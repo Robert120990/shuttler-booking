@@ -1,12 +1,10 @@
 import initSqlJs from 'sql.js';
-import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
+import { DATA_DIR } from './config.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const dbPath = join(__dirname, '..', 'database.sqlite');
+const dataDir = DATA_DIR;
+const dbPath = join(dataDir, 'database.sqlite');
 
 let db = null;
 
@@ -153,6 +151,9 @@ export async function initDb() {
 
 export function saveDb() {
   if (db) {
+    if (!existsSync(dataDir)) {
+      mkdirSync(dataDir, { recursive: true });
+    }
     const data = db.export();
     const buffer = Buffer.from(data);
     writeFileSync(dbPath, buffer);

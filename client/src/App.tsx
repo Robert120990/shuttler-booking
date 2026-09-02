@@ -10,6 +10,11 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { FAQsPage } from './pages/FAQsPage';
 import { AboutPage } from './pages/AboutPage';
+import { TermsPage } from './pages/TermsPage';
+import { PrivacyPage } from './pages/PrivacyPage';
+import { CookiesPage } from './pages/CookiesPage';
+import { ContactPage } from './pages/ContactPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { AdminCountries } from './components/admin/AdminCountries';
 import { AdminCities } from './components/admin/AdminCities';
@@ -32,7 +37,12 @@ function App() {
             <Route path="shuttles/:id" element={<ShuttlePage />} />
             <Route path="faqs" element={<FAQsPage />} />
             <Route path="about" element={<AboutPage />} />
+            <Route path="terms" element={<TermsPage />} />
+            <Route path="privacy" element={<PrivacyPage />} />
+            <Route path="cookies" element={<CookiesPage />} />
+            <Route path="contact" element={<ContactPage />} />
             <Route path="search" element={<HomePage />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />

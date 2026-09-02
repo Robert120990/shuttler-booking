@@ -9,6 +9,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { shuttlesApi } from '../../api/endpoints';
 import { getImageUrl } from '../../api/client';
 import { BookingModal } from './BookingModal';
+import { SEO } from '../seo/SEO';
 import type { Shuttle } from '../../types';
 
 const generateDates = (availabilityDays: number[]) => {
@@ -127,8 +128,73 @@ export const ShuttlePage = () => {
     (shuttle as any).destination_image,
   ].filter(Boolean);
 
+  const originName = (shuttle as any).origin_name || '';
+  const destName = (shuttle as any).destination_name || '';
+  const routeName = originName && destName ? `${originName} to ${destName}` : shuttle.name;
+
+  const tripSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: `${routeName} Shuttle`,
+    description: shuttle.description || `Book a shuttle from ${originName} to ${destName}.`,
+    image: getImageUrl(shuttle.image_url),
+    sku: `shuttle-${shuttle.slug}`,
+    brand: {
+      '@type': 'Organization',
+      name: (shuttle as any).operator || 'Trail Explorer',
+    },
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: shuttle.rating || 5.0,
+      reviewCount: shuttle.review_count || 0,
+    },
+    offers: {
+      '@type': 'Offer',
+      price: shuttle.price,
+      priceCurrency: 'USD',
+      availability: 'https://schema.org/InStock',
+      url: `https://trailexplorer.com/shuttles/${shuttle.slug}`,
+    },
+  };
+
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://trailexplorer.com/' },
+      { '@type': 'ListItem', position: 2, name: originName, item: `https://trailexplorer.com/cities/${(shuttle as any).origin_slug || ''}` },
+      { '@type': 'ListItem', position: 3, name: routeName, item: `https://trailexplorer.com/shuttles/${shuttle.slug}` },
+    ],
+  };
+
+  const transferSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Service',
+    serviceType: 'Shuttle Transfer',
+    name: `${routeName} Shuttle`,
+    description: shuttle.description || `Shuttle transfer from ${originName} to ${destName}.`,
+    provider: {
+      '@type': 'Organization',
+      name: (shuttle as any).operator || 'Trail Explorer',
+    },
+    areaServed: [originName, destName],
+    offers: {
+      '@type': 'Offer',
+      price: shuttle.price,
+      priceCurrency: 'USD',
+    },
+  };
+
   return (
     <div className="bg-slate-50">
+      <SEO
+        title={`${routeName} Shuttle - From $${shuttle.price}/person`}
+        description={shuttle.description || `Book a ${routeName} shuttle. ${shuttle.duration_hours} hours, $${shuttle.price} per person. ${shuttle.luggage_policy || 'Check luggage policy and included amenities.'}`}
+        path={`/shuttles/${shuttle.slug}`}
+        image={getImageUrl(shuttle.image_url)}
+        type="product"
+        jsonLd={[tripSchema, breadcrumbSchema, transferSchema]}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">

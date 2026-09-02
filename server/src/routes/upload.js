@@ -4,12 +4,11 @@ import sharp from 'sharp';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
-import { fileURLToPath } from 'url';
+import { IMAGES_DIR, ensureDir } from '../config.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const router = express.Router();
 
-const publicDir = path.join(__dirname, '../../public/images');
+const publicDir = IMAGES_DIR;
 
 const storage = multer.memoryStorage();
 
@@ -45,9 +44,7 @@ router.post('/image', upload.single('image'), async (req, res) => {
     const folderName = typeToFolder[type];
     const categoryDir = path.join(publicDir, folderName);
     
-    if (!fs.existsSync(categoryDir)) {
-      fs.mkdirSync(categoryDir, { recursive: true });
-    }
+    ensureDir(categoryDir);
 
     const filename = `${uuidv4()}.webp`;
     const filepath = path.join(categoryDir, filename);
@@ -92,7 +89,8 @@ router.delete('/image', async (req, res) => {
       return res.status(400).json({ error: 'URL de imagen requerida' });
     }
 
-    const filepath = path.join(__dirname, '../..', url);
+    const relativePath = url.startsWith('/images/') ? url.slice('/images/'.length) : url.replace(/^\//, '');
+    const filepath = path.join(publicDir, relativePath);
     
     if (fs.existsSync(filepath)) {
       fs.unlinkSync(filepath);

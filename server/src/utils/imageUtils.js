@@ -4,17 +4,14 @@ import fs from 'fs';
 import https from 'https';
 import http from 'http';
 import { v4 as uuidv4 } from 'uuid';
-import { fileURLToPath } from 'url';
+import { IMAGES_DIR, ensureDir } from '../config.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const serverRoot = path.join(__dirname, '../..');
-const publicDir = path.join(serverRoot, 'public/images');
+const publicDir = IMAGES_DIR;
 
 function resolveImagePath(imageUrl) {
   if (!imageUrl) return null;
-  const cleanPath = imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl;
-  const fullPath = path.join(serverRoot, 'public', cleanPath);
-  return fullPath;
+  const cleanPath = imageUrl.startsWith('/images/') ? imageUrl.slice('/images/'.length) : imageUrl.replace(/^\//, '');
+  return path.join(publicDir, cleanPath);
 }
 
 function downloadImage(url) {
@@ -71,9 +68,7 @@ async function getImageBuffer(imageUrl, defaultWidth = 400, defaultHeight = 300)
 export async function generateShuttleImage(originImageUrl, destinationImageUrl) {
   const shuttlesDir = path.join(publicDir, 'shuttles');
   
-  if (!fs.existsSync(shuttlesDir)) {
-    fs.mkdirSync(shuttlesDir, { recursive: true });
-  }
+  ensureDir(shuttlesDir);
 
   const filename = `shuttle-${uuidv4()}.webp`;
   const filepath = path.join(shuttlesDir, filename);

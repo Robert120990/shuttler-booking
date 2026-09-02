@@ -135,7 +135,6 @@ export const AdminShuttles = () => {
     if (days.length === 2 && days.includes(0) && days.includes(6)) return 'Weekends';
     if (days.length === 2 && days.includes(5) && days.includes(6)) return 'Friday to Saturday';
     
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const shortDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     
     if (days.length <= 3) {

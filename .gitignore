@@ -4,3 +4,23 @@ dist-ssr/
 *.local
 .env
 .env.*
+!.env.example
+
+# Datos locales de la base de datos SQLite (no debe subirse)
+*.sqlite
+*.sqlite3
+server/database.sqlite
+
+# Archivos subidos / generados en runtime (se persisten en el volumen)
+uploads/
+storage/
+data/
+server/public/uploads/
+
+# Artefactos de pruebas / herramientas
+.playwright-mcp/
+*.log
+
+# System files
+.DS_Store
+Thumbs.db

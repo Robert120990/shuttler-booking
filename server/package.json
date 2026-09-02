@@ -8,7 +8,9 @@
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "download-images": "node src/download-images.js",
-    "reset-db": "node src/reset-db.js"
+    "reset-db": "node src/reset-db.js",
+    "build:client": "cd ../client && npm ci && npm run build",
+    "build": "npm run build:client"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

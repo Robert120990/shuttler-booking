@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+**/dist
+client/dist
+server/database.sqlite
+*.sqlite
+.git
+.gitignore
+.env
+.env.*
+Dockerfile
+.dockerignore
+README.md

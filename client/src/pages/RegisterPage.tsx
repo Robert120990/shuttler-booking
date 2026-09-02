@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useAuthStore } from '../stores/authStore';
 import { authApi } from '../api/endpoints';
+import { SEO } from '../components/seo/SEO';
 
 export const RegisterPage = () => {
   const [name, setName] = useState('');
@@ -49,6 +50,7 @@ export const RegisterPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <SEO title="Create Account" description="Create your Trail Explorer account to book shuttles." path="/register" noindex />
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-xl flex items-center justify-center">

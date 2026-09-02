@@ -6,6 +6,7 @@ import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { citiesApi, shuttlesApi } from '../../api/endpoints';
 import { getImageUrl } from '../../api/client';
+import { SEO } from '../seo/SEO';
 import type { City, Shuttle } from '../../types';
 
 interface ShuttleCardProps {
@@ -20,6 +21,7 @@ const ShuttleCard = ({ shuttle }: ShuttleCardProps) => (
           src={getImageUrl(shuttle.image_url)} 
           alt={shuttle.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+          loading="lazy"
         />
         <div className="absolute top-3 right-3">
           <Badge variant={shuttle.service_type === 'international' ? 'warning' : 'success'}>
@@ -125,6 +127,23 @@ export const CityPage = () => {
 
   return (
     <div className="bg-slate-50">
+      <SEO
+        title={`Shuttles from ${city.name}`}
+        description={city.description || `Book shuttles to and from ${city.name}, ${countryName}. Compare prices and times for shuttles, transfers and transport.`}
+        path={`/cities/${city.slug}`}
+        image={getImageUrl(city.image_url)}
+        jsonLd={[
+          {
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://trailexplorer.com/' },
+              { '@type': 'ListItem', position: 2, name: countryName, item: `https://trailexplorer.com/countries/${(city as any).country_slug || ''}` },
+              { '@type': 'ListItem', position: 3, name: city.name, item: `https://trailexplorer.com/cities/${city.slug}` },
+            ],
+          },
+        ]}
+      />
       <section className="relative h-64 md:h-80">
         <img src={getImageUrl(city.image_url)} alt={city.name} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />

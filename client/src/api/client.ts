@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3001/api';
-const SERVER_URL = 'http://localhost:3001';
+const SERVER_URL = (import.meta.env.VITE_SERVER_URL as string) || 'http://localhost:3001';
+const API_URL = `${SERVER_URL}/api`;
 
 export const getImageUrl = (path: string | undefined): string => {
   if (!path) return '/placeholder.jpg';

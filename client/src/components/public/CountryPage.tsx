@@ -4,6 +4,7 @@ import { ArrowRight, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '../ui/Card';
 import { countriesApi } from '../../api/endpoints';
 import { getImageUrl } from '../../api/client';
+import { SEO } from '../seo/SEO';
 import type { Country } from '../../types';
 
 export const CountryPage = () => {
@@ -53,8 +54,33 @@ export const CountryPage = () => {
 
   const cities = (country as any).cities || [];
 
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://trailexplorer.com/' },
+      { '@type': 'ListItem', position: 2, name: country.name, item: `https://trailexplorer.com/countries/${country.slug}` },
+    ],
+  };
+
+  const citySchemas = cities.map((city: any) => ({
+    '@context': 'https://schema.org',
+    '@type': 'TouristDestination',
+    name: `${city.name}, ${country.name}`,
+    description: city.description,
+    image: getImageUrl((city as any).image_url),
+    url: `https://trailexplorer.com/cities/${city.slug}`,
+  }));
+
   return (
     <div>
+      <SEO
+        title={`Shuttles in ${country.name}`}
+        description={country.description || `Book shuttles and transfers in ${country.name}. Find the best rates for transport within ${country.name} and to nearby countries.`}
+        path={`/countries/${country.slug}`}
+        image={getImageUrl(country.image_url)}
+        jsonLd={[breadcrumbSchema, ...citySchemas]}
+      />
       <section className="relative h-64 md:h-80">
         <img
           src={getImageUrl(country.image_url)}
@@ -83,6 +109,7 @@ export const CountryPage = () => {
                         src={getImageUrl((city as any).image_url)}
                         alt={city.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
                       />
                     </div>
                     <CardContent className="pt-4">

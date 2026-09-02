@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Loader2, X, User, MapPin, Calendar, Users, Package } from 'lucide-react';
+import { Loader2, X, User, Package } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';

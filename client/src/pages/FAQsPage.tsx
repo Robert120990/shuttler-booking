@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import { SEO } from '../components/seo/SEO';
 
 const FAQ_DATA = [
   {
@@ -38,8 +39,29 @@ const FAQ_DATA = [
 ];
 
 export const FAQsPage = () => {
+  const flatFaqs = FAQ_DATA.flatMap((section) => section.questions);
+
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: flatFaqs.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.a,
+      },
+    })),
+  };
+
   return (
     <div className="bg-slate-50 min-h-screen py-12">
+      <SEO
+        title="Frequently Asked Questions"
+        description="Find answers to common questions about booking shuttles and transfers in Central America. Learn about payments, cancellations, luggage policy and more."
+        path="/faqs"
+        jsonLd={[faqSchema]}
+      />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-slate-900 mb-4">Frequently Asked Questions</h1>

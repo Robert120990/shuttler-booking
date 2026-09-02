@@ -2,10 +2,31 @@ import { MapPin, Mail, Phone, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { SEO } from '../components/seo/SEO';
 
 export const AboutPage = () => {
   return (
     <div className="bg-slate-50 min-h-screen">
+      <SEO
+        title="About Us"
+        description="Trail Explorer is your trusted partner for booking shuttles, transfers, and transportation across Central America since 2011. We connect travelers with trusted local operators."
+        path="/about"
+        jsonLd={[
+          {
+            '@context': 'https://schema.org',
+            '@type': 'LocalBusiness',
+            name: 'Trail Explorer',
+            description: 'Shuttle booking platform across Central America',
+            telephone: '+503 1234 5678',
+            email: 'info@trailexplorer.com',
+            address: {
+              '@type': 'PostalAddress',
+              addressLocality: 'San Salvador',
+              addressCountry: 'SV',
+            },
+          },
+        ]}
+      />
       <section className="bg-gradient-to-br from-emerald-800 to-emerald-900 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl font-bold mb-4">About Trail Explorer</h1>
@@ -35,6 +56,7 @@ export const AboutPage = () => {
                 src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80"
                 alt="Central America landscapes"
                 className="w-full h-full object-cover"
+                loading="lazy"
               />
             </div>
           </div>

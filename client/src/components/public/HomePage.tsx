@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Star, Clock, MapPin, ArrowRight, Shield, CreditCard, Headphones, Calendar, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { countriesApi, shuttlesApi } from '../../api/endpoints';
 import { getImageUrl } from '../../api/client';
+import { SEO } from '../seo/SEO';
 import type { Country, Shuttle } from '../../types';
 
 const FEATURES = [
@@ -37,6 +38,8 @@ export const HomePage = () => {
   const [isPaused, setIsPaused] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const location = useLocation();
+  const isSearch = location.pathname === '/search';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -95,12 +98,27 @@ export const HomePage = () => {
 
   return (
     <div>
+      <SEO
+        title="Book Shuttles Across Central America"
+        description="Reserva shuttles, traslados y transporte en Centroamérica. Book the best shuttle transfers across Mexico, Guatemala, Costa Rica and more. Secure booking in minutes."
+        path={isSearch ? '/search' : '/'}
+        jsonLd={[
+          {
+            '@context': 'https://schema.org',
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://trailexplorer.com/' },
+            ],
+          },
+        ]}
+      />
       <section className="relative text-white">
         <div className="absolute inset-0">
           <img
             src="https://images.unsplash.com/photo-1506197603052-3cc9c3a201bd?w=1920&q=80"
             alt="Central America"
             className="w-full h-full object-cover"
+            fetchPriority="high"
           />
         </div>
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
@@ -172,6 +190,7 @@ export const HomePage = () => {
                       src={getImageUrl(country.image_url)}
                       alt={country.name}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      loading="lazy"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                     <div className="absolute inset-0 p-6 flex flex-col justify-end">
@@ -208,6 +227,7 @@ export const HomePage = () => {
                       src={getImageUrl(shuttle.image_url)}
                       alt={shuttle.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
                     />
                     <div className="absolute top-3 right-3">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${

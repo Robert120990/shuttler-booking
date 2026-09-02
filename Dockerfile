@@ -28,9 +28,6 @@ ENV PORT=3000
 ENV DATA_DIR=/data
 ENV IMAGES_DIR=/data/images
 
-# Volumen persistente para DB e imágenes
-VOLUME /data
-
 WORKDIR /app/server
 EXPOSE 3000
 CMD ["node", "src/index.js"]

@@ -25,6 +25,7 @@ Configúralas en Railway (Dashboard → tu servicio → **Variables**):
 
 - Añade un **Volume** en Railway montado en el path `/data`.
 - La base de datos `database.sqlite`, las imágenes subidas y las imágenes généricas del seed se guardan ahí.
+- **Importante:** el Dockerfile **no** incluye la instrucción `VOLUME` (Railway la rechaza al hacer build). El volumen se crea y monta exclusivamente desde el dashboard de Railway en `/data`.
 - Al primer arranque el servidor copia las imágenes estáticas del repo e inicializa la DB + seed automáticamente.
 
 ## Deploy

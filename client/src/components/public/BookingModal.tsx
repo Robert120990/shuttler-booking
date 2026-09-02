@@ -57,29 +57,38 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
         extraLuggageCost += luggageOptions[item.typeIndex].price * item.quantity;
       }
     });
-    const totalPrice = (shuttle.price * bookingData.passengers) + extraLuggageCost;
+    const passengersCount = bookingData.passengers || 1;
+    const totalPrice = (shuttle.price * passengersCount) + extraLuggageCost;
     const totalExtraLuggage = bookingData.extra_luggage.reduce((sum, item) => sum + item.quantity, 0);
+
+    const passengerName = bookingData.passenger_name || user?.name || '';
+    const passengerEmail = bookingData.passenger_email || user?.email || '';
+    const passengerPhone = bookingData.passenger_phone || '';
+    const pickupPersonName = bookingData.pickup_person_name || passengerName;
 
     try {
       setSubmitting(true);
       await bookingsApi.create({
+        user_id: user?.id,
         shuttle_id: shuttle.id,
         date: bookingData.date,
-        seats: bookingData.passengers,
+        seats: passengersCount,
         pickup_location: bookingData.pickup_location,
         dropoff_location: bookingData.dropoff_location,
-        passenger_name: bookingData.passenger_name,
-        passenger_email: bookingData.passenger_email,
-        passenger_phone: bookingData.passenger_phone,
+        passenger_name: passengerName,
+        passenger_email: passengerEmail,
+        passenger_phone: passengerPhone,
+        pickup_person_name: pickupPersonName,
         total_price: totalPrice,
         extra_luggage: totalExtraLuggage,
         status: 'pending',
       });
       setBookingData({ extra_luggage: [] });
       onSuccess();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error creating booking:', err);
-      alert('There was an error processing your booking. Please try again.');
+      const serverMsg = err.response?.data?.error || 'Hubo un error al procesar tu reserva. Por favor intenta de nuevo.';
+      alert(serverMsg);
     } finally {
       setSubmitting(false);
     }

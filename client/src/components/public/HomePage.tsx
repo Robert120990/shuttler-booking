@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Star, Clock, MapPin, ArrowRight, Shield, CreditCard, Headphones, Calendar, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Star, Clock, MapPin, Shield, CreditCard, Headphones, Calendar, Loader2, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { countriesApi, shuttlesApi } from '../../api/endpoints';
@@ -112,7 +112,7 @@ export const HomePage = () => {
           },
         ]}
       />
-      <section className="relative text-white">
+      <section className="relative text-white overflow-hidden">
         <div className="absolute inset-0">
           <img
             src="https://images.unsplash.com/photo-1506197603052-3cc9c3a201bd?w=1920&q=80"
@@ -120,28 +120,28 @@ export const HomePage = () => {
             className="w-full h-full object-cover"
             fetchPriority="high"
           />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/20 to-black/10" />
         </div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
-          <div className="max-w-3xl">
-            <h1 className="text-4xl lg:text-6xl font-bold leading-tight">
+
+        {/* Small logo badge in top right corner */}
+        <div className="absolute top-4 right-4 sm:top-6 sm:right-6 lg:top-6 lg:right-8 z-10">
+          <div className="bg-white/95 p-2 sm:p-2.5 rounded-2xl shadow-xl border border-white/50 ring-2 ring-black/5 transform hover:scale-105 transition-transform duration-300">
+            <img
+              src="/logo.jpeg"
+              alt="Trail Explorer Logo"
+              className="w-20 sm:w-24 md:w-28 h-auto object-contain rounded-xl"
+            />
+          </div>
+        </div>
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 flex items-center justify-between">
+          <div className="max-w-2xl text-left">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight drop-shadow-lg">
               Explore Central America
             </h1>
-            <p className="mt-6 text-xl text-emerald-100">
+            <p className="mt-4 text-base sm:text-lg lg:text-xl text-slate-100 drop-shadow-md max-w-xl">
               Book shuttles, transfers and transportation across 8 countries. Your adventure starts with a single booking.
             </p>
-            <div className="mt-8 flex flex-col sm:flex-row gap-4">
-              <Link to="/countries/costa-rica">
-                <Button size="lg" className="w-full sm:w-auto bg-white text-emerald-800 hover:bg-emerald-50">
-                  Search Routes
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
-              </Link>
-              <Link to="/countries/costa-rica">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto border-white text-white hover:bg-white/10">
-                  Explore Costa Rica
-                </Button>
-              </Link>
-            </div>
           </div>
         </div>
       </section>

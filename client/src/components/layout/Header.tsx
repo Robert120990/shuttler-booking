@@ -61,11 +61,11 @@ export const Header = () => {
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-8">
-            <Link to="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">TE</span>
+            <Link to="/" className="flex items-center gap-2.5">
+              <div className="bg-white p-1 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-center">
+                <img src="/logo.jpeg" alt="Trail Explorer" className="h-8 w-8 object-contain rounded-md" />
               </div>
-              <span className="font-semibold text-slate-900 dark:text-white hidden sm:block">Trail Explorer</span>
+              <span className="font-bold text-lg text-slate-900 dark:text-white hidden sm:block">Trail Explorer</span>
             </Link>
 
             <div className="hidden md:flex items-center gap-6">

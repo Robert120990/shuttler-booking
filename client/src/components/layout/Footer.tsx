@@ -27,9 +27,7 @@ export const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">TE</span>
-              </div>
+              <img src="/logo.jpeg" alt="Trail Explorer" className="h-9 w-auto object-contain rounded-md" />
               <span className="font-semibold text-white">Trail Explorer</span>
             </div>
             <p className="text-sm text-slate-400">

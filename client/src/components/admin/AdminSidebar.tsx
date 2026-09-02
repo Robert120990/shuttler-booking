@@ -22,9 +22,7 @@ export const AdminSidebar = () => {
     <div className="w-64 bg-slate-900 text-white min-h-screen p-4 flex flex-col">
       <div className="mb-8">
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">TE</span>
-          </div>
+          <img src="/logo.jpeg" alt="Trail Explorer" className="h-9 w-auto object-contain rounded-md" />
           <span className="font-semibold">Admin Panel</span>
         </Link>
       </div>

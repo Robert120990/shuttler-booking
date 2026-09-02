@@ -164,16 +164,20 @@ export function getDb() {
   return db;
 }
 
+const sanitizeParam = (val) => (val === undefined ? null : val);
+
 export function prepare(sql) {
   return {
     run: (...params) => {
-      db.run(sql, params);
+      const cleanParams = params.map(sanitizeParam);
+      db.run(sql, cleanParams);
       saveDb();
       return { changes: db.getRowsModified() };
     },
     get: (...params) => {
+      const cleanParams = params.map(sanitizeParam);
       const stmt = db.prepare(sql);
-      stmt.bind(params);
+      stmt.bind(cleanParams);
       if (stmt.step()) {
         const row = stmt.getAsObject();
         stmt.free();
@@ -183,9 +187,10 @@ export function prepare(sql) {
       return null;
     },
     all: (...params) => {
+      const cleanParams = params.map(sanitizeParam);
       const results = [];
       const stmt = db.prepare(sql);
-      stmt.bind(params);
+      stmt.bind(cleanParams);
       while (stmt.step()) {
         results.push(stmt.getAsObject());
       }

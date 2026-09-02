@@ -31,16 +31,57 @@ router.get('/:id', (req, res) => {
 });
 
 router.post('/', (req, res) => {
-  const { shuttle_id, date, pickup_location, dropoff_location, passenger_name, passenger_email, passenger_phone, seats, extra_luggage, total_price, pickup_person_name } = req.body;
-  const id = uuidv4();
-  
-  prepare(`
-    INSERT INTO bookings (id, shuttle_id, date, pickup_location, dropoff_location, passenger_name, passenger_email, passenger_phone, seats, extra_luggage, total_price, status, payment_status, pickup_person_name)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending', ?)
-  `).run(id, shuttle_id, date, pickup_location, dropoff_location, passenger_name, passenger_email, passenger_phone, seats, extra_luggage || 0, total_price, pickup_person_name);
-  
-  const booking = prepare('SELECT * FROM bookings WHERE id = ?').get(id);
-  res.status(201).json(booking);
+  try {
+    const {
+      user_id,
+      shuttle_id,
+      date,
+      pickup_location,
+      dropoff_location,
+      passenger_name,
+      passenger_email,
+      passenger_phone,
+      seats,
+      extra_luggage,
+      total_price,
+      pickup_person_name
+    } = req.body;
+
+    if (!shuttle_id || !date || !pickup_location || !dropoff_location) {
+      return res.status(400).json({ error: 'Missing required booking fields (shuttle_id, date, pickup_location, dropoff_location)' });
+    }
+
+    const id = uuidv4();
+
+    prepare(`
+      INSERT INTO bookings (
+        id, user_id, shuttle_id, date, pickup_location, dropoff_location,
+        passenger_name, passenger_email, passenger_phone, seats,
+        extra_luggage, total_price, status, payment_status, pickup_person_name
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending', ?)
+    `).run(
+      id,
+      user_id || null,
+      shuttle_id,
+      date,
+      pickup_location,
+      dropoff_location,
+      passenger_name || null,
+      passenger_email || null,
+      passenger_phone || null,
+      seats || 1,
+      extra_luggage || 0,
+      total_price || 0,
+      pickup_person_name || passenger_name || null
+    );
+
+    const booking = prepare('SELECT * FROM bookings WHERE id = ?').get(id);
+    res.status(201).json(booking);
+  } catch (error) {
+    console.error('Error creating booking:', error);
+    res.status(500).json({ error: error.message || 'Failed to create booking' });
+  }
 });
 
 router.patch('/:id/status', (req, res) => {

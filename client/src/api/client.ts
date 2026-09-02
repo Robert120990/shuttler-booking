@@ -1,28 +1,50 @@
 import axios from 'axios';
 
-const getBaseServerUrl = (): string => {
-  const envUrl = (import.meta.env.VITE_SERVER_URL as string) || '';
-  if (envUrl) {
-    return envUrl.replace(/\/+$/, '');
+export const getBaseServerUrl = (): string => {
+  const isBrowser = typeof window !== 'undefined';
+  const isLocalhostHost = isBrowser && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+  const rawEnvUrl = (import.meta.env.VITE_SERVER_URL as string) || '';
+  
+  if (rawEnvUrl) {
+    let cleanUrl = rawEnvUrl.replace(/\/+$/, '');
+    const isEnvLocalhost = cleanUrl.includes('localhost') || cleanUrl.includes('127.0.0.1');
+
+    // Upgrade HTTP to HTTPS if page is loaded via HTTPS (prevents Mixed Content blocking on mobile)
+    if (isBrowser && window.location.protocol === 'https:' && cleanUrl.startsWith('http://')) {
+      cleanUrl = cleanUrl.replace(/^http:\/\//i, 'https://');
+    }
+
+    // Only return envUrl if we're on localhost or if envUrl is a remote URL
+    if (!isBrowser || isLocalhostHost || !isEnvLocalhost) {
+      return cleanUrl;
+    }
   }
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+
+  // When deployed in production on a real domain/IP, fallback to the current origin
+  if (isBrowser && !isLocalhostHost) {
     return window.location.origin.replace(/\/+$/, '');
   }
+
   return 'http://localhost:3001';
 };
 
-const SERVER_URL = getBaseServerUrl();
-const API_URL = `${SERVER_URL}/api`;
-
 export const getImageUrl = (path: string | undefined): string => {
   if (!path) return '/placeholder.jpg';
-  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:' && path.startsWith('http://')) {
+      return path.replace(/^http:\/\//i, 'https://');
+    }
+    return path;
+  }
+  
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   return `${getBaseServerUrl()}${cleanPath}`;
 };
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: `${getBaseServerUrl()}/api`,
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
@@ -30,6 +52,19 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
+  const isBrowser = typeof window !== 'undefined';
+  const isLocalhostHost = isBrowser && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+  // Ensure production requests never attempt to hit localhost
+  if (isBrowser && !isLocalhostHost) {
+    if (!config.baseURL || config.baseURL.includes('localhost') || config.baseURL.includes('127.0.0.1')) {
+      config.baseURL = `${window.location.origin.replace(/\/+$/, '')}/api`;
+    }
+    if (window.location.protocol === 'https:' && config.baseURL?.startsWith('http://')) {
+      config.baseURL = config.baseURL.replace(/^http:\/\//i, 'https://');
+    }
+  }
+
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -55,3 +90,4 @@ api.interceptors.response.use(
 );
 
 export default api;
+

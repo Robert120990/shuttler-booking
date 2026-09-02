@@ -4,11 +4,127 @@ import bcrypt from 'bcryptjs';
 import { generateShuttleImage } from './utils/imageUtils.js';
 
 const getImageUrl = (category, filename) => `/images/${category}/${filename}`;
-const getCityImageUrl = (filename) => `/images/cities/${filename}`;
+
+export const DEFAULT_COUNTRY_IMAGES = {
+  'costa-rica': '4d71c2d3-11a8-46a4-888c-f7a4b03cab55.webp',
+  'guatemala': '89018267-ca97-4fe4-baa8-449638d316d9.webp',
+  'el-salvador': '6cc37ed0-3747-4048-a2a4-2847f188047f.webp',
+  'nicaragua': '6b8697be-6d0d-4684-846a-47ac018a673b.webp',
+  'panama': 'f8f00ad1-7c97-4b0e-a1c0-289d148df740.webp',
+  'mexico': '44d2d2a3-5956-41d2-8e9f-32cdd172dddf.webp',
+  'belize': 'a4ae4ec7-d24a-4016-ac1a-0a0ac14ce3d5.webp',
+  'honduras': '264f72b4-e00c-4c72-a914-52f153f1fdba.webp',
+};
+
+export const DEFAULT_CITY_IMAGES = {
+  // Costa Rica
+  'la-fortuna': '34107515-6273-4ac1-b253-651ed7f5ffae.webp',
+  'monteverde': '20fee31d-acef-45e3-95f6-9abc6a57b04f.webp',
+  'san-jose': 'e721c134-70c3-47ef-bcf4-cec7adecfecf.webp',
+  'tamarindo': '15a76da7-3542-46c9-a10f-92852176bad1.webp',
+  'puerto-viejo': 'b3c16504-2805-4c6e-a132-0df6279e81a5.webp',
+  'liberia': '26f20d73-2ef8-4c14-b1e8-1ae8696650b7.webp',
+  // Guatemala
+  'antigua-guatemala': '87482884-3c34-41dd-a048-fe833611d110.webp',
+  'flores-peten': '5548339a-37e5-4cac-b192-70f38b7f86d6.webp',
+  'panajachel': '372dc37d-b613-4ed3-944d-77bc66bf42e1.webp',
+  'quetzaltenango': 'd4014625-3505-49d4-98f9-3f803e56cc9e.webp',
+  'guatemala-city': '48d64f60-a1d8-4f7e-bd31-431772855d73.webp',
+  // El Salvador
+  'el-tunco': 'ea33d26b-81c3-4346-a173-e8649f02111a.webp',
+  'santa-ana': '9b972527-384b-4567-94b0-226201b994fa.webp',
+  'san-salvador': '0a45d200-8afc-468a-a572-db3f8b37fdec.webp',
+  'suchitoto': '40b7bc4f-2d7f-495f-82e7-ff90f4c71d50.webp',
+  // Nicaragua
+  'granada': '38071664-3768-4fdb-a122-8094435b16c5.webp',
+  'leon': '3b886163-05b6-43cf-8e4f-34860c0db141.webp',
+  'san-juan-del-sur': 'bd9b8903-c90c-473f-bf97-429098be79fe.webp',
+  'managua': '43f6119f-afdc-446e-a406-67b018c8684c.webp',
+  // Panama
+  'bocas-del-toro': '4fc4772a-9c6d-4c72-abfd-5c3229fdff88.webp',
+  'boquete': '4fffefdc-e521-49f8-a0e2-3e6ce1adf54d.webp',
+  'panama-city': '12cb407b-425d-46ee-826b-03f2a55275dc.webp',
+  // Mexico
+  'palenque': '74ff7732-331c-4c9c-9f6a-ab8cbcd0d34e.webp',
+  'san-cristobal-de-las-casas': 'c67335c8-2c03-446c-b99c-05bd25b54176.webp',
+  // Belize
+  'belize-city': '7c088f7c-08f0-450f-ab22-61417ffb8294.webp',
+  'san-ignacio': 'a825043e-a741-4072-98d6-9203c2248ef3.webp',
+  // Honduras
+  'copan-ruinas': 'f3947644-620f-42eb-af30-35315a80c4a7.webp',
+  'la-ceiba': '7590f472-4121-4de9-9c5c-a41c5e8d0950.webp',
+};
+
+export const DEFAULT_SHUTTLE_IMAGES = {
+  'la-fortuna-to-san-josé': '/images/shuttles/shuttle-cdd55cb1-b8bd-49c1-ae75-db8799290186.webp',
+  'liberia-to-san-josé': '/images/shuttles/shuttle-ff415624-1b55-49c2-ace7-38c59cee3ca1.webp',
+  'antigua-to-san-salvador': '/images/shuttles/shuttle-cbc4e609-03a8-43ca-93f5-d5578d296f61.webp',
+  'el-tunco-to-antigua': '/images/shuttles/shuttle-ba19b243-3663-4db4-ab11-876295717ac0.webp',
+};
+
+export async function syncDatabaseImages() {
+  try {
+    // 1. Check and repair countries
+    for (const [slug, imgFile] of Object.entries(DEFAULT_COUNTRY_IMAGES)) {
+      const imgUrl = getImageUrl('countries', imgFile);
+      prepare(`
+        UPDATE countries 
+        SET image_url = ? 
+        WHERE slug = ? AND (image_url IS NULL OR image_url LIKE '%placeholder%' OR image_url = '')
+      `).run(imgUrl, slug);
+    }
+
+    // 2. Check and repair cities
+    for (const [slug, imgFile] of Object.entries(DEFAULT_CITY_IMAGES)) {
+      const imgUrl = getImageUrl('cities', imgFile);
+      prepare(`
+        UPDATE cities 
+        SET image_url = ? 
+        WHERE slug = ? AND (image_url IS NULL OR image_url LIKE '%placeholder%' OR image_url = '')
+      `).run(imgUrl, slug);
+    }
+
+    // 3. Check and repair predefined shuttles
+    for (const [slug, imgUrl] of Object.entries(DEFAULT_SHUTTLE_IMAGES)) {
+      prepare(`
+        UPDATE shuttles 
+        SET image_url = ? 
+        WHERE slug = ? AND (image_url IS NULL OR image_url LIKE '%placeholder%' OR image_url = '')
+      `).run(imgUrl, slug);
+    }
+
+    // 4. Generate composite images for any remaining shuttles without valid image
+    const shuttlesWithoutImage = prepare(`
+      SELECT s.id, s.slug, c1.image_url as origin_img, c2.image_url as dest_img
+      FROM shuttles s
+      LEFT JOIN cities c1 ON s.origin_city_id = c1.id
+      LEFT JOIN cities c2 ON s.destination_city_id = c2.id
+      WHERE s.image_url IS NULL OR s.image_url LIKE '%placeholder%' OR s.image_url = ''
+    `).all();
+
+    for (const s of shuttlesWithoutImage) {
+      if (s.origin_img && s.dest_img) {
+        try {
+          const generatedUrl = await generateShuttleImage(s.origin_img, s.dest_img);
+          if (generatedUrl) {
+            prepare('UPDATE shuttles SET image_url = ? WHERE id = ?').run(generatedUrl, s.id);
+          }
+        } catch (err) {
+          console.error(`Error generating shuttle banner for ${s.slug}:`, err);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error in syncDatabaseImages:', err);
+  }
+}
 
 export async function seedData() {
   const userCount = prepare('SELECT COUNT(*) as count FROM users').get();
-  if (userCount && userCount.count > 0) return;
+  if (userCount && userCount.count > 0) {
+    await syncDatabaseImages();
+    return;
+  }
 
   const adminPassword = bcrypt.hashSync('admin123', 10);
   const userPassword = bcrypt.hashSync('user123', 10);
@@ -21,14 +137,14 @@ export async function seedData() {
   );
 
   const countries = [
-    { id: uuidv4(), name: 'Costa Rica', slug: 'costa-rica', description: 'Rainforests, volcanoes, beaches, wildlife and unforgettable adventures.', image: 'placeholder.png' },
-    { id: uuidv4(), name: 'Guatemala', slug: 'guatemala', description: 'Volcanoes, Mayan ruins, colonial cities and lake escapes.', image: 'placeholder.png' },
-    { id: uuidv4(), name: 'El Salvador', slug: 'el-salvador', description: 'Beaches, surfing, cultural towns and natural wonders.', image: 'placeholder.png' },
-    { id: uuidv4(), name: 'Nicaragua', slug: 'nicaragua', description: 'Colonial cities, volcanoes, lakes and authentic culture.', image: 'placeholder.png' },
-    { id: uuidv4(), name: 'Panamá', slug: 'panama', description: 'Canals, beaches, rainforests and biodiversity.', image: 'placeholder.png' },
-    { id: uuidv4(), name: 'México', slug: 'mexico', description: 'Ancient ruins, beaches, colonial cities and rich culture.', image: 'placeholder.png' },
-    { id: uuidv4(), name: 'Belice', slug: 'belize', description: 'Barrier reef, Mayan ruins and Caribbean charm.', image: 'placeholder.png' },
-    { id: uuidv4(), name: 'Honduras', slug: 'honduras', description: 'Mayan ruins, Caribbean islands and natural parks.', image: 'placeholder.png' },
+    { id: uuidv4(), name: 'Costa Rica', slug: 'costa-rica', description: 'Rainforests, volcanoes, beaches, wildlife and unforgettable adventures.', image: DEFAULT_COUNTRY_IMAGES['costa-rica'] },
+    { id: uuidv4(), name: 'Guatemala', slug: 'guatemala', description: 'Volcanoes, Mayan ruins, colonial cities and lake escapes.', image: DEFAULT_COUNTRY_IMAGES['guatemala'] },
+    { id: uuidv4(), name: 'El Salvador', slug: 'el-salvador', description: 'Beaches, surfing, cultural towns and natural wonders.', image: DEFAULT_COUNTRY_IMAGES['el-salvador'] },
+    { id: uuidv4(), name: 'Nicaragua', slug: 'nicaragua', description: 'Colonial cities, volcanoes, lakes and authentic culture.', image: DEFAULT_COUNTRY_IMAGES['nicaragua'] },
+    { id: uuidv4(), name: 'Panamá', slug: 'panama', description: 'Canals, beaches, rainforests and biodiversity.', image: DEFAULT_COUNTRY_IMAGES['panama'] },
+    { id: uuidv4(), name: 'México', slug: 'mexico', description: 'Ancient ruins, beaches, colonial cities and rich culture.', image: DEFAULT_COUNTRY_IMAGES['mexico'] },
+    { id: uuidv4(), name: 'Belice', slug: 'belize', description: 'Barrier reef, Mayan ruins and Caribbean charm.', image: DEFAULT_COUNTRY_IMAGES['belize'] },
+    { id: uuidv4(), name: 'Honduras', slug: 'honduras', description: 'Mayan ruins, Caribbean islands and natural parks.', image: DEFAULT_COUNTRY_IMAGES['honduras'] },
   ];
 
   const insertCountry = prepare(`INSERT INTO countries (id, name, slug, description, image_url) VALUES (?, ?, ?, ?, ?)`);
@@ -36,48 +152,48 @@ export async function seedData() {
 
   const citiesData = {
     'costa-rica': [
-      { name: 'La Fortuna', slug: 'la-fortuna', description: 'Arenal Volcano, hot springs, waterfalls', image: 'placeholder.png' },
-      { name: 'Monteverde', slug: 'monteverde', description: 'Cloud forests, wildlife, eco-adventures', image: 'placeholder.png' },
-      { name: 'San José', slug: 'san-jose', description: 'Museums, markets, cultural experiences', image: 'placeholder.png' },
-      { name: 'Tamarindo', slug: 'tamarindo', description: 'Beaches, surfing, sunsets', image: 'placeholder.png' },
-      { name: 'Puerto Viejo', slug: 'puerto-viejo', description: 'Caribbean beaches, wildlife, surfing', image: 'placeholder.png' },
-      { name: 'Liberia', slug: 'liberia', description: 'Colonial charm, gateway to Guanacaste beaches', image: 'placeholder.png' },
+      { name: 'La Fortuna', slug: 'la-fortuna', description: 'Arenal Volcano, hot springs, waterfalls', image: DEFAULT_CITY_IMAGES['la-fortuna'] },
+      { name: 'Monteverde', slug: 'monteverde', description: 'Cloud forests, wildlife, eco-adventures', image: DEFAULT_CITY_IMAGES['monteverde'] },
+      { name: 'San José', slug: 'san-jose', description: 'Museums, markets, cultural experiences', image: DEFAULT_CITY_IMAGES['san-jose'] },
+      { name: 'Tamarindo', slug: 'tamarindo', description: 'Beaches, surfing, sunsets', image: DEFAULT_CITY_IMAGES['tamarindo'] },
+      { name: 'Puerto Viejo', slug: 'puerto-viejo', description: 'Caribbean beaches, wildlife, surfing', image: DEFAULT_CITY_IMAGES['puerto-viejo'] },
+      { name: 'Liberia', slug: 'liberia', description: 'Colonial charm, gateway to Guanacaste beaches', image: DEFAULT_CITY_IMAGES['liberia'] },
     ],
     'guatemala': [
-      { name: 'Antigua Guatemala', slug: 'antigua-guatemala', description: 'Colonial streets, volcano views, ruins', image: 'placeholder.png' },
-      { name: 'Flores Petén', slug: 'flores-peten', description: 'Mayan ruins, lake views, jungle adventures', image: 'placeholder.png' },
-      { name: 'Panajachel', slug: 'panajachel', description: 'Lake Atitlán views, volcanic landscapes', image: 'placeholder.png' },
-      { name: 'Quetzaltenango', slug: 'quetzaltenango', description: 'Highland culture, volcano hikes', image: 'placeholder.png' },
-      { name: 'Guatemala City', slug: 'guatemala-city', description: 'Historic plazas, museums, markets', image: 'placeholder.png' },
+      { name: 'Antigua Guatemala', slug: 'antigua-guatemala', description: 'Colonial streets, volcano views, ruins', image: DEFAULT_CITY_IMAGES['antigua-guatemala'] },
+      { name: 'Flores Petén', slug: 'flores-peten', description: 'Mayan ruins, lake views, jungle adventures', image: DEFAULT_CITY_IMAGES['flores-peten'] },
+      { name: 'Panajachel', slug: 'panajachel', description: 'Lake Atitlán views, volcanic landscapes', image: DEFAULT_CITY_IMAGES['panajachel'] },
+      { name: 'Quetzaltenango', slug: 'quetzaltenango', description: 'Highland culture, volcano hikes', image: DEFAULT_CITY_IMAGES['quetzaltenango'] },
+      { name: 'Guatemala City', slug: 'guatemala-city', description: 'Historic plazas, museums, markets', image: DEFAULT_CITY_IMAGES['guatemala-city'] },
     ],
     'el-salvador': [
-      { name: 'El Tunco', slug: 'el-tunco', description: 'Beach surfing, sunsets, nightlife', image: 'placeholder.png' },
-      { name: 'Santa Ana', slug: 'santa-ana', description: 'Volcano hikes, colonial architecture', image: 'placeholder.png' },
-      { name: 'San Salvador', slug: 'san-salvador', description: 'Museums, markets, urban culture', image: 'placeholder.png' },
-      { name: 'Suchitoto', slug: 'suchitoto', description: 'Artisanal town, lake views', image: 'placeholder.png' },
+      { name: 'El Tunco', slug: 'el-tunco', description: 'Beach surfing, sunsets, nightlife', image: DEFAULT_CITY_IMAGES['el-tunco'] },
+      { name: 'Santa Ana', slug: 'santa-ana', description: 'Volcano hikes, colonial architecture', image: DEFAULT_CITY_IMAGES['santa-ana'] },
+      { name: 'San Salvador', slug: 'san-salvador', description: 'Museums, markets, urban culture', image: DEFAULT_CITY_IMAGES['san-salvador'] },
+      { name: 'Suchitoto', slug: 'suchitoto', description: 'Artisanal town, lake views', image: DEFAULT_CITY_IMAGES['suchitoto'] },
     ],
     'nicaragua': [
-      { name: 'Granada', slug: 'granada', description: 'Colonial architecture, lake views', image: 'placeholder.png' },
-      { name: 'León', slug: 'leon', description: 'Volcano hikes, colonial streets', image: 'placeholder.png' },
-      { name: 'San Juan del Sur', slug: 'san-juan-del-sur', description: 'Beaches, surfing, sunsets', image: 'placeholder.png' },
-      { name: 'Managua', slug: 'managua', description: 'Capital city, lakeside', image: 'placeholder.png' },
+      { name: 'Granada', slug: 'granada', description: 'Colonial architecture, lake views', image: DEFAULT_CITY_IMAGES['granada'] },
+      { name: 'León', slug: 'leon', description: 'Volcano hikes, colonial streets', image: DEFAULT_CITY_IMAGES['leon'] },
+      { name: 'San Juan del Sur', slug: 'san-juan-del-sur', description: 'Beaches, surfing, sunsets', image: DEFAULT_CITY_IMAGES['san-juan-del-sur'] },
+      { name: 'Managua', slug: 'managua', description: 'Capital city, lakeside', image: DEFAULT_CITY_IMAGES['managua'] },
     ],
     'panama': [
-      { name: 'Bocas del Toro', slug: 'bocas-del-toro', description: 'Caribbean islands, snorkeling', image: 'placeholder.png' },
-      { name: 'Boquete', slug: 'boquete', description: 'Coffee farms, cloud forests', image: 'placeholder.png' },
-      { name: 'Panama City', slug: 'panama-city', description: 'Modern city, Canal, historic Casco Viejo', image: 'placeholder.png' },
+      { name: 'Bocas del Toro', slug: 'bocas-del-toro', description: 'Caribbean islands, snorkeling', image: DEFAULT_CITY_IMAGES['bocas-del-toro'] },
+      { name: 'Boquete', slug: 'boquete', description: 'Coffee farms, cloud forests', image: DEFAULT_CITY_IMAGES['boquete'] },
+      { name: 'Panama City', slug: 'panama-city', description: 'Modern city, Canal, historic Casco Viejo', image: DEFAULT_CITY_IMAGES['panama-city'] },
     ],
     'mexico': [
-      { name: 'Palenque', slug: 'palenque', description: 'Mayan ruins, jungle, waterfalls', image: 'placeholder.png' },
-      { name: 'San Cristóbal de las Casas', slug: 'san-cristobal-de-las-casas', description: 'Colonial city, indigenous culture', image: 'placeholder.png' },
+      { name: 'Palenque', slug: 'palenque', description: 'Mayan ruins, jungle, waterfalls', image: DEFAULT_CITY_IMAGES['palenque'] },
+      { name: 'San Cristóbal de las Casas', slug: 'san-cristobal-de-las-casas', description: 'Colonial city, indigenous culture', image: DEFAULT_CITY_IMAGES['san-cristobal-de-las-casas'] },
     ],
     'belize': [
-      { name: 'Belize City', slug: 'belize-city', description: 'Caribbean culture, historic sites', image: 'placeholder.png' },
-      { name: 'San Ignacio', slug: 'san-ignacio', description: 'Mayan ruins, caves, adventure', image: 'placeholder.png' },
+      { name: 'Belize City', slug: 'belize-city', description: 'Caribbean culture, historic sites', image: DEFAULT_CITY_IMAGES['belize-city'] },
+      { name: 'San Ignacio', slug: 'san-ignacio', description: 'Mayan ruins, caves, adventure', image: DEFAULT_CITY_IMAGES['san-ignacio'] },
     ],
     'honduras': [
-      { name: 'Copán Ruinas', slug: 'copan-ruinas', description: 'Mayan ruins, archaeological site', image: 'placeholder.png' },
-      { name: 'La Ceiba', slug: 'la-ceiba', description: 'Gateway to islands, nature', image: 'placeholder.png' },
+      { name: 'Copán Ruinas', slug: 'copan-ruinas', description: 'Mayan ruins, archaeological site', image: DEFAULT_CITY_IMAGES['copan-ruinas'] },
+      { name: 'La Ceiba', slug: 'la-ceiba', description: 'Gateway to islands, nature', image: DEFAULT_CITY_IMAGES['la-ceiba'] },
     ],
   };
 
@@ -88,8 +204,9 @@ export async function seedData() {
     const countryCities = citiesData[country.slug] || [];
     countryCities.forEach(city => {
       const cityId = uuidv4();
-      citiesMap[city.slug] = { id: cityId, countryId: country.id };
-      insertCity.run(cityId, city.name, city.slug, country.id, city.description, getImageUrl('cities', city.image));
+      const imgUrl = getImageUrl('cities', city.image);
+      citiesMap[city.slug] = { id: cityId, countryId: country.id, imageUrl: imgUrl };
+      insertCity.run(cityId, city.name, city.slug, country.id, city.description, imgUrl);
     });
   });
 
@@ -113,7 +230,7 @@ export async function seedData() {
       cancellationPolicy: 'Free cancellation up to 24 hours before departure.',
       operator: 'Trail Explorer Partner',
       petsAllowed: 1,
-      image: 'placeholder.png'
+      image: null
     },
     { 
       name: 'La Fortuna to San José', 
@@ -134,7 +251,7 @@ export async function seedData() {
       cancellationPolicy: 'Free cancellation up to 24 hours before departure.',
       operator: 'Trail Explorer Partner',
       petsAllowed: 0,
-      image: 'placeholder.png'
+      image: DEFAULT_SHUTTLE_IMAGES['la-fortuna-to-san-josé']
     },
     { 
       name: 'Liberia to San José', 
@@ -155,7 +272,7 @@ export async function seedData() {
       cancellationPolicy: 'Free cancellation up to 24 hours before departure.',
       operator: 'Trail Explorer Partner',
       petsAllowed: 1,
-      image: 'placeholder.png'
+      image: DEFAULT_SHUTTLE_IMAGES['liberia-to-san-josé']
     },
     { 
       name: 'Tamarindo to Monteverde', 
@@ -176,7 +293,7 @@ export async function seedData() {
       cancellationPolicy: 'Free cancellation up to 24 hours before departure.',
       operator: 'Trail Explorer Partner',
       petsAllowed: 0,
-      image: 'placeholder.png'
+      image: null
     },
     { 
       name: 'Antigua to San Salvador', 
@@ -196,7 +313,7 @@ export async function seedData() {
       cancellationPolicy: 'Free cancellation up to 48 hours before departure.',
       operator: 'International Shuttle Co.',
       petsAllowed: 0,
-      image: 'placeholder.png'
+      image: DEFAULT_SHUTTLE_IMAGES['antigua-to-san-salvador']
     },
     { 
       name: 'El Tunco to Antigua', 
@@ -216,7 +333,7 @@ export async function seedData() {
       cancellationPolicy: 'Free cancellation up to 48 hours before departure.',
       operator: 'International Shuttle Co.',
       petsAllowed: 0,
-      image: 'placeholder.png'
+      image: DEFAULT_SHUTTLE_IMAGES['el-tunco-to-antigua']
     },
     { 
       name: 'Monteverde to La Fortuna', 
@@ -237,7 +354,7 @@ export async function seedData() {
       cancellationPolicy: 'Free cancellation up to 24 hours before departure.',
       operator: 'Trail Explorer Partner',
       petsAllowed: 1,
-      image: 'placeholder.png'
+      image: null
     },
     { 
       name: 'Granada to León', 
@@ -258,7 +375,7 @@ export async function seedData() {
       cancellationPolicy: 'Free cancellation up to 24 hours before departure.',
       operator: 'Nicaragua Shuttle Services',
       petsAllowed: 1,
-      image: 'placeholder.png'
+      image: null
     },
   ];
 
@@ -267,13 +384,21 @@ export async function seedData() {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  const shuttleIds = [];
-  shuttles.forEach(s => {
+  for (const s of shuttles) {
     const originCity = citiesMap[s.origin];
     const destCity = citiesMap[s.dest];
     if (originCity && destCity) {
       const shuttleId = uuidv4();
-      shuttleIds.push({ id: shuttleId, originCity, destCity });
+      let shuttleImage = s.image;
+      
+      if (!shuttleImage && originCity.imageUrl && destCity.imageUrl) {
+        try {
+          shuttleImage = await generateShuttleImage(originCity.imageUrl, destCity.imageUrl);
+        } catch (err) {
+          console.error(`Error generating composite shuttle image for ${s.name}:`, err);
+        }
+      }
+
       insertShuttle.run(
         shuttleId, s.name, s.name.toLowerCase().replace(/\s+/g, '-'),
         originCity.id, destCity.id, s.price, s.duration, s.schedule, s.availability, 
@@ -281,22 +406,8 @@ export async function seedData() {
         s.type, s.desc,
         s.included, s.toBring, s.luggagePolicy, s.luggageOptions,
         s.pickupInfo, s.cancellationPolicy, s.operator, s.petsAllowed,
-        null
+        shuttleImage || null
       );
-    }
-  });
-
-  for (const s of shuttleIds) {
-    try {
-      const imageUrl = await generateShuttleImage(
-        getCityImageUrl('placeholder.png'),
-        getCityImageUrl('placeholder.png')
-      );
-      if (imageUrl) {
-        prepare('UPDATE shuttles SET image_url = ? WHERE id = ?').run(imageUrl, s.id);
-      }
-    } catch (err) {
-      console.error('Error generating shuttle image:', err);
     }
   }
 
@@ -311,5 +422,7 @@ export async function seedData() {
   const insertFaq = prepare(`INSERT INTO faqs (id, question, question_en, answer, answer_en, category, "order") VALUES (?, ?, ?, ?, ?, ?, ?)`);
   faqs.forEach((f, i) => insertFaq.run(uuidv4(), f.q, f.q_en, f.a, f.a_en, f.category, i));
 
-  console.log('Database seeded successfully!');
+  await syncDatabaseImages();
+
+  console.log('Database seeded and images synchronized successfully!');
 }

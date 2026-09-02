@@ -21,6 +21,7 @@ const PORT = process.env.PORT || 3001;
 function syncSeedImages() {
   const repoImages = path.join(__dirname, '../public/images');
   if (!fs.existsSync(repoImages)) return;
+
   const copyDir = (src, dest) => {
     if (!fs.existsSync(src)) return;
     ensureDir(dest);
@@ -31,12 +32,23 @@ function syncSeedImages() {
       if (stat.isDirectory()) {
         copyDir(srcPath, destPath);
       } else {
-        if (!fs.existsSync(destPath)) {
-          fs.copyFileSync(srcPath, destPath);
+        // Copy if dest doesn't exist or has 0 bytes
+        if (!fs.existsSync(destPath) || fs.statSync(destPath).size === 0) {
+          try {
+            fs.copyFileSync(srcPath, destPath);
+          } catch (err) {
+            console.error(`Error copying image ${srcPath} to ${destPath}:`, err);
+          }
         }
       }
     }
   };
+
+  ensureDir(IMAGES_DIR);
+  ensureDir(path.join(IMAGES_DIR, 'countries'));
+  ensureDir(path.join(IMAGES_DIR, 'cities'));
+  ensureDir(path.join(IMAGES_DIR, 'shuttles'));
+
   copyDir(repoImages, IMAGES_DIR);
 }
 
@@ -45,12 +57,25 @@ app.use(express.json());
 
 ensureDir(IMAGES_DIR);
 syncSeedImages();
+
 const repoImagesDir = path.join(__dirname, '../public/images');
+
+// 1. Serve runtime & uploaded images from IMAGES_DIR (/data/images in production)
 app.use('/images', express.static(IMAGES_DIR));
+
+// 2. Fallback to repo static images directory
 if (fs.existsSync(repoImagesDir)) {
   app.use('/images', express.static(repoImagesDir));
 }
 
+// 3. Fallback for any missing /images/* file: serve placeholder image instead of 404 JSON
+const fallbackPlaceholder = path.join(repoImagesDir, 'cities', 'placeholder.png');
+app.use('/images', (req, res, next) => {
+  if (fs.existsSync(fallbackPlaceholder)) {
+    return res.sendFile(fallbackPlaceholder);
+  }
+  res.status(404).end();
+});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);

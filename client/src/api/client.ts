@@ -48,6 +48,12 @@ export const getImageUrl = (path: string | undefined): string => {
   }
   
   const normalizedPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
+
+  // In production browser, return root-relative path directly for optimal reliability
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return normalizedPath;
+  }
+
   return `${getBaseServerUrl()}${normalizedPath}`;
 };
 

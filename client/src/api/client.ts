@@ -32,16 +32,25 @@ export const getBaseServerUrl = (): string => {
 export const getImageUrl = (path: string | undefined): string => {
   if (!path) return '/placeholder.jpg';
   
-  if (path.startsWith('http://') || path.startsWith('https://')) {
-    if (typeof window !== 'undefined' && window.location.protocol === 'https:' && path.startsWith('http://')) {
-      return path.replace(/^http:\/\//i, 'https://');
+  let cleanPath = path;
+
+  // Clean any host prefix if it points to localhost or 127.0.0.1 (e.g. legacy seed data from local PC)
+  if (cleanPath.includes('localhost') || cleanPath.includes('127.0.0.1')) {
+    cleanPath = cleanPath.replace(/^https?:\/\/[^/]+/i, '');
+  }
+
+  // If path is a full external URL (like Unsplash)
+  if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:' && cleanPath.startsWith('http://')) {
+      return cleanPath.replace(/^http:\/\//i, 'https://');
     }
-    return path;
+    return cleanPath;
   }
   
-  const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  return `${getBaseServerUrl()}${cleanPath}`;
+  const normalizedPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
+  return `${getBaseServerUrl()}${normalizedPath}`;
 };
+
 
 const api = axios.create({
   baseURL: `${getBaseServerUrl()}/api`,

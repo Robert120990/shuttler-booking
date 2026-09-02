@@ -45,7 +45,12 @@ app.use(express.json());
 
 ensureDir(IMAGES_DIR);
 syncSeedImages();
+const repoImagesDir = path.join(__dirname, '../public/images');
 app.use('/images', express.static(IMAGES_DIR));
+if (fs.existsSync(repoImagesDir)) {
+  app.use('/images', express.static(repoImagesDir));
+}
+
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);

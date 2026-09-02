@@ -1,14 +1,24 @@
 import axios from 'axios';
 
-const rawServerUrl = (import.meta.env.VITE_SERVER_URL as string) || '';
-const SERVER_URL = rawServerUrl ? rawServerUrl.replace(/\/+$/, '') : 'http://localhost:3001';
+const getBaseServerUrl = (): string => {
+  const envUrl = (import.meta.env.VITE_SERVER_URL as string) || '';
+  if (envUrl) {
+    return envUrl.replace(/\/+$/, '');
+  }
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return window.location.origin.replace(/\/+$/, '');
+  }
+  return 'http://localhost:3001';
+};
+
+const SERVER_URL = getBaseServerUrl();
 const API_URL = `${SERVER_URL}/api`;
 
 export const getImageUrl = (path: string | undefined): string => {
   if (!path) return '/placeholder.jpg';
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  return `${SERVER_URL}${cleanPath}`;
+  return `${getBaseServerUrl()}${cleanPath}`;
 };
 
 const api = axios.create({

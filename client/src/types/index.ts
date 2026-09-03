@@ -22,6 +22,19 @@ export interface City {
   created_at: string;
 }
 
+export interface Hostel {
+  id: string;
+  name: string;
+  city_id: string;
+  city_name?: string;
+  city_slug?: string;
+  country_name?: string;
+  country_slug?: string;
+  address?: string;
+  phone?: string;
+  created_at: string;
+}
+
 export interface Shuttle {
   id: string;
   name: string;

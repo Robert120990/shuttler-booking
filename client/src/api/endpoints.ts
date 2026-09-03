@@ -1,5 +1,5 @@
 import api from './client';
-import type { Country, City, Shuttle, Booking, FAQ, User } from '../types';
+import type { Country, City, Shuttle, Booking, FAQ, User, Hostel } from '../types';
 
 export const countriesApi = {
   getAll: () => api.get<Country[]>('/countries'),
@@ -16,6 +16,14 @@ export const citiesApi = {
   create: (data: Partial<City>) => api.post<City>('/cities', data),
   update: (id: string, data: Partial<City>) => api.put<City>(`/cities/${id}`, data),
   delete: (id: string) => api.delete(`/cities/${id}`),
+};
+
+export const hostelsApi = {
+  getAll: () => api.get<Hostel[]>('/hostels'),
+  getByCity: (cityIdentifier: string) => api.get<Hostel[]>(`/hostels/city/${cityIdentifier}`),
+  create: (data: Partial<Hostel>) => api.post<Hostel>('/hostels', data),
+  update: (id: string, data: Partial<Hostel>) => api.put<Hostel>(`/hostels/${id}`, data),
+  delete: (id: string) => api.delete(`/hostels/${id}`),
 };
 
 export const shuttlesApi = {
@@ -62,4 +70,5 @@ export const settingsApi = {
   update: (data: Record<string, any>) => api.post<{ message: string; settings: Record<string, string> }>('/settings', data),
   testSmtp: (data: Record<string, any>) => api.post<{ success: boolean; message: string }>('/settings/test-smtp', data),
 };
+
 

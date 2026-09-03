@@ -122,6 +122,15 @@ async function initSqlite() {
       key TEXT UNIQUE NOT NULL,
       value TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS hostels (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      city_id TEXT NOT NULL REFERENCES cities(id),
+      address TEXT,
+      phone TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   saveDb();
@@ -235,6 +244,15 @@ export async function initDb() {
             id TEXT PRIMARY KEY,
             key TEXT UNIQUE NOT NULL,
             value TEXT
+          );
+
+          CREATE TABLE IF NOT EXISTS hostels (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            city_id TEXT NOT NULL REFERENCES cities(id),
+            address TEXT,
+            phone TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           );
         `);
       } finally {

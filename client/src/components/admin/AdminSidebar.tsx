@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Globe, MapPin, Bus, Calendar, Users, HelpCircle, Settings, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Globe, MapPin, Bus, Building2, Calendar, Users, HelpCircle, Settings, LogOut, Menu, X } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { cn } from '../../lib/utils';
 
@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },
   { icon: Globe, label: 'Países', href: '/admin/countries' },
   { icon: MapPin, label: 'Ciudades', href: '/admin/cities' },
+  { icon: Building2, label: 'Hostales / Hoteles', href: '/admin/hostels' },
   { icon: Bus, label: 'Shuttles', href: '/admin/shuttles' },
   { icon: Calendar, label: 'Reservas', href: '/admin/bookings' },
   { icon: Users, label: 'Usuarios', href: '/admin/users' },

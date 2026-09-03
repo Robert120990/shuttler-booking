@@ -23,6 +23,7 @@ import { AdminBookings } from './components/admin/AdminBookings';
 import { AdminFAQs } from './components/admin/AdminFAQs';
 import { AdminUsers } from './components/admin/AdminUsers';
 import { AdminSettings } from './components/admin/AdminSettings';
+import { AdminHostels } from './components/admin/AdminHostels';
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ function App() {
             <Route index element={<AdminDashboard />} />
             <Route path="countries" element={<AdminCountries />} />
             <Route path="cities" element={<AdminCities />} />
+            <Route path="hostels" element={<AdminHostels />} />
             <Route path="shuttles" element={<AdminShuttles />} />
             <Route path="bookings" element={<AdminBookings />} />
             <Route path="faqs" element={<AdminFAQs />} />

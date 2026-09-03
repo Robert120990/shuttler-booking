@@ -256,11 +256,100 @@ export async function seedSampleBookings() {
   }
 }
 
+export async function seedSampleHostels() {
+  try {
+    const hostelCount = await prepare('SELECT COUNT(*) as count FROM hostels').get();
+    if (hostelCount && Number(hostelCount.count) > 0) {
+      return;
+    }
+
+    const cities = await prepare('SELECT id, slug, name FROM cities').all();
+    if (!cities || cities.length === 0) return;
+
+    const cityMap = {};
+    for (const c of cities) {
+      cityMap[c.slug] = c.id;
+    }
+
+    const defaultHostels = [
+      // La Fortuna
+      { citySlug: 'la-fortuna', name: 'Selina La Fortuna', address: 'Calle 468, La Fortuna', phone: '+506 2479 7249' },
+      { citySlug: 'la-fortuna', name: 'Arenal Backpackers Resort', address: '350m oeste de la Iglesia Católica, La Fortuna', phone: '+506 2479 7000' },
+      { citySlug: 'la-fortuna', name: 'Hotel Los Lagos Spa & Resort', address: '6 km oeste del centro de La Fortuna', phone: '+506 2479 1000' },
+      { citySlug: 'la-fortuna', name: 'Tabacón Thermal Resort & Spa', address: '13 km noroeste del centro de La Fortuna', phone: '+506 2519 1999' },
+      
+      // San José
+      { citySlug: 'san-jose', name: 'Selina San José', address: 'Avenida 9, Calle 15, Barrio Amón', phone: '+506 4001 8501' },
+      { citySlug: 'san-jose', name: 'Hotel Presidente San José', address: 'Avenida Central, Calle 7', phone: '+506 2010 0000' },
+      { citySlug: 'san-jose', name: 'Stray Cat Hostel', address: 'Calle 20, Avenida 9, Barrio México', phone: '+506 8505 4505' },
+      { citySlug: 'san-jose', name: 'Hotel Real InterContinental San José', address: 'Frente a Multiplaza Escazú', phone: '+506 2208 2100' },
+      { citySlug: 'san-jose', name: 'Aeropuerto Internacional Juan Santamaría (SJO)', address: 'Alajuela, San José Area', phone: '+506 2437 2400' },
+
+      // Monteverde
+      { citySlug: 'monteverde', name: 'Selina Monteverde', address: 'Santa Elena, Monteverde', phone: '+506 2645 5109' },
+      { citySlug: 'monteverde', name: 'Monteverde Backpackers', address: 'Centro de Santa Elena', phone: '+506 2645 5844' },
+      { citySlug: 'monteverde', name: 'Hotel Belmar', address: '300m este de la Estación de Gasolina', phone: '+506 2645 5201' },
+
+      // Tamarindo
+      { citySlug: 'tamarindo', name: 'Selina Tamarindo', address: 'Playa Tamarindo, Guanacaste', phone: '+506 4001 8505' },
+      { citySlug: 'tamarindo', name: 'Tamarindo Backpackers', address: 'Calle Los Jobos, Tamarindo', phone: '+506 2653 1184' },
+      { citySlug: 'tamarindo', name: 'Hotel Diria Tamarindo', address: 'Playa Tamarindo Central', phone: '+506 2653 0031' },
+
+      // Liberia
+      { citySlug: 'liberia', name: 'Hotel Hilton Garden Inn Liberia Airport', address: 'Frente a Aeropuerto LIR', phone: '+506 2690 8888' },
+      { citySlug: 'liberia', name: 'Hotel Boyeros', address: 'Entrada a Liberia, Carretera Interamericana', phone: '+506 2666 0722' },
+      { citySlug: 'liberia', name: 'Aeropuerto Internacional de Guanacaste (LIR)', address: 'Liberia, Guanacaste', phone: '+506 2668 1010' },
+
+      // Antigua Guatemala
+      { citySlug: 'antigua-guatemala', name: 'Hotel Museo Spa Casa Santo Domingo', address: '3a Calle Oriente 28A, Antigua Guatemala', phone: '+502 7820 1220' },
+      { citySlug: 'antigua-guatemala', name: 'Selina Antigua', address: '6a Avenida Norte #43, Antigua Guatemala', phone: '+502 7832 9494' },
+      { citySlug: 'antigua-guatemala', name: 'Tropicana Hostel', address: '6a Calle Poniente #2, Antigua Guatemala', phone: '+502 7832 0462' },
+      { citySlug: 'antigua-guatemala', name: 'Somos Hostel', address: '4a Avenida Norte #11, Antigua Guatemala', phone: '+502 7832 1530' },
+
+      // San Salvador
+      { citySlug: 'san-salvador', name: 'Hotel Barceló San Salvador', address: 'Boulevard Sergio Vieira de Mello, San Salvador', phone: '+503 2268 4545' },
+      { citySlug: 'san-salvador', name: 'Hostal La Zona', address: 'San Benito, Calle La Reforma #158', phone: '+503 2223 9090' },
+      { citySlug: 'san-salvador', name: 'Hotel Real InterContinental San Salvador', address: 'Boulevard de los Héroes', phone: '+503 2211 3333' },
+
+      // El Tunco
+      { citySlug: 'el-tunco', name: 'Boca Olas Resort Villas', address: 'Playa El Tunco, Tamanique', phone: '+503 2389 6300' },
+      { citySlug: 'el-tunco', name: 'Papaya Lodge Hostel', address: 'Calle Principal El Tunco', phone: '+503 2389 6231' },
+      { citySlug: 'el-tunco', name: 'Mopelia Hostel & Bar', address: 'Playa El Tunco', phone: '+503 2389 6110' },
+
+      // Granada
+      { citySlug: 'granada', name: 'Selina Granada', address: 'Costado Oeste del Parque Central, Granada', phone: '+505 2552 2335' },
+      { citySlug: 'granada', name: 'Hotel Plaza Colón', address: 'Frente al Parque Central, Granada', phone: '+505 2552 8484' },
+      { citySlug: 'granada', name: 'Hostal Oasis Granada', address: 'Calle Estrada #109, Granada', phone: '+505 2552 8006' },
+
+      // León
+      { citySlug: 'leon', name: 'ViaVia Hostel León', address: 'Frente a Iglesia La Merced, León', phone: '+505 2311 6147' },
+      { citySlug: 'leon', name: 'Bigfoot Hostel León', address: 'De la Iglesia San Sebastián 1/2c al norte', phone: '+505 2311 4267' },
+      { citySlug: 'leon', name: 'Hotel El Convento', address: 'Frente a Iglesia San Francisco, León', phone: '+505 2311 7053' },
+    ];
+
+    const insertHostel = prepare(`
+      INSERT INTO hostels (id, name, city_id, address, phone)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+
+    for (const h of defaultHostels) {
+      const cityId = cityMap[h.citySlug];
+      if (cityId) {
+        await insertHostel.run(uuidv4(), h.name, cityId, h.address, h.phone);
+      }
+    }
+    console.log('✅ Hostales de muestra inicializados con éxito.');
+  } catch (err) {
+    console.error('Error seeding hostels:', err);
+  }
+}
+
 export async function seedData() {
   const userCount = await prepare('SELECT COUNT(*) as count FROM users').get();
   if (userCount && Number(userCount.count) > 0) {
     await syncDatabaseImages();
     await seedSampleBookings();
+    await seedSampleHostels();
     return;
   }
 
@@ -566,6 +655,7 @@ export async function seedData() {
 
   await syncDatabaseImages();
   await seedSampleBookings();
+  await seedSampleHostels();
 
   console.log('Database seeded and images synchronized successfully!');
 }

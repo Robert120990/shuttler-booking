@@ -129,23 +129,23 @@ export const AdminShuttles = () => {
   };
 
   const generateAvailabilityText = (days: number[]): string => {
-    if (days.length === 0) return 'No days available';
-    if (days.length === 7) return 'Every day';
-    if (days.length === 5 && !days.includes(0) && !days.includes(6)) return 'Monday to Friday';
-    if (days.length === 2 && days.includes(0) && days.includes(6)) return 'Weekends';
-    if (days.length === 2 && days.includes(5) && days.includes(6)) return 'Friday to Saturday';
+    if (days.length === 0) return 'Sin días disponibles';
+    if (days.length === 7) return 'Todos los días';
+    if (days.length === 5 && !days.includes(0) && !days.includes(6)) return 'Lunes a Viernes';
+    if (days.length === 2 && days.includes(0) && days.includes(6)) return 'Fines de semana';
+    if (days.length === 2 && days.includes(5) && days.includes(6)) return 'Viernes a Sábado';
     
-    const shortDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const shortDays = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
     
     if (days.length <= 3) {
       return days.sort((a, b) => a - b).map(d => shortDays[d]).join(', ');
     }
     
     const sorted = days.sort((a, b) => a - b);
-    return `${shortDays[sorted[0]]} to ${shortDays[sorted[sorted.length - 1]]}`;
+    return `${shortDays[sorted[0]]} a ${shortDays[sorted[sorted.length - 1]]}`;
   };
 
-  const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayLabels = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
   const allDaysSelected = formData.availability_days.length === 7;
   const autoAvailability = generateAvailabilityText(formData.availability_days);
 
@@ -181,20 +181,20 @@ export const AdminShuttles = () => {
       handleCloseModal();
     } catch (error) {
       console.error('Error saving shuttle:', error);
-      alert('Error saving shuttle. Please try again.');
+      alert('Error al guardar el shuttle. Por favor intenta de nuevo.');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this shuttle?')) {
+    if (confirm('¿Estás seguro de que deseas eliminar este shuttle?')) {
       try {
         await shuttlesApi.delete(id);
         await fetchData();
       } catch (error) {
         console.error('Error deleting shuttle:', error);
-        alert('Error deleting shuttle. Please try again.');
+        alert('Error al eliminar el shuttle. Por favor intenta de nuevo.');
       }
     }
   };
@@ -219,34 +219,34 @@ export const AdminShuttles = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Shuttles</h1>
-          <p className="text-slate-500">Manage shuttle routes and services</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Shuttles</h1>
+          <p className="text-slate-500 text-sm sm:text-base">Gestiona rutas y servicios de shuttle</p>
         </div>
-        <Button onClick={() => handleOpenModal()}>
+        <Button onClick={() => handleOpenModal()} className="w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" />
-          Add Shuttle
+          Agregar Shuttle
         </Button>
       </div>
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="relative flex-1 max-w-md">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <div className="relative flex-1 w-full sm:max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
-                placeholder="Search shuttles..."
+                placeholder="Buscar shuttles..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 w-full"
               />
             </div>
             <Select
               options={[
-                { value: '', label: 'All Types' },
+                { value: '', label: 'Todos los tipos' },
                 { value: 'local', label: 'Local' },
-                { value: 'international', label: 'International' },
+                { value: 'international', label: 'Internacional' },
               ]}
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
@@ -255,17 +255,18 @@ export const AdminShuttles = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          {/* Desktop table */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-200">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Image</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Route</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Type</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Price</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Duration</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Status</th>
-                  <th className="text-right py-3 px-4 text-sm font-medium text-slate-500">Actions</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Imagen</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Ruta</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Tipo</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Precio</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Duración</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Estado</th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-slate-500">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -282,13 +283,13 @@ export const AdminShuttles = () => {
                     </td>
                     <td className="py-3 px-4">
                       <Badge variant={shuttle.service_type === 'international' ? 'warning' : 'success'}>
-                        {shuttle.service_type === 'international' ? 'International' : 'Local'}
+                        {shuttle.service_type === 'international' ? 'Internacional' : 'Local'}
                       </Badge>
                     </td>
                     <td className="py-3 px-4 text-slate-900">${shuttle.price}</td>
                     <td className="py-3 px-4 text-slate-600">{shuttle.duration_hours}h</td>
                     <td className="py-3 px-4">
-                      <Badge variant="success">active</Badge>
+                      <Badge variant="success">activo</Badge>
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -305,36 +306,72 @@ export const AdminShuttles = () => {
               </tbody>
             </table>
             {filteredShuttles.length === 0 && (
-              <p className="text-center py-8 text-slate-500">No shuttles found</p>
+              <p className="text-center py-8 text-slate-500">No se encontraron shuttles</p>
             )}
+          </div>
+
+          {/* Mobile cards */}
+          <div className="sm:hidden space-y-3">
+            {filteredShuttles.length === 0 ? (
+              <p className="text-center py-8 text-slate-500">No se encontraron shuttles</p>
+            ) : filteredShuttles.map((shuttle) => (
+              <div key={shuttle.id} className="border border-slate-200 rounded-lg overflow-hidden bg-white">
+                <img src={getImageUrl(shuttle.image_url)} alt={shuttle.name} className="w-full h-32 object-cover" />
+                <div className="p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold text-slate-900">{shuttle.name}</p>
+                      <p className="text-sm text-slate-500">{getCityName((shuttle as any).origin_city_id)} → {getCityName((shuttle as any).destination_city_id)}</p>
+                    </div>
+                    <Badge variant={shuttle.service_type === 'international' ? 'warning' : 'success'}>
+                      {shuttle.service_type === 'international' ? 'Intl.' : 'Local'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 text-sm text-slate-600">
+                      <span className="font-semibold text-slate-900">${shuttle.price}</span>
+                      <span>{shuttle.duration_hours}h</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => handleOpenModal(shuttle)}>
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleDelete(shuttle.id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-y-auto">
-          <Card className="w-full max-w-2xl mx-4 my-8 max-h-[90vh] overflow-y-auto">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>{editingShuttle ? 'Edit Shuttle' : 'Add New Shuttle'}</CardTitle>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 overflow-y-auto p-4">
+          <Card className="w-full max-w-2xl my-4">
+            <CardHeader className="flex flex-row items-center justify-between sticky top-0 bg-white z-10 border-b border-slate-100">
+              <CardTitle>{editingShuttle ? 'Editar Shuttle' : 'Agregar Nuevo Shuttle'}</CardTitle>
               <Button variant="ghost" size="sm" onClick={handleCloseModal}>
                 <X className="w-4 h-4" />
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Input label="Shuttle Name" placeholder="e.g., La Fortuna to Monteverde" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
-              <div className="grid grid-cols-2 gap-4">
-                <Select label="Origin City" options={[{ value: '', label: 'Select city' }, ...cityOptions]} value={formData.origin_city_id} onChange={(e) => setFormData({ ...formData, origin_city_id: e.target.value })} />
-                <Select label="Destination City" options={[{ value: '', label: 'Select city' }, ...cityOptions]} value={formData.destination_city_id} onChange={(e) => setFormData({ ...formData, destination_city_id: e.target.value })} />
+              <Input label="Nombre del Shuttle" placeholder="ej., La Fortuna a Monteverde" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Select label="Ciudad de Origen" options={[{ value: '', label: 'Seleccionar ciudad' }, ...cityOptions]} value={formData.origin_city_id} onChange={(e) => setFormData({ ...formData, origin_city_id: e.target.value })} />
+                <Select label="Ciudad de Destino" options={[{ value: '', label: 'Seleccionar ciudad' }, ...cityOptions]} value={formData.destination_city_id} onChange={(e) => setFormData({ ...formData, destination_city_id: e.target.value })} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <Input label="Price ($)" type="number" placeholder="59" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} />
-                <Input label="Duration (hours)" type="number" placeholder="4" value={formData.duration_hours} onChange={(e) => setFormData({ ...formData, duration_hours: e.target.value })} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input label="Precio ($)" type="number" placeholder="59" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} />
+                <Input label="Duración (horas)" type="number" placeholder="4" value={formData.duration_hours} onChange={(e) => setFormData({ ...formData, duration_hours: e.target.value })} />
               </div>
-              <Input label="Schedule" placeholder="e.g., 8:00 AM" value={formData.schedule} onChange={(e) => setFormData({ ...formData, schedule: e.target.value })} />
+              <Input label="Horario" placeholder="ej., 8:00 AM" value={formData.schedule} onChange={(e) => setFormData({ ...formData, schedule: e.target.value })} />
               
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Available Days</label>
-                <div className="flex gap-2 mb-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">Días Disponibles</label>
+                <div className="flex flex-wrap gap-2 mb-2">
                   {dayLabels.map((label, day) => (
                     <button
                       key={day}
@@ -358,80 +395,80 @@ export const AdminShuttles = () => {
                   })}
                   className="text-sm text-emerald-600 hover:text-emerald-700"
                 >
-                  {allDaysSelected ? 'Clear all' : 'Select all'}
+                  {allDaysSelected ? 'Desmarcar todos' : 'Seleccionar todos'}
                 </button>
                 <span className="ml-4 text-sm text-slate-500">
-                  Auto-generated: <span className="font-medium text-slate-700">{autoAvailability}</span>
+                  Auto: <span className="font-medium text-slate-700">{autoAvailability}</span>
                 </span>
               </div>
 
               <div className="border-t pt-4">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Included Services (comma separated)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Servicios Incluidos (separados por coma)</label>
                 <Input 
-                  placeholder="Air conditioning, Door-to-door service, WiFi" 
+                  placeholder="Aire acondicionado, Servicio puerta a puerta, WiFi" 
                   value={formData.included} 
                   onChange={(e) => setFormData({ ...formData, included: e.target.value })} 
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">What to Bring (comma separated)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Qué Traer (separados por coma)</label>
                 <Input 
-                  placeholder="Book or Kindle, Headphones, Water" 
+                  placeholder="Libro, Audífonos, Agua" 
                   value={formData.to_bring} 
                   onChange={(e) => setFormData({ ...formData, to_bring: e.target.value })} 
                 />
               </div>
 
               <div className="border-t pt-4">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Luggage Options</label>
-                <p className="text-xs text-slate-500 mb-3">Add extra luggage options with their prices</p>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Opciones de Equipaje</label>
+                <p className="text-xs text-slate-500 mb-3">Agrega opciones de equipaje extra con sus precios</p>
                 {formData.luggage_options.map((option, index) => (
                   <div key={index} className="flex gap-2 mb-2">
                     <Input
-                      placeholder="Option name (e.g., Surfboard)"
+                      placeholder="Nombre (ej., Tabla de surf)"
                       value={option.name}
                       onChange={(e) => handleLuggageOptionChange(index, 'name', e.target.value)}
-                      className="flex-1"
+                      className="flex-1 min-w-0"
                     />
                     <Input
                       type="number"
-                      placeholder="Price"
+                      placeholder="Precio"
                       value={option.price}
                       onChange={(e) => handleLuggageOptionChange(index, 'price', Number(e.target.value))}
-                      className="w-24"
+                      className="w-20 sm:w-24"
                     />
-                    <Button variant="ghost" size="sm" onClick={() => handleRemoveLuggageOption(index)} className="text-red-500">
+                    <Button variant="ghost" size="sm" onClick={() => handleRemoveLuggageOption(index)} className="text-red-500 flex-shrink-0">
                       <X className="w-4 h-4" />
                     </Button>
                   </div>
                 ))}
                 <Button variant="outline" size="sm" onClick={handleAddLuggageOption}>
-                  <Plus className="w-4 h-4 mr-1" /> Add Option
+                  <Plus className="w-4 h-4 mr-1" /> Agregar Opción
                 </Button>
               </div>
 
-              <Input label="Luggage Policy" placeholder="e.g., 1 backpack and 1 carry-on per person" value={formData.luggage_policy} onChange={(e) => setFormData({ ...formData, luggage_policy: e.target.value })} />
+              <Input label="Política de Equipaje" placeholder="ej., 1 mochila y 1 bolso de mano por persona" value={formData.luggage_policy} onChange={(e) => setFormData({ ...formData, luggage_policy: e.target.value })} />
               
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Pickup Information</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Información de Recogida</label>
                 <textarea
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   rows={3}
-                  placeholder="Enter pickup locations and details..."
+                  placeholder="Ingresa los lugares y detalles de recogida..."
                   value={formData.pickup_info}
                   onChange={(e) => setFormData({ ...formData, pickup_info: e.target.value })}
                 />
               </div>
 
-              <Input label="Operator" placeholder="e.g., Local third-party operator" value={formData.operator} onChange={(e) => setFormData({ ...formData, operator: e.target.value })} />
+              <Input label="Operador" placeholder="ej., Operador tercero local" value={formData.operator} onChange={(e) => setFormData({ ...formData, operator: e.target.value })} />
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Cancellation Policy</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Política de Cancelación</label>
                 <textarea
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   rows={2}
-                  placeholder="e.g., Free cancellation up to 24 hours before departure."
+                  placeholder="ej., Cancelación gratuita hasta 24 horas antes de la salida."
                   value={formData.cancellation_policy}
                   onChange={(e) => setFormData({ ...formData, cancellation_policy: e.target.value })}
                 />
@@ -445,13 +482,13 @@ export const AdminShuttles = () => {
                   onChange={(e) => setFormData({ ...formData, pets_allowed: e.target.checked })}
                   className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
                 />
-                <label htmlFor="pets_allowed" className="text-sm text-slate-700">Pets Allowed</label>
+                <label htmlFor="pets_allowed" className="text-sm text-slate-700">Se permiten mascotas</label>
               </div>
 
               <div className="flex gap-3 pt-4">
-                <Button variant="outline" className="flex-1" onClick={handleCloseModal}>Cancel</Button>
+                <Button variant="outline" className="flex-1" onClick={handleCloseModal}>Cancelar</Button>
                 <Button className="flex-1" onClick={handleSave} disabled={saving || !formData.name || !formData.origin_city_id || !formData.destination_city_id}>
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Guardar'}
                 </Button>
               </div>
             </CardContent>

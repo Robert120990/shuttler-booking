@@ -94,14 +94,14 @@ export const AdminCountries = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Countries</h1>
-          <p className="text-slate-500">Manage countries and destinations</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Países</h1>
+          <p className="text-slate-500 text-sm sm:text-base">Gestiona países y destinos</p>
         </div>
-        <Button onClick={() => handleOpenModal()}>
+        <Button onClick={() => handleOpenModal()} className="w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" />
-          Add Country
+          Agregar País
         </Button>
       </div>
 

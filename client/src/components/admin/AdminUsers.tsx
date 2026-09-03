@@ -123,10 +123,10 @@ export const AdminUsers = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Gestión de Usuarios</h1>
-          <p className="text-slate-500">Administra las cuentas y permisos de los usuarios del sistema</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Gestión de Usuarios</h1>
+          <p className="text-slate-500 text-sm sm:text-base">Administra las cuentas y permisos de los usuarios del sistema</p>
         </div>
-        <Button onClick={() => handleOpenModal()}>
+        <Button onClick={() => handleOpenModal()} className="w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-2" />
           Agregar Usuario
         </Button>
@@ -186,7 +186,8 @@ export const AdminUsers = () => {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-sm text-slate-600">
               <thead className="bg-slate-50 text-slate-700 font-medium border-y border-slate-200">
                 <tr>
@@ -202,7 +203,7 @@ export const AdminUsers = () => {
                   <tr key={user.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 font-medium text-slate-900">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-slate-200 text-slate-700 rounded-full flex items-center justify-center font-semibold text-xs">
+                        <div className="w-8 h-8 bg-slate-200 text-slate-700 rounded-full flex items-center justify-center font-semibold text-xs flex-shrink-0">
                           {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
                         </div>
                         <span>{user.name}</span>
@@ -247,6 +248,41 @@ export const AdminUsers = () => {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden divide-y divide-slate-200">
+            {filteredUsers.length === 0 ? (
+              <p className="text-center py-8 text-slate-500">No se encontraron usuarios</p>
+            ) : filteredUsers.map((user) => (
+              <div key={user.id} className="px-4 py-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 bg-slate-200 text-slate-700 rounded-full flex items-center justify-center font-semibold text-sm flex-shrink-0">
+                    {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-900 truncate">{user.name}</p>
+                    <p className="text-sm text-slate-500 truncate">{user.email}</p>
+                    <Badge variant={user.role === 'admin' ? 'info' : 'default'} className="mt-1">
+                      {user.role === 'admin' ? 'Administrador' : 'Usuario'}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <Button variant="ghost" size="sm" onClick={() => handleOpenModal(user)}>
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(user.id, user.name)}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>

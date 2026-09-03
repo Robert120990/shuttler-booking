@@ -49,7 +49,7 @@ export const AdminBookings = () => {
       await fetchData();
     } catch (error) {
       console.error('Error updating status:', error);
-      alert('Error updating booking status. Please try again.');
+      alert('Error al actualizar el estado. Por favor intenta de nuevo.');
     } finally {
       setUpdatingId(null);
     }
@@ -93,29 +93,29 @@ export const AdminBookings = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Bookings</h1>
-        <p className="text-slate-500">Manage all reservations and bookings</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Reservas</h1>
+        <p className="text-slate-500 text-sm sm:text-base">Gestiona todas las reservas y pedidos</p>
       </div>
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="relative flex-1 max-w-md">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <div className="relative flex-1 w-full sm:max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <Input
-                placeholder="Search by customer, route..."
+                placeholder="Buscar por cliente, ruta..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 w-full"
               />
             </div>
             <Select
               options={[
-                { value: '', label: 'All Statuses' },
-                { value: 'pending', label: 'Pending' },
-                { value: 'confirmed', label: 'Confirmed' },
-                { value: 'completed', label: 'Completed' },
-                { value: 'cancelled', label: 'Cancelled' },
+                { value: '', label: 'Todos los estados' },
+                { value: 'pending', label: 'Pendiente' },
+                { value: 'confirmed', label: 'Confirmado' },
+                { value: 'completed', label: 'Completado' },
+                { value: 'cancelled', label: 'Cancelado' },
               ]}
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -124,19 +124,20 @@ export const AdminBookings = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-200">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Customer</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Route</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Date</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Passengers</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Luggage</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Cliente</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Ruta</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Fecha</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Pasajeros</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Equipaje</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Total</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Status</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Payment</th>
-                  <th className="text-right py-3 px-4 text-sm font-medium text-slate-500">Actions</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Estado</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">Pago</th>
+                  <th className="text-right py-3 px-4 text-sm font-medium text-slate-500">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -159,11 +160,11 @@ export const AdminBookings = () => {
                       </div>
                     </td>
                     <td className="py-3 px-4 text-slate-600">
-                      {new Date(booking.date).toLocaleDateString('en-US', { 
-                        weekday: 'short', 
-                        year: 'numeric', 
-                        month: 'short', 
-                        day: 'numeric' 
+                      {new Date(booking.date).toLocaleDateString('es-ES', {
+                        weekday: 'short',
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
                       })}
                     </td>
                     <td className="py-3 px-4 text-slate-600">
@@ -176,7 +177,7 @@ export const AdminBookings = () => {
                           <span>{booking.extra_luggage}</span>
                         </div>
                       ) : (
-                        <span className="text-slate-400">None</span>
+                        <span className="text-slate-400">Ninguno</span>
                       )}
                     </td>
                     <td className="py-3 px-4 font-medium text-slate-900">${booking.total_price}</td>
@@ -186,10 +187,10 @@ export const AdminBookings = () => {
                       ) : (
                         <Select
                           options={[
-                            { value: 'pending', label: 'Pending' },
-                            { value: 'confirmed', label: 'Confirmed' },
-                            { value: 'completed', label: 'Completed' },
-                            { value: 'cancelled', label: 'Cancelled' },
+                            { value: 'pending', label: 'Pendiente' },
+                            { value: 'confirmed', label: 'Confirmado' },
+                            { value: 'completed', label: 'Completado' },
+                            { value: 'cancelled', label: 'Cancelado' },
                           ]}
                           value={booking.status || 'pending'}
                           onChange={(e) => handleStatusChange(booking.id, e.target.value)}
@@ -199,7 +200,7 @@ export const AdminBookings = () => {
                     </td>
                     <td className="py-3 px-4">
                       <Badge variant={getPaymentBadgeVariant(booking.payment_status || 'pending')}>
-                        {booking.payment_status === 'paid' ? 'Paid' : booking.payment_status === 'refunded' ? 'Refunded' : 'Pending'}
+                        {booking.payment_status === 'paid' ? 'Pagado' : booking.payment_status === 'refunded' ? 'Reembolsado' : 'Pendiente'}
                       </Badge>
                     </td>
                     <td className="py-3 px-4 text-right">
@@ -212,17 +213,67 @@ export const AdminBookings = () => {
               </tbody>
             </table>
             {filteredBookings.length === 0 && (
-              <p className="text-center py-8 text-slate-500">No bookings found</p>
+              <p className="text-center py-8 text-slate-500">No se encontraron reservas</p>
             )}
+          </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-3">
+            {filteredBookings.length === 0 ? (
+              <p className="text-center py-8 text-slate-500">No se encontraron reservas</p>
+            ) : filteredBookings.map((booking) => (
+              <div key={booking.id} className="border border-slate-200 rounded-lg p-4 space-y-3 bg-white">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-semibold text-slate-900">{booking.passenger_name || 'N/A'}</p>
+                    <p className="text-sm text-slate-500">{booking.passenger_email || 'N/A'}</p>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedBooking(booking)}>
+                    <Eye className="w-4 h-4" />
+                  </Button>
+                </div>
+                <div className="text-sm space-y-1">
+                  <p className="text-slate-700 font-medium">{getShuttleName(booking.shuttle_id)}</p>
+                  <p className="text-slate-500">{new Date(booking.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                  <p className="text-slate-500 flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    {booking.pickup_location || 'N/A'}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <p className="font-bold text-slate-900">${booking.total_price}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant={getPaymentBadgeVariant(booking.payment_status || 'pending')}>
+                      {booking.payment_status === 'paid' ? 'Pagado' : booking.payment_status === 'refunded' ? 'Reembolsado' : 'Pendiente'}
+                    </Badge>
+                    {updatingId === booking.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Select
+                        options={[
+                          { value: 'pending', label: 'Pendiente' },
+                          { value: 'confirmed', label: 'Confirmado' },
+                          { value: 'completed', label: 'Completado' },
+                          { value: 'cancelled', label: 'Cancelado' },
+                        ]}
+                        value={booking.status || 'pending'}
+                        onChange={(e) => handleStatusChange(booking.id, e.target.value)}
+                        className="text-xs"
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
 
       {selectedBooking && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-lg mx-4">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <h2 className="text-lg font-bold">Booking Details</h2>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <CardHeader className="flex flex-row items-center justify-between sticky top-0 bg-white z-10 border-b border-slate-100">
+              <h2 className="text-lg font-bold">Detalles de la Reserva</h2>
               <Button variant="ghost" size="sm" onClick={() => setSelectedBooking(null)}>
                 <X className="w-4 h-4" />
               </Button>
@@ -230,20 +281,20 @@ export const AdminBookings = () => {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-slate-500">Passenger</p>
+                  <p className="text-sm text-slate-500">Pasajero</p>
                   <p className="font-medium">{selectedBooking.passenger_name || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-slate-500">Email</p>
-                  <p className="font-medium">{selectedBooking.passenger_email || 'N/A'}</p>
+                  <p className="font-medium break-all">{selectedBooking.passenger_email || 'N/A'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-slate-500">Phone</p>
+                  <p className="text-sm text-slate-500">Teléfono</p>
                   <p className="font-medium">{selectedBooking.passenger_phone || 'N/A'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-slate-500">Date</p>
-                  <p className="font-medium">{new Date(selectedBooking.date).toLocaleDateString()}</p>
+                  <p className="text-sm text-slate-500">Fecha</p>
+                  <p className="font-medium">{new Date(selectedBooking.date).toLocaleDateString('es-ES')}</p>
                 </div>
               </div>
               
@@ -252,7 +303,7 @@ export const AdminBookings = () => {
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 text-emerald-600" />
                     <div>
-                      <p className="text-sm text-slate-500">Person to Pick Up</p>
+                      <p className="text-sm text-slate-500">Persona a recoger</p>
                       <p className="font-medium">{(selectedBooking as any).pickup_person_name}</p>
                     </div>
                   </div>
@@ -260,20 +311,20 @@ export const AdminBookings = () => {
               )}
               
               <div className="border-t pt-4">
-                <p className="text-sm text-slate-500 mb-1">Route</p>
+                <p className="text-sm text-slate-500 mb-1">Ruta</p>
                 <p className="font-medium">{getShuttleName(selectedBooking.shuttle_id)}</p>
                 <div className="mt-2 space-y-1">
                   <div className="flex items-start gap-2">
-                    <MapPin className="w-4 h-4 text-emerald-600 mt-0.5" />
+                    <MapPin className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm text-slate-500">Pickup</p>
+                      <p className="text-sm text-slate-500">Recogida</p>
                       <p className="font-medium">{selectedBooking.pickup_location || 'N/A'}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
-                    <MapPin className="w-4 h-4 text-red-600 mt-0.5" />
+                    <MapPin className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm text-slate-500">Dropoff</p>
+                      <p className="text-sm text-slate-500">Entrega</p>
                       <p className="font-medium">{selectedBooking.dropoff_location || 'N/A'}</p>
                     </div>
                   </div>
@@ -282,27 +333,27 @@ export const AdminBookings = () => {
 
               <div className="border-t pt-4 flex gap-8">
                 <div>
-                  <p className="text-sm text-slate-500 mb-1">Passengers</p>
+                  <p className="text-sm text-slate-500 mb-1">Pasajeros</p>
                   <p className="font-medium">{selectedBooking.seats || 1}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-slate-500 mb-1">Luggage</p>
+                  <p className="text-sm text-slate-500 mb-1">Equipaje</p>
                   <p className="font-medium">
                     {selectedBooking.extra_luggage && selectedBooking.extra_luggage > 0 
-                      ? `${selectedBooking.extra_luggage} bags`
-                      : 'No extra luggage'}
+                      ? `${selectedBooking.extra_luggage} maletas`
+                      : 'Sin equipaje extra'}
                   </p>
                 </div>
               </div>
 
               <div className="border-t pt-4">
                 <div className="flex justify-between items-center">
-                  <p className="text-slate-500">Total Paid</p>
+                  <p className="text-slate-500">Total Pagado</p>
                   <p className="text-xl font-bold text-emerald-600">${selectedBooking.total_price}</p>
                 </div>
               </div>
 
-              <div className="border-t pt-4 flex gap-2">
+              <div className="border-t pt-4 flex gap-2 flex-wrap">
                 <Badge variant={getStatusBadgeVariant(selectedBooking.status || 'pending')}>
                   {selectedBooking.status}
                 </Badge>
@@ -312,7 +363,7 @@ export const AdminBookings = () => {
               </div>
 
               <p className="text-xs text-slate-400 text-center">
-                Created: {new Date(selectedBooking.created_at).toLocaleString()}
+                Creado: {new Date(selectedBooking.created_at).toLocaleString('es-ES')}
               </p>
             </CardContent>
           </Card>

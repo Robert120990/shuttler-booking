@@ -45,20 +45,20 @@ export const AdminDashboard = () => {
   }
 
   const statsData = [
-    { label: 'Total Countries', value: stats.countries.toString(), icon: Globe, change: 'Total available', positive: true },
-    { label: 'Total Cities', value: stats.cities.toString(), icon: MapPin, change: 'All destinations', positive: true },
-    { label: 'Active Shuttles', value: stats.shuttles.toString(), icon: Bus, change: 'All routes', positive: true },
-    { label: 'Total Bookings', value: stats.bookings.toString(), icon: Calendar, change: 'All reservations', positive: true },
+    { label: 'Total Países', value: stats.countries.toString(), icon: Globe, change: 'Total disponibles', positive: true },
+    { label: 'Total Ciudades', value: stats.cities.toString(), icon: MapPin, change: 'Todos los destinos', positive: true },
+    { label: 'Shuttles Activos', value: stats.shuttles.toString(), icon: Bus, change: 'Todas las rutas', positive: true },
+    { label: 'Total Reservas', value: stats.bookings.toString(), icon: Calendar, change: 'Todas las reservas', positive: true },
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-        <p className="text-slate-500">Welcome back! Here's what's happening.</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Dashboard</h1>
+        <p className="text-slate-500 text-sm sm:text-base">¡Bienvenido de nuevo! Aquí está lo que está pasando.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         {statsData.map((stat) => (
           <Card key={stat.label}>
             <CardContent className="pt-6">
@@ -80,45 +80,45 @@ export const AdminDashboard = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              Recent Bookings
+              Reservas Recientes
               <Link to="/admin/bookings" className="text-sm font-normal text-emerald-600 hover:underline">
-                View all
+                Ver todas
               </Link>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {recentBookings.length > 0 ? recentBookings.map((booking) => (
-                <div key={booking.id} className="flex items-center justify-between py-3 border-b border-slate-100 last:border-0">
-                  <div>
-                    <p className="font-medium text-slate-900">{booking.passenger_name || 'N/A'}</p>
-                    <p className="text-sm text-slate-500">{booking.passenger_email || 'N/A'}</p>
+                <div key={booking.id} className="flex items-center justify-between py-3 border-b border-slate-100 last:border-0 gap-2">
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-900 truncate">{booking.passenger_name || 'N/A'}</p>
+                    <p className="text-sm text-slate-500 truncate">{booking.passenger_email || 'N/A'}</p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex-shrink-0">
                     <p className="font-medium text-slate-900">${booking.total_price}</p>
-                    <p className="text-sm text-slate-500">{new Date(booking.date).toLocaleDateString()}</p>
+                    <p className="text-sm text-slate-500">{new Date(booking.date).toLocaleDateString('es-ES')}</p>
                     <Badge variant={booking.status === 'confirmed' ? 'success' : booking.status === 'pending' ? 'warning' : booking.status === 'completed' ? 'info' : 'default'}>
                       {booking.status}
                     </Badge>
                   </div>
                 </div>
               )) : (
-                <p className="text-slate-500 text-center py-4">No bookings yet</p>
+                <p className="text-slate-500 text-center py-4">Sin reservas aún</p>
               )}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hidden lg:block">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              Top Routes
+              Rutas Principales
               <Link to="/admin/shuttles" className="text-sm font-normal text-emerald-600 hover:underline">
-                View all
+                Ver todas
               </Link>
             </CardTitle>
           </CardHeader>
@@ -126,7 +126,7 @@ export const AdminDashboard = () => {
             <div className="h-64 bg-slate-50 rounded-lg flex items-center justify-center">
               <div className="text-center text-slate-400">
                 <TrendingUp className="w-12 h-12 mx-auto mb-2" />
-                <p>View all shuttles to see route statistics</p>
+                <p>Ver todos los shuttles para estadísticas de rutas</p>
               </div>
             </div>
           </CardContent>
@@ -135,13 +135,13 @@ export const AdminDashboard = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Revenue Overview</CardTitle>
+          <CardTitle>Resumen de Ingresos</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-64 bg-slate-50 rounded-lg flex items-center justify-center">
+          <div className="h-48 sm:h-64 bg-slate-50 rounded-lg flex items-center justify-center">
             <div className="text-center text-slate-400">
               <TrendingUp className="w-12 h-12 mx-auto mb-2" />
-              <p>Revenue chart will be implemented with a charting library</p>
+              <p className="text-sm">El gráfico de ingresos se implementará próximamente</p>
             </div>
           </div>
         </CardContent>

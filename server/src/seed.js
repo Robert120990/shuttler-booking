@@ -119,10 +119,148 @@ export async function syncDatabaseImages() {
   }
 }
 
+export function seedSampleBookings() {
+  try {
+    // Fix any legacy booking pointing to invalid shuttle_id 's1'
+    const invalidBookings = prepare("SELECT id FROM bookings WHERE shuttle_id = 's1'").all();
+    if (invalidBookings.length > 0) {
+      const firstShuttle = prepare('SELECT id FROM shuttles LIMIT 1').get();
+      if (firstShuttle) {
+        prepare("UPDATE bookings SET shuttle_id = ? WHERE shuttle_id = 's1'").run(firstShuttle.id);
+      }
+    }
+
+    const bookingCount = prepare('SELECT COUNT(*) as count FROM bookings').get();
+    if (bookingCount && bookingCount.count > 1) {
+      return;
+    }
+
+    const shuttles = prepare('SELECT id, name, price FROM shuttles').all();
+    if (!shuttles || shuttles.length === 0) return;
+
+    const insertBooking = prepare(`
+      INSERT INTO bookings (
+        id, user_id, shuttle_id, date, pickup_location, dropoff_location,
+        passenger_name, passenger_email, passenger_phone, seats,
+        extra_luggage, total_price, status, payment_status, pickup_person_name
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const sampleBookings = [
+      {
+        shuttleIndex: 0,
+        date: '2026-09-10',
+        pickup_location: 'Hotel Real InterContinental San José',
+        dropoff_location: 'Tabacón Thermal Resort, La Fortuna',
+        passenger_name: 'Carlos Mendoza',
+        passenger_email: 'carlos.mendoza@gmail.com',
+        passenger_phone: '+506 8834-5678',
+        pickup_person_name: 'Carlos Mendoza',
+        seats: 2,
+        extra_luggage: 1,
+        priceMultiplier: 2,
+        extraFee: 15,
+        status: 'confirmed',
+        payment_status: 'paid'
+      },
+      {
+        shuttleIndex: 1 % shuttles.length,
+        date: '2026-09-12',
+        pickup_location: 'Hotel Hilton Garden Inn Liberia Airport',
+        dropoff_location: 'Hotel Presidente, San José',
+        passenger_name: 'Emma Watson',
+        passenger_email: 'emma.traveler@outlook.com',
+        passenger_phone: '+1 415 555 2671',
+        pickup_person_name: 'Emma Watson',
+        seats: 1,
+        extra_luggage: 0,
+        priceMultiplier: 1,
+        extraFee: 0,
+        status: 'pending',
+        payment_status: 'pending'
+      },
+      {
+        shuttleIndex: 2 % shuttles.length,
+        date: '2026-09-15',
+        pickup_location: 'Hotel Casa Santo Domingo, Antigua Guatemala',
+        dropoff_location: 'Hotel Barceló San Salvador',
+        passenger_name: 'Alejandro Ramos',
+        passenger_email: 'a.ramos@empresa.com',
+        passenger_phone: '+503 7234-8901',
+        pickup_person_name: 'Alejandro Ramos',
+        seats: 3,
+        extra_luggage: 2,
+        priceMultiplier: 3,
+        extraFee: 30,
+        status: 'confirmed',
+        payment_status: 'paid'
+      },
+      {
+        shuttleIndex: 3 % shuttles.length,
+        date: '2026-09-08',
+        pickup_location: 'Boca Olas Resort Villas, El Tunco',
+        dropoff_location: 'Hotel Los Pasos, Antigua Guatemala',
+        passenger_name: 'Sophia Martinez',
+        passenger_email: 'sophia.m@yahoo.com',
+        passenger_phone: '+1 305 555 7890',
+        pickup_person_name: 'Sophia Martinez',
+        seats: 2,
+        extra_luggage: 1,
+        priceMultiplier: 2,
+        extraFee: 20,
+        status: 'completed',
+        payment_status: 'paid'
+      },
+      {
+        shuttleIndex: 0,
+        date: '2026-09-20',
+        pickup_location: 'Selina Hostel La Fortuna',
+        dropoff_location: 'Aeropuerto Internacional Juan Santamaría (SJO)',
+        passenger_name: 'David Schmidt',
+        passenger_email: 'schmidt.david@posteo.de',
+        passenger_phone: '+49 170 1234567',
+        pickup_person_name: 'David Schmidt',
+        seats: 1,
+        extra_luggage: 0,
+        priceMultiplier: 1,
+        extraFee: 0,
+        status: 'cancelled',
+        payment_status: 'refunded'
+      }
+    ];
+
+    for (const b of sampleBookings) {
+      const shuttle = shuttles[b.shuttleIndex] || shuttles[0];
+      const total = (shuttle.price * b.priceMultiplier) + b.extraFee;
+      insertBooking.run(
+        uuidv4(),
+        null,
+        shuttle.id,
+        b.date,
+        b.pickup_location,
+        b.dropoff_location,
+        b.passenger_name,
+        b.passenger_email,
+        b.passenger_phone,
+        b.seats,
+        b.extra_luggage,
+        total,
+        b.status,
+        b.payment_status,
+        b.pickup_person_name
+      );
+    }
+  } catch (err) {
+    console.error('Error seeding sample bookings:', err);
+  }
+}
+
 export async function seedData() {
   const userCount = prepare('SELECT COUNT(*) as count FROM users').get();
   if (userCount && userCount.count > 0) {
     await syncDatabaseImages();
+    seedSampleBookings();
     return;
   }
 
@@ -423,6 +561,8 @@ export async function seedData() {
   faqs.forEach((f, i) => insertFaq.run(uuidv4(), f.q, f.q_en, f.a, f.a_en, f.category, i));
 
   await syncDatabaseImages();
+  seedSampleBookings();
 
   console.log('Database seeded and images synchronized successfully!');
 }
+

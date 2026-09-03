@@ -37,9 +37,10 @@ export const AdminBookings = () => {
     }
   };
 
-  const getShuttleName = (shuttleId: string) => {
+  const getShuttleName = (shuttleId: string, booking?: any) => {
+    if (booking && booking.shuttle_name) return booking.shuttle_name;
     const shuttle = shuttles.find(s => s.id === shuttleId);
-    return shuttle?.name || 'Unknown Route';
+    return shuttle?.name || 'Ruta no especificada';
   };
 
   const handleStatusChange = async (bookingId: string, newStatus: string) => {
@@ -56,10 +57,13 @@ export const AdminBookings = () => {
   };
 
   const filteredBookings = bookings.filter((booking) => {
+    const routeName = getShuttleName(booking.shuttle_id, booking);
+    const passengerName = booking.passenger_name || '';
+    const passengerEmail = booking.passenger_email || '';
     const matchesSearch =
-      booking.passenger_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      booking.passenger_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getShuttleName(booking.shuttle_id).toLowerCase().includes(searchTerm.toLowerCase());
+      passengerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      passengerEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      routeName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = !statusFilter || booking.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -152,7 +156,7 @@ export const AdminBookings = () => {
                     </td>
                     <td className="py-3 px-4">
                       <div>
-                        <p className="text-slate-600">{getShuttleName(booking.shuttle_id)}</p>
+                        <p className="text-slate-600">{getShuttleName(booking.shuttle_id, booking)}</p>
                         <p className="text-xs text-slate-400 flex items-center gap-1">
                           <MapPin className="w-3 h-3" />
                           {booking.pickup_location || 'N/A'}
@@ -233,7 +237,7 @@ export const AdminBookings = () => {
                   </Button>
                 </div>
                 <div className="text-sm space-y-1">
-                  <p className="text-slate-700 font-medium">{getShuttleName(booking.shuttle_id)}</p>
+                  <p className="text-slate-700 font-medium">{getShuttleName(booking.shuttle_id, booking)}</p>
                   <p className="text-slate-500">{new Date(booking.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
                   <p className="text-slate-500 flex items-center gap-1">
                     <MapPin className="w-3 h-3" />
@@ -312,7 +316,7 @@ export const AdminBookings = () => {
               
               <div className="border-t pt-4">
                 <p className="text-sm text-slate-500 mb-1">Ruta</p>
-                <p className="font-medium">{getShuttleName(selectedBooking.shuttle_id)}</p>
+                <p className="font-medium">{getShuttleName(selectedBooking.shuttle_id, selectedBooking)}</p>
                 <div className="mt-2 space-y-1">
                   <div className="flex items-start gap-2">
                     <MapPin className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />

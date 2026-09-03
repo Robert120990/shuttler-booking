@@ -1,6 +1,7 @@
 import express from 'express';
 import { prepare } from '../db.js';
 import { v4 as uuidv4 } from 'uuid';
+import { sendBookingNotification } from '../utils/mailer.js';
 
 const router = express.Router();
 
@@ -77,6 +78,13 @@ router.post('/', (req, res) => {
     );
 
     const booking = prepare('SELECT * FROM bookings WHERE id = ?').get(id);
+    const shuttle = prepare('SELECT * FROM shuttles WHERE id = ?').get(shuttle_id);
+
+    // Send email notification asynchronously
+    sendBookingNotification(booking, shuttle).catch((mailErr) => {
+      console.error('Error enviando notificación de reserva:', mailErr);
+    });
+
     res.status(201).json(booking);
   } catch (error) {
     console.error('Error creating booking:', error);

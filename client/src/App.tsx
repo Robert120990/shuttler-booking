@@ -22,6 +22,7 @@ import { AdminShuttles } from './components/admin/AdminShuttles';
 import { AdminBookings } from './components/admin/AdminBookings';
 import { AdminFAQs } from './components/admin/AdminFAQs';
 import { AdminUsers } from './components/admin/AdminUsers';
+import { AdminSettings } from './components/admin/AdminSettings';
 
 const queryClient = new QueryClient();
 
@@ -54,7 +55,7 @@ function App() {
             <Route path="bookings" element={<AdminBookings />} />
             <Route path="faqs" element={<AdminFAQs />} />
             <Route path="users" element={<AdminUsers />} />
-            <Route path="settings" element={<AdminDashboard />} />
+            <Route path="settings" element={<AdminSettings />} />
           </Route>
         </Routes>
       </BrowserRouter>

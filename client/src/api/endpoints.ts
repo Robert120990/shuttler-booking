@@ -56,3 +56,10 @@ export const authApi = {
   register: (data: { name: string; email: string; password: string }) => api.post<{ token: string; user: User }>('/auth/register', data),
   me: () => api.get<User>('/auth/me'),
 };
+
+export const settingsApi = {
+  getAll: () => api.get<Record<string, string>>('/settings'),
+  update: (data: Record<string, any>) => api.post<{ message: string; settings: Record<string, string> }>('/settings', data),
+  testSmtp: (data: Record<string, any>) => api.post<{ success: boolean; message: string }>('/settings/test-smtp', data),
+};
+

@@ -20,7 +20,41 @@ router.get('/:slug', async (req, res) => {
     if (!country) return res.status(404).json({ error: 'Country not found' });
     
     const cities = await prepare('SELECT * FROM cities WHERE country_id = ? ORDER BY name').all(country.id);
-    res.json({ ...country, cities });
+
+    // Shuttles saliendo desde este país
+    const departureShuttles = await prepare(`
+      SELECT s.*, 
+        o.name as origin_name, o.slug as origin_slug, o.image_url as origin_image,
+        d.name as destination_name, d.slug as destination_slug, d.image_url as destination_image,
+        co_dest.name as dest_country_name, co_dest.slug as dest_country_slug
+      FROM shuttles s
+      JOIN cities o ON s.origin_city_id = o.id
+      JOIN cities d ON s.destination_city_id = d.id
+      JOIN countries co_dest ON d.country_id = co_dest.id
+      WHERE o.country_id = ?
+      ORDER BY s.rating DESC, s.name ASC
+    `).all(country.id);
+
+    // Shuttles llegando hacia este país
+    const arrivalShuttles = await prepare(`
+      SELECT s.*, 
+        o.name as origin_name, o.slug as origin_slug, o.image_url as origin_image,
+        d.name as destination_name, d.slug as destination_slug, d.image_url as destination_image,
+        co_orig.name as origin_country_name, co_orig.slug as origin_country_slug
+      FROM shuttles s
+      JOIN cities o ON s.origin_city_id = o.id
+      JOIN cities d ON s.destination_city_id = d.id
+      JOIN countries co_orig ON o.country_id = co_orig.id
+      WHERE d.country_id = ?
+      ORDER BY s.rating DESC, s.name ASC
+    `).all(country.id);
+
+    res.json({
+      ...country,
+      cities,
+      departureShuttles,
+      arrivalShuttles,
+    });
   } catch (error) {
     console.error('Error fetching country:', error);
     res.status(500).json({ error: 'Failed to fetch country' });

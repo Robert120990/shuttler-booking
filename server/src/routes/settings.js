@@ -24,16 +24,15 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Datos de configuración inválidos' });
     }
 
-    const upsertStmt = prepare(`
-      INSERT INTO settings (id, key, value)
-      VALUES (?, ?, ?)
-      ON CONFLICT(key) DO UPDATE SET value = excluded.value
-    `);
-
     for (const [key, value] of Object.entries(settingsData)) {
       if (typeof key === 'string' && key.trim()) {
         const strVal = value === undefined || value === null ? '' : String(value);
-        await upsertStmt.run(uuidv4(), key, strVal);
+        const existing = await prepare('SELECT id FROM settings WHERE key = ?').get(key.trim());
+        if (existing) {
+          await prepare('UPDATE settings SET value = ? WHERE key = ?').run(strVal, key.trim());
+        } else {
+          await prepare('INSERT INTO settings (id, key, value) VALUES (?, ?, ?)').run(uuidv4(), key.trim(), strVal);
+        }
       }
     }
 
@@ -48,9 +47,9 @@ router.post('/', async (req, res) => {
 // POST /api/settings/test-smtp - Send test email
 router.post('/test-smtp', async (req, res) => {
   try {
-    const { smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from, target_email } = req.body;
+    const { smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from, target_email, notification_email, test_email } = req.body;
 
-    const emailToSend = target_email || req.body.notification_email || smtp_user;
+    const emailToSend = target_email || test_email || notification_email || smtp_user;
     if (!emailToSend) {
       return res.status(400).json({ error: 'Debes especificar un correo destinatario para la prueba.' });
     }

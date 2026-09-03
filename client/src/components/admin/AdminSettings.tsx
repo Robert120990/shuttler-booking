@@ -21,6 +21,7 @@ export const AdminSettings = () => {
     smtp_pass: '',
     smtp_from: '',
     notification_email: '',
+    test_email: '',
     send_customer_email: 'true',
   });
 
@@ -33,6 +34,8 @@ export const AdminSettings = () => {
       setLoading(true);
       const res = await settingsApi.getAll();
       if (res.data) {
+        const notifEmail = res.data.notification_email ?? res.data.smtp_user ?? '';
+        const testMail = res.data.test_email || notifEmail || res.data.smtp_user || '';
         setFormData({
           smtp_host: res.data.smtp_host || '',
           smtp_port: res.data.smtp_port || '587',
@@ -40,12 +43,11 @@ export const AdminSettings = () => {
           smtp_user: res.data.smtp_user || '',
           smtp_pass: res.data.smtp_pass || '',
           smtp_from: res.data.smtp_from || '',
-          notification_email: res.data.notification_email || res.data.smtp_user || '',
+          notification_email: notifEmail,
+          test_email: testMail,
           send_customer_email: res.data.send_customer_email !== undefined ? res.data.send_customer_email : 'true',
         });
-        if (res.data.notification_email || res.data.smtp_user) {
-          setTestEmail(res.data.notification_email || res.data.smtp_user);
-        }
+        setTestEmail(testMail);
       }
     } catch (error) {
       console.error('Error al cargar configuración:', error);
@@ -59,7 +61,28 @@ export const AdminSettings = () => {
     try {
       setSaving(true);
       setFeedback(null);
-      await settingsApi.update(formData);
+      const payload = {
+        ...formData,
+        test_email: testEmail || formData.test_email || formData.notification_email,
+      };
+      const res = await settingsApi.update(payload);
+      if (res.data?.settings) {
+        const s = res.data.settings;
+        const notifEmail = s.notification_email ?? s.smtp_user ?? '';
+        const testMail = s.test_email || notifEmail || s.smtp_user || '';
+        setFormData({
+          smtp_host: s.smtp_host || '',
+          smtp_port: s.smtp_port || '587',
+          smtp_secure: s.smtp_secure || 'false',
+          smtp_user: s.smtp_user || '',
+          smtp_pass: s.smtp_pass || '',
+          smtp_from: s.smtp_from || '',
+          notification_email: notifEmail,
+          test_email: testMail,
+          send_customer_email: s.send_customer_email !== undefined ? s.send_customer_email : 'true',
+        });
+        setTestEmail(testMail);
+      }
       setFeedback({
         type: 'success',
         message: '¡Configuración guardada exitosamente!',
@@ -74,7 +97,7 @@ export const AdminSettings = () => {
   };
 
   const handleTestSmtp = async () => {
-    const target = testEmail || formData.notification_email || formData.smtp_user;
+    const target = testEmail || formData.test_email || formData.notification_email || formData.smtp_user;
     if (!target) {
       setFeedback({
         type: 'error',
@@ -156,9 +179,9 @@ export const AdminSettings = () => {
                 <Mail className="w-5 h-5" />
               </div>
               <div>
-                <CardTitle className="text-lg">Destinatarios de Notificaciones</CardTitle>
+                <CardTitle className="text-lg">Correo de Destino para Notificaciones</CardTitle>
                 <CardDescription>
-                  Define a dónde se enviarán las alertas automáticas cuando un cliente realice una reserva
+                  Define a dónde se enviarán las alertas y detalles automáticos cuando un cliente realice una reserva
                 </CardDescription>
               </div>
             </div>
@@ -166,20 +189,23 @@ export const AdminSettings = () => {
           <CardContent className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
-                Correo para Recibir Notificaciones de Reserva <span className="text-red-500">*</span>
+                Correo Electrónico de Destino <span className="text-red-500">*</span>
               </label>
               <Input
-                type="email"
-                placeholder="ejemplo@trailexplorer.com"
+                type="text"
+                placeholder="reservas@trailexplorer.com"
                 value={formData.notification_email}
                 onChange={(e) => {
-                  setFormData({ ...formData, notification_email: e.target.value });
-                  if (!testEmail) setTestEmail(e.target.value);
+                  const val = e.target.value;
+                  setFormData((prev) => ({ ...prev, notification_email: val }));
+                  if (!testEmail || testEmail === formData.notification_email) {
+                    setTestEmail(val);
+                  }
                 }}
                 required
               />
               <p className="text-xs text-slate-500 mt-1">
-                Cada vez que se confirme o solicite una reserva en la web, se enviará un reporte completo a este correo.
+                Cada vez que se confirme o solicite una reserva en la web, se enviará un reporte completo a este correo asignado. Puedes ingresar uno o varios correos separados por comas.
               </p>
             </div>
 

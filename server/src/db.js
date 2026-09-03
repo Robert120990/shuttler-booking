@@ -133,6 +133,10 @@ async function initSqlite() {
     );
   `);
 
+  try {
+    sqliteDb.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_settings_key ON settings (key)');
+  } catch (e) {}
+
   saveDb();
   return sqliteDb;
 }
@@ -254,6 +258,8 @@ export async function initDb() {
             phone TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           );
+
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_settings_key ON settings (key);
         `);
       } finally {
         client.release();

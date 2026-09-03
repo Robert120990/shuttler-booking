@@ -143,7 +143,34 @@ export const AdminSettings = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl pb-12">
+    <div className="space-y-6 max-w-4xl pb-12 relative">
+      {/* Floating Toast Notification */}
+      {feedback && (
+        <div className="fixed top-6 right-6 z-50 max-w-md w-full animate-in fade-in slide-in-from-top-4 duration-300">
+          <div
+            className={`p-4 rounded-xl shadow-xl flex items-start gap-3 border ${
+              feedback.type === 'success'
+                ? 'bg-emerald-600 text-white border-emerald-700 shadow-emerald-900/20'
+                : 'bg-red-600 text-white border-red-700 shadow-red-900/20'
+            }`}
+          >
+            {feedback.type === 'success' ? (
+              <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5 text-white" />
+            ) : (
+              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-white" />
+            )}
+            <div className="flex-1 text-sm font-medium">{feedback.message}</div>
+            <button
+              type="button"
+              onClick={() => setFeedback(null)}
+              className="text-white/80 hover:text-white text-xs px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Configuración del Sistema</h1>
@@ -152,7 +179,7 @@ export const AdminSettings = () => {
         </p>
       </div>
 
-      {/* Feedback Banner */}
+      {/* In-page Feedback Banner */}
       {feedback && (
         <div
           className={`p-4 rounded-lg flex items-start gap-3 border transition-all ${
@@ -189,7 +216,7 @@ export const AdminSettings = () => {
           <CardContent className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
-                Correo Electrónico de Destino <span className="text-red-500">*</span>
+                Correo Electrónico de Destino
               </label>
               <Input
                 type="text"
@@ -202,7 +229,6 @@ export const AdminSettings = () => {
                     setTestEmail(val);
                   }
                 }}
-                required
               />
               <p className="text-xs text-slate-500 mt-1">
                 Cada vez que se confirme o solicite una reserva en la web, se enviará un reporte completo a este correo asignado. Puedes ingresar uno o varios correos separados por comas.
@@ -243,24 +269,22 @@ export const AdminSettings = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="sm:col-span-2">
                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Servidor SMTP (Host) <span className="text-red-500">*</span>
+                  Servidor SMTP (Host)
                 </label>
                 <Input
                   placeholder="ej. smtp.gmail.com, smtp.mailgun.org, smtp.office365.com"
                   value={formData.smtp_host}
                   onChange={(e) => setFormData({ ...formData, smtp_host: e.target.value })}
-                  required
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Puerto <span className="text-red-500">*</span>
+                  Puerto
                 </label>
                 <Input
                   placeholder="587 o 465"
                   value={formData.smtp_port}
                   onChange={(e) => setFormData({ ...formData, smtp_port: e.target.value })}
-                  required
                 />
               </div>
             </div>
@@ -268,20 +292,19 @@ export const AdminSettings = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Usuario / Correo SMTP <span className="text-red-500">*</span>
+                  Usuario / Correo SMTP
                 </label>
                 <Input
                   type="text"
                   placeholder="usuario@dominio.com"
                   value={formData.smtp_user}
                   onChange={(e) => setFormData({ ...formData, smtp_user: e.target.value })}
-                  required
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Contraseña / App Password <span className="text-red-500">*</span>
+                  Contraseña / App Password
                 </label>
                 <div className="relative">
                   <Input
@@ -290,7 +313,6 @@ export const AdminSettings = () => {
                     value={formData.smtp_pass}
                     onChange={(e) => setFormData({ ...formData, smtp_pass: e.target.value })}
                     className="pr-10"
-                    required
                   />
                   <button
                     type="button"
@@ -399,7 +421,7 @@ export const AdminSettings = () => {
             type="submit"
             size="lg"
             disabled={saving}
-            className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-8"
+            className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-8 shadow-md hover:shadow-lg transition-all cursor-pointer"
           >
             {saving ? (
               <>

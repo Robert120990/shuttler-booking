@@ -129,10 +129,6 @@ app.get('/sitemap.xml', async (req, res) => {
   }
 });
 
-await initDb();
-const { seedData } = await import('./seed.js');
-await seedData();
-
 const clientDistPath = process.env.CLIENT_DIST || path.join(__dirname, '../../client/dist');
 app.use(express.static(clientDistPath));
 
@@ -143,6 +139,16 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(clientDistPath, 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+// Start listening immediately so Railway health checks pass instantly
+app.listen(PORT, '0.0.0.0', async () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  
+  try {
+    await initDb();
+    const { seedData } = await import('./seed.js');
+    await seedData();
+    console.log('✨ Sistema y base de datos listos para procesar solicitudes.');
+  } catch (err) {
+    console.error('⚠️ Error inicializando base de datos:', err);
+  }
 });

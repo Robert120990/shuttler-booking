@@ -92,11 +92,11 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.get('/sitemap.xml', (req, res) => {
+app.get('/sitemap.xml', async (req, res) => {
   try {
-    const countries = prepare('SELECT slug, name FROM countries ORDER BY name').all();
-    const cities = prepare('SELECT slug, name FROM cities ORDER BY name').all();
-    const shuttles = prepare('SELECT slug, name FROM shuttles ORDER BY name').all();
+    const countries = await prepare('SELECT slug, name FROM countries ORDER BY name').all();
+    const cities = await prepare('SELECT slug, name FROM cities ORDER BY name').all();
+    const shuttles = await prepare('SELECT slug, name FROM shuttles ORDER BY name').all();
 
     const baseUrl = PUBLIC_URL.replace(/\/$/, '');
 

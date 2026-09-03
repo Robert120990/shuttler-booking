@@ -1,24 +1,145 @@
 import initSqlJs from 'sql.js';
+import pg from 'pg';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { DATA_DIR } from './config.js';
 
+const { Pool } = pg;
+
 const dataDir = DATA_DIR;
 const dbPath = join(dataDir, 'database.sqlite');
 
-let db = null;
+let isPg = false;
+let pgPool = null;
+let sqliteDb = null;
 
 export async function initDb() {
+  const databaseUrl = process.env.DATABASE_URL || process.env.SUPABASE_DATABASE_URL || process.env.POSTGRES_URL;
+
+  if (databaseUrl) {
+    isPg = true;
+    console.log('🔌 Conectando a base de datos PostgreSQL (Supabase)...');
+    
+    pgPool = new Pool({
+      connectionString: databaseUrl,
+      ssl: databaseUrl.includes('localhost') ? false : { rejectUnauthorized: false },
+    });
+
+    // Test connection
+    const client = await pgPool.connect();
+    try {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS users (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          email TEXT UNIQUE NOT NULL,
+          password_hash TEXT NOT NULL,
+          role TEXT DEFAULT 'user',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS countries (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          slug TEXT UNIQUE NOT NULL,
+          flag TEXT,
+          description TEXT,
+          image_url TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS cities (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          slug TEXT UNIQUE NOT NULL,
+          country_id TEXT NOT NULL REFERENCES countries(id),
+          description TEXT,
+          image_url TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS shuttles (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          slug TEXT NOT NULL,
+          origin_city_id TEXT NOT NULL REFERENCES cities(id),
+          destination_city_id TEXT NOT NULL REFERENCES cities(id),
+          price NUMERIC NOT NULL,
+          duration_hours NUMERIC NOT NULL,
+          schedule TEXT,
+          availability TEXT DEFAULT 'Every day',
+          availability_days TEXT DEFAULT '[0,1,2,3,4,5,6]',
+          service_type TEXT DEFAULT 'local',
+          description TEXT,
+          included TEXT,
+          to_bring TEXT,
+          luggage_policy TEXT,
+          luggage_options TEXT DEFAULT '[]',
+          pickup_info TEXT,
+          cancellation_policy TEXT,
+          operator TEXT,
+          pets_allowed INTEGER DEFAULT 0,
+          image_url TEXT,
+          rating NUMERIC DEFAULT 5.0,
+          review_count INTEGER DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS bookings (
+          id TEXT PRIMARY KEY,
+          user_id TEXT REFERENCES users(id),
+          shuttle_id TEXT NOT NULL REFERENCES shuttles(id),
+          date TEXT NOT NULL,
+          pickup_location TEXT NOT NULL,
+          dropoff_location TEXT NOT NULL,
+          passenger_name TEXT,
+          passenger_email TEXT,
+          passenger_phone TEXT,
+          seats INTEGER DEFAULT 1,
+          extra_luggage INTEGER DEFAULT 0,
+          total_price NUMERIC NOT NULL,
+          status TEXT DEFAULT 'pending',
+          payment_status TEXT DEFAULT 'pending',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          pickup_person_name TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS faqs (
+          id TEXT PRIMARY KEY,
+          question TEXT NOT NULL,
+          question_en TEXT,
+          answer TEXT NOT NULL,
+          answer_en TEXT,
+          category TEXT,
+          "order" INTEGER DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS settings (
+          id TEXT PRIMARY KEY,
+          key TEXT UNIQUE NOT NULL,
+          value TEXT
+        );
+      `);
+      console.log('✅ Tablas PostgreSQL inicializadas con éxito.');
+    } finally {
+      client.release();
+    }
+    return pgPool;
+  }
+
+  // Fallback to SQLite
+  console.log('📁 Usando base de datos local SQLite...');
   const SQL = await initSqlJs();
   
   if (existsSync(dbPath)) {
     const fileBuffer = readFileSync(dbPath);
-    db = new SQL.Database(fileBuffer);
+    sqliteDb = new SQL.Database(fileBuffer);
   } else {
-    db = new SQL.Database();
+    sqliteDb = new SQL.Database();
   }
 
-  db.run(`
+  sqliteDb.run(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -26,10 +147,8 @@ export async function initDb() {
       password_hash TEXT NOT NULL,
       role TEXT DEFAULT 'user',
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+    );
 
-  db.run(`
     CREATE TABLE IF NOT EXISTS countries (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -38,29 +157,24 @@ export async function initDb() {
       description TEXT,
       image_url TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+    );
 
-  db.run(`
     CREATE TABLE IF NOT EXISTS cities (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       slug TEXT UNIQUE NOT NULL,
-      country_id TEXT NOT NULL,
+      country_id TEXT NOT NULL REFERENCES countries(id),
       description TEXT,
       image_url TEXT,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (country_id) REFERENCES countries(id)
-    )
-  `);
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
 
-  db.run(`
     CREATE TABLE IF NOT EXISTS shuttles (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       slug TEXT NOT NULL,
-      origin_city_id TEXT NOT NULL,
-      destination_city_id TEXT NOT NULL,
+      origin_city_id TEXT NOT NULL REFERENCES cities(id),
+      destination_city_id TEXT NOT NULL REFERENCES cities(id),
       price REAL NOT NULL,
       duration_hours REAL NOT NULL,
       schedule TEXT,
@@ -79,24 +193,13 @@ export async function initDb() {
       image_url TEXT,
       rating REAL DEFAULT 5.0,
       review_count INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (origin_city_id) REFERENCES cities(id),
-      FOREIGN KEY (destination_city_id) REFERENCES cities(id)
-    )
-  `);
-  
-  try { db.run('ALTER TABLE shuttles ADD COLUMN operator TEXT'); } catch (e) {}
-  try { db.run('ALTER TABLE shuttles ADD COLUMN availability TEXT DEFAULT \'Every day\''); } catch (e) {}
-  try { db.run('ALTER TABLE shuttles ADD COLUMN availability_days TEXT DEFAULT \'[0,1,2,3,4,5,6]\''); } catch (e) {}
-  try { db.run('ALTER TABLE shuttles ADD COLUMN luggage_options TEXT DEFAULT \'[]\''); } catch (e) {}
-  try { db.run('ALTER TABLE shuttles ADD COLUMN pickup_info TEXT'); } catch (e) {}
-  try { db.run('ALTER TABLE shuttles ADD COLUMN cancellation_policy TEXT'); } catch (e) {}
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
 
-  db.run(`
     CREATE TABLE IF NOT EXISTS bookings (
       id TEXT PRIMARY KEY,
-      user_id TEXT,
-      shuttle_id TEXT NOT NULL,
+      user_id TEXT REFERENCES users(id),
+      shuttle_id TEXT NOT NULL REFERENCES shuttles(id),
       date TEXT NOT NULL,
       pickup_location TEXT NOT NULL,
       dropoff_location TEXT NOT NULL,
@@ -109,22 +212,9 @@ export async function initDb() {
       status TEXT DEFAULT 'pending',
       payment_status TEXT DEFAULT 'pending',
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (user_id) REFERENCES users(id),
-      FOREIGN KEY (shuttle_id) REFERENCES shuttles(id)
-    )
-  `);
-  
-  try {
-    db.run('ALTER TABLE bookings ADD COLUMN extra_luggage INTEGER DEFAULT 0');
-  } catch (e) {
-  }
+      pickup_person_name TEXT
+    );
 
-  try {
-    db.run('ALTER TABLE bookings ADD COLUMN pickup_person_name TEXT');
-  } catch (e) {
-  }
-
-  db.run(`
     CREATE TABLE IF NOT EXISTS faqs (
       id TEXT PRIMARY KEY,
       question TEXT NOT NULL,
@@ -134,68 +224,89 @@ export async function initDb() {
       category TEXT,
       "order" INTEGER DEFAULT 0,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+    );
 
-  db.run(`
     CREATE TABLE IF NOT EXISTS settings (
       id TEXT PRIMARY KEY,
       key TEXT UNIQUE NOT NULL,
       value TEXT
-    )
+    );
   `);
 
   saveDb();
-  return db;
+  return sqliteDb;
 }
 
 export function saveDb() {
-  if (db) {
+  if (sqliteDb) {
     if (!existsSync(dataDir)) {
       mkdirSync(dataDir, { recursive: true });
     }
-    const data = db.export();
+    const data = sqliteDb.export();
     const buffer = Buffer.from(data);
     writeFileSync(dbPath, buffer);
   }
 }
 
 export function getDb() {
-  return db;
+  return isPg ? pgPool : sqliteDb;
 }
 
 const sanitizeParam = (val) => (val === undefined ? null : val);
 
+function convertSqlForPg(sql) {
+  let paramIndex = 1;
+  return sql.replace(/\?/g, () => `$${paramIndex++}`);
+}
+
 export function prepare(sql) {
   return {
-    run: (...params) => {
+    run: async (...params) => {
       const cleanParams = params.map(sanitizeParam);
-      db.run(sql, cleanParams);
-      saveDb();
-      return { changes: db.getRowsModified() };
+      if (isPg) {
+        const pgSql = convertSqlForPg(sql);
+        const res = await pgPool.query(pgSql, cleanParams);
+        return { changes: res.rowCount };
+      } else {
+        sqliteDb.run(sql, cleanParams);
+        saveDb();
+        return { changes: sqliteDb.getRowsModified() };
+      }
     },
-    get: (...params) => {
+    get: async (...params) => {
       const cleanParams = params.map(sanitizeParam);
-      const stmt = db.prepare(sql);
-      stmt.bind(cleanParams);
-      if (stmt.step()) {
-        const row = stmt.getAsObject();
+      if (isPg) {
+        const pgSql = convertSqlForPg(sql);
+        const res = await pgPool.query(pgSql, cleanParams);
+        return res.rows[0] || null;
+      } else {
+        const stmt = sqliteDb.prepare(sql);
+        stmt.bind(cleanParams);
+        if (stmt.step()) {
+          const row = stmt.getAsObject();
+          stmt.free();
+          return row;
+        }
         stmt.free();
-        return row;
+        return null;
       }
-      stmt.free();
-      return null;
     },
-    all: (...params) => {
+    all: async (...params) => {
       const cleanParams = params.map(sanitizeParam);
-      const results = [];
-      const stmt = db.prepare(sql);
-      stmt.bind(cleanParams);
-      while (stmt.step()) {
-        results.push(stmt.getAsObject());
+      if (isPg) {
+        const pgSql = convertSqlForPg(sql);
+        const res = await pgPool.query(pgSql, cleanParams);
+        return res.rows;
+      } else {
+        const results = [];
+        const stmt = sqliteDb.prepare(sql);
+        stmt.bind(cleanParams);
+        while (stmt.step()) {
+          results.push(stmt.getAsObject());
+        }
+        stmt.free();
+        return results;
       }
-      stmt.free();
-      return results;
     }
   };
 }

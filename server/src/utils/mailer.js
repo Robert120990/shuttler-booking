@@ -4,9 +4,9 @@ import { prepare } from '../db.js';
 /**
  * Retrieves SMTP and notification settings from the database
  */
-export function getSettings() {
+export async function getSettings() {
   try {
-    const rows = prepare('SELECT key, value FROM settings').all();
+    const rows = await prepare('SELECT key, value FROM settings').all();
     const settings = {};
     for (const row of rows) {
       settings[row.key] = row.value;
@@ -21,8 +21,8 @@ export function getSettings() {
 /**
  * Creates a Nodemailer transporter using DB settings or provided custom config
  */
-export function createTransporter(customConfig = null) {
-  const config = customConfig || getSettings();
+export function createTransporter(config) {
+  if (!config) return null;
 
   const host = config.smtp_host || process.env.SMTP_HOST;
   const port = Number(config.smtp_port || process.env.SMTP_PORT || 587);
@@ -92,7 +92,7 @@ export async function sendTestEmail(customConfig, targetEmail) {
  */
 export async function sendBookingNotification(booking, shuttle = null) {
   try {
-    const settings = getSettings();
+    const settings = await getSettings();
     const transporter = createTransporter(settings);
 
     if (!transporter) {

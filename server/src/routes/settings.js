@@ -6,9 +6,9 @@ import { getSettings, sendTestEmail } from '../utils/mailer.js';
 const router = express.Router();
 
 // GET /api/settings - Retrieve all settings
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const settings = getSettings();
+    const settings = await getSettings();
     res.json(settings);
   } catch (error) {
     console.error('Error fetching settings:', error);
@@ -17,7 +17,7 @@ router.get('/', (req, res) => {
 });
 
 // POST /api/settings - Save / update settings
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const settingsData = req.body;
     if (typeof settingsData !== 'object' || settingsData === null) {
@@ -33,11 +33,11 @@ router.post('/', (req, res) => {
     for (const [key, value] of Object.entries(settingsData)) {
       if (typeof key === 'string' && key.trim()) {
         const strVal = value === undefined || value === null ? '' : String(value);
-        upsertStmt.run(uuidv4(), key, strVal);
+        await upsertStmt.run(uuidv4(), key, strVal);
       }
     }
 
-    const updatedSettings = getSettings();
+    const updatedSettings = await getSettings();
     res.json({ message: 'Configuración guardada exitosamente', settings: updatedSettings });
   } catch (error) {
     console.error('Error saving settings:', error);

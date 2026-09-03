@@ -67,7 +67,7 @@ export async function syncDatabaseImages() {
     // 1. Check and repair countries
     for (const [slug, imgFile] of Object.entries(DEFAULT_COUNTRY_IMAGES)) {
       const imgUrl = getImageUrl('countries', imgFile);
-      prepare(`
+      await prepare(`
         UPDATE countries 
         SET image_url = ? 
         WHERE slug = ? AND (image_url IS NULL OR image_url LIKE '%placeholder%' OR image_url = '')
@@ -77,7 +77,7 @@ export async function syncDatabaseImages() {
     // 2. Check and repair cities
     for (const [slug, imgFile] of Object.entries(DEFAULT_CITY_IMAGES)) {
       const imgUrl = getImageUrl('cities', imgFile);
-      prepare(`
+      await prepare(`
         UPDATE cities 
         SET image_url = ? 
         WHERE slug = ? AND (image_url IS NULL OR image_url LIKE '%placeholder%' OR image_url = '')
@@ -86,7 +86,7 @@ export async function syncDatabaseImages() {
 
     // 3. Check and repair predefined shuttles
     for (const [slug, imgUrl] of Object.entries(DEFAULT_SHUTTLE_IMAGES)) {
-      prepare(`
+      await prepare(`
         UPDATE shuttles 
         SET image_url = ? 
         WHERE slug = ? AND (image_url IS NULL OR image_url LIKE '%placeholder%' OR image_url = '')
@@ -94,7 +94,7 @@ export async function syncDatabaseImages() {
     }
 
     // 4. Generate composite images for any remaining shuttles without valid image
-    const shuttlesWithoutImage = prepare(`
+    const shuttlesWithoutImage = await prepare(`
       SELECT s.id, s.slug, c1.image_url as origin_img, c2.image_url as dest_img
       FROM shuttles s
       LEFT JOIN cities c1 ON s.origin_city_id = c1.id
@@ -107,7 +107,7 @@ export async function syncDatabaseImages() {
         try {
           const generatedUrl = await generateShuttleImage(s.origin_img, s.dest_img);
           if (generatedUrl) {
-            prepare('UPDATE shuttles SET image_url = ? WHERE id = ?').run(generatedUrl, s.id);
+            await prepare('UPDATE shuttles SET image_url = ? WHERE id = ?').run(generatedUrl, s.id);
           }
         } catch (err) {
           console.error(`Error generating shuttle banner for ${s.slug}:`, err);
@@ -119,23 +119,23 @@ export async function syncDatabaseImages() {
   }
 }
 
-export function seedSampleBookings() {
+export async function seedSampleBookings() {
   try {
     // Fix any legacy booking pointing to invalid shuttle_id 's1'
-    const invalidBookings = prepare("SELECT id FROM bookings WHERE shuttle_id = 's1'").all();
+    const invalidBookings = await prepare("SELECT id FROM bookings WHERE shuttle_id = 's1'").all();
     if (invalidBookings.length > 0) {
-      const firstShuttle = prepare('SELECT id FROM shuttles LIMIT 1').get();
+      const firstShuttle = await prepare('SELECT id FROM shuttles LIMIT 1').get();
       if (firstShuttle) {
-        prepare("UPDATE bookings SET shuttle_id = ? WHERE shuttle_id = 's1'").run(firstShuttle.id);
+        await prepare("UPDATE bookings SET shuttle_id = ? WHERE shuttle_id = 's1'").run(firstShuttle.id);
       }
     }
 
-    const bookingCount = prepare('SELECT COUNT(*) as count FROM bookings').get();
-    if (bookingCount && bookingCount.count > 1) {
+    const bookingCount = await prepare('SELECT COUNT(*) as count FROM bookings').get();
+    if (bookingCount && Number(bookingCount.count) > 1) {
       return;
     }
 
-    const shuttles = prepare('SELECT id, name, price FROM shuttles').all();
+    const shuttles = await prepare('SELECT id, name, price FROM shuttles').all();
     if (!shuttles || shuttles.length === 0) return;
 
     const insertBooking = prepare(`
@@ -233,7 +233,7 @@ export function seedSampleBookings() {
     for (const b of sampleBookings) {
       const shuttle = shuttles[b.shuttleIndex] || shuttles[0];
       const total = (shuttle.price * b.priceMultiplier) + b.extraFee;
-      insertBooking.run(
+      await insertBooking.run(
         uuidv4(),
         null,
         shuttle.id,
@@ -257,20 +257,20 @@ export function seedSampleBookings() {
 }
 
 export async function seedData() {
-  const userCount = prepare('SELECT COUNT(*) as count FROM users').get();
-  if (userCount && userCount.count > 0) {
+  const userCount = await prepare('SELECT COUNT(*) as count FROM users').get();
+  if (userCount && Number(userCount.count) > 0) {
     await syncDatabaseImages();
-    seedSampleBookings();
+    await seedSampleBookings();
     return;
   }
 
   const adminPassword = bcrypt.hashSync('admin123', 10);
   const userPassword = bcrypt.hashSync('user123', 10);
 
-  prepare(`INSERT INTO users (id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)`).run(
+  await prepare(`INSERT INTO users (id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)`).run(
     uuidv4(), 'Admin User', 'admin@trailexplorer.com', adminPassword, 'admin'
   );
-  prepare(`INSERT INTO users (id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)`).run(
+  await prepare(`INSERT INTO users (id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)`).run(
     uuidv4(), 'Demo User', 'user@example.com', userPassword, 'user'
   );
 
@@ -286,7 +286,9 @@ export async function seedData() {
   ];
 
   const insertCountry = prepare(`INSERT INTO countries (id, name, slug, description, image_url) VALUES (?, ?, ?, ?, ?)`);
-  countries.forEach(c => insertCountry.run(c.id, c.name, c.slug, c.description, getImageUrl('countries', c.image)));
+  for (const c of countries) {
+    await insertCountry.run(c.id, c.name, c.slug, c.description, getImageUrl('countries', c.image));
+  }
 
   const citiesData = {
     'costa-rica': [
@@ -337,16 +339,16 @@ export async function seedData() {
 
   const insertCity = prepare(`INSERT INTO cities (id, name, slug, country_id, description, image_url) VALUES (?, ?, ?, ?, ?, ?)`);
   const citiesMap = {};
-  
-  countries.forEach(country => {
+
+  for (const country of countries) {
     const countryCities = citiesData[country.slug] || [];
-    countryCities.forEach(city => {
+    for (const city of countryCities) {
       const cityId = uuidv4();
       const imgUrl = getImageUrl('cities', city.image);
       citiesMap[city.slug] = { id: cityId, countryId: country.id, imageUrl: imgUrl };
-      insertCity.run(cityId, city.name, city.slug, country.id, city.description, imgUrl);
-    });
-  });
+      await insertCity.run(cityId, city.name, city.slug, country.id, city.description, imgUrl);
+    }
+  }
 
   const shuttles = [
     { 
@@ -395,8 +397,8 @@ export async function seedData() {
       name: 'Liberia to San José', 
       origin: 'liberia', 
       dest: 'san-jose', 
-      price: 59, 
-      duration: 4.5, 
+      price: 54, 
+      duration: 4, 
       schedule: '9:15 AM, 3:15 PM', 
       availability: 'Every day',
       availabilityDays: [0,1,2,3,4,5,6],
@@ -537,7 +539,7 @@ export async function seedData() {
         }
       }
 
-      insertShuttle.run(
+      await insertShuttle.run(
         shuttleId, s.name, s.name.toLowerCase().replace(/\s+/g, '-'),
         originCity.id, destCity.id, s.price, s.duration, s.schedule, s.availability, 
         JSON.stringify(s.availabilityDays || [0,1,2,3,4,5,6]),
@@ -558,11 +560,14 @@ export async function seedData() {
   ];
 
   const insertFaq = prepare(`INSERT INTO faqs (id, question, question_en, answer, answer_en, category, "order") VALUES (?, ?, ?, ?, ?, ?, ?)`);
-  faqs.forEach((f, i) => insertFaq.run(uuidv4(), f.q, f.q_en, f.a, f.a_en, f.category, i));
+  for (const f of faqs) {
+    await insertFaq.run(uuidv4(), f.q, f.q_en, f.a, f.a_en, f.category, 0);
+  }
 
   await syncDatabaseImages();
-  seedSampleBookings();
+  await seedSampleBookings();
 
   console.log('Database seeded and images synchronized successfully!');
 }
+
 

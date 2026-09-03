@@ -1,55 +1,38 @@
-# Despliegue en Railway
+# Despliegue en Railway & Conexión con Supabase
 
-Arquitectura elegida: **un solo servicio persistente** (frontend + backend en el mismo contenedor, con disco persistente en `/data`).
+La aplicación soporta **dos modos de base de datos automáticamente**:
+1. **Supabase (PostgreSQL en la nube - 100% persistente y gratuito):** Se activa automáticamente al configurar la variable `DATABASE_URL`.
+2. **SQLite local / Volumen:** Modo por defecto cuando no se define `DATABASE_URL`.
 
-## Requisitos previos
+---
 
-- Repositorio subido a GitHub (`origin` ya configurado).
-- `server/database.sqlite` fuera del tracking de git (ya está en `.gitignore`).
+## ⚡ Conectar con Supabase (Recomendado para no perder datos en cuentas gratis)
 
-## Variables de entorno
+1. Crea un proyecto gratuito en **[Supabase](https://supabase.com)**.
+2. En Supabase ve a **Project Settings** → **Database** → **Connection String** → pestaña **URI** (o modo **Node.js** / **Session/Transaction Pooler**).
+3. Copia la URL de conexión (reemplazando `[YOUR-PASSWORD]` por la contraseña de tu base de datos Supabase).
+   - Ejemplo: `postgresql://postgres.[ref]:miPassword@aws-0-[region].pooler.supabase.com:6543/postgres`
+4. En **Railway Dashboard** → tu Servicio → pestaña **Variables**, agrega:
+   - `DATABASE_URL` = `tu_url_de_supabase`
+5. ¡Listo! La app creará automáticamente las tablas (`users`, `countries`, `cities`, `shuttles`, `bookings`, `settings`, `faqs`) y poblará los datos iniciales. Tus reservas y configuraciones nunca se borrarán.
+
+---
+
+## Variables de Entorno en Railway
 
 Configúralas en Railway (Dashboard → tu servicio → **Variables**):
 
 | Variable | Valor (ejemplo) | Descripción |
 |----------|------------------|-------------|
-| `PORT` | `3000` | Puerto interno (Railway inyecta `PORT` automáticamente y expone el mismo). |
+| `DATABASE_URL` | `postgresql://...` | *(Opcional)* Conexión a PostgreSQL en Supabase. Si se omite, usa SQLite local. |
+| `PORT` | `3000` | Puerto interno (Railway lo inyecta automáticamente). |
 | `PUBLIC_URL` | `https://tu-app.up.railway.app` | Base URL usada en `sitemap.xml`. |
-| `DATA_DIR` | `/data` | Directorio persistente para la DB e imágenes. **Debe coincidir con el volumen.** |
 | `VITE_SERVER_URL` | `https://tu-app.up.railway.app` | URL del backend desde el navegador. |
-| `VITE_SITE_URL` | `https://tu-app.up.railway.app` | URL canónica para SEO/canonical/hreflang. |
+| `VITE_SITE_URL` | `https://tu-app.up.railway.app` | URL canónica para SEO. |
 
-> Nota: `VITE_*` se inyectan en **build time** (build args del Dockerfile). Cámbialas y haz **redeploy** si cambian.
-
-## Volumen persistente
-
-- Añade un **Volume** en Railway montado en el path `/data`.
-- La base de datos `database.sqlite`, las imágenes subidas y las imágenes généricas del seed se guardan ahí.
-- **Importante:** el Dockerfile **no** incluye la instrucción `VOLUME` (Railway la rechaza al hacer build). El volumen se crea y monta exclusivamente desde el dashboard de Railway en `/data`.
-- Al primer arranque el servidor copia las imágenes estáticas del repo e inicializa la DB + seed automáticamente.
+---
 
 ## Deploy
 
-1. Railway detecta el `Dockerfile` de la raíz (configuración en `railway.json`).
-2. El build hace: `npm ci` del cliente → `vite build` → `npm ci --omit=dev` del server → imagen final.
-3. El container arranca con `node src/index.js` y monta el volumen `/data`.
-
-Desde CLI:
-
-```bash
-railway up
-```
-
-O desde el dashboard: **New Project → Deploy from GitHub repo**.
-
-## Verificación
-
-- `/api/health` → `{ "status": "ok", ... }`
-- `/` → app
-- `/sitemap.xml` → usa `PUBLIC_URL`
-- `/robots.txt`
-
-## Producción vs desarrollo
-
-- En **desarrollo local**, `config.js` usa rutas relativas por defecto (`server/public/images`, `server/database.sqlite`), por lo que sigue funcionando sin variables de entorno.
-- En **producción**, fija `DATA_DIR=/data`, `IMAGES_DIR=/data/images` (implícito vía `syncSeedImages` + `IMAGES_DIR` del Dockerfile) y `PUBLIC_URL`.
+1. Al hacer `git push` a `main`, Railway compila y despliega automáticamente.
+2. Si tienes `DATABASE_URL` de Supabase configurada, se conectará a la base de datos externa permanente.

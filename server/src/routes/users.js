@@ -6,9 +6,9 @@ import { prepare } from '../db.js';
 const router = express.Router();
 
 // Get all users
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const users = prepare('SELECT id, name, email, role, created_at FROM users ORDER BY created_at DESC').all();
+    const users = await prepare('SELECT id, name, email, role, created_at FROM users ORDER BY created_at DESC').all();
     res.json(users);
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -17,9 +17,9 @@ router.get('/', (req, res) => {
 });
 
 // Get user by ID
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
-    const user = prepare('SELECT id, name, email, role, created_at FROM users WHERE id = ?').get(req.params.id);
+    const user = await prepare('SELECT id, name, email, role, created_at FROM users WHERE id = ?').get(req.params.id);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -31,7 +31,7 @@ router.get('/:id', (req, res) => {
 });
 
 // Create user
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
     
@@ -39,7 +39,7 @@ router.post('/', (req, res) => {
       return res.status(400).json({ error: 'Name, email, and password are required' });
     }
 
-    const existing = prepare('SELECT id FROM users WHERE email = ?').get(email);
+    const existing = await prepare('SELECT id FROM users WHERE email = ?').get(email);
     if (existing) {
       return res.status(400).json({ error: 'Email already registered' });
     }
@@ -48,11 +48,11 @@ router.post('/', (req, res) => {
     const password_hash = bcrypt.hashSync(password, 10);
     const userRole = role === 'admin' ? 'admin' : 'user';
 
-    prepare(
+    await prepare(
       'INSERT INTO users (id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)'
     ).run(id, name, email, password_hash, userRole);
 
-    const newUser = prepare('SELECT id, name, email, role, created_at FROM users WHERE id = ?').get(id);
+    const newUser = await prepare('SELECT id, name, email, role, created_at FROM users WHERE id = ?').get(id);
     res.status(201).json(newUser);
   } catch (error) {
     console.error('Error creating user:', error);
@@ -61,19 +61,19 @@ router.post('/', (req, res) => {
 });
 
 // Update user
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { name, email, role, password } = req.body;
 
-    const existing = prepare('SELECT id FROM users WHERE id = ?').get(id);
+    const existing = await prepare('SELECT id FROM users WHERE id = ?').get(id);
     if (!existing) {
       return res.status(404).json({ error: 'User not found' });
     }
 
     // Check email uniqueness if email is changed
     if (email) {
-      const emailCheck = prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(email, id);
+      const emailCheck = await prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(email, id);
       if (emailCheck) {
         return res.status(400).json({ error: 'Email already in use by another user' });
       }
@@ -81,16 +81,16 @@ router.put('/:id', (req, res) => {
 
     if (password && password.trim() !== '') {
       const password_hash = bcrypt.hashSync(password, 10);
-      prepare(
+      await prepare(
         'UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), role = COALESCE(?, role), password_hash = ? WHERE id = ?'
       ).run(name, email, role, password_hash, id);
     } else {
-      prepare(
+      await prepare(
         'UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), role = COALESCE(?, role) WHERE id = ?'
       ).run(name, email, role, id);
     }
 
-    const updatedUser = prepare('SELECT id, name, email, role, created_at FROM users WHERE id = ?').get(id);
+    const updatedUser = await prepare('SELECT id, name, email, role, created_at FROM users WHERE id = ?').get(id);
     res.json(updatedUser);
   } catch (error) {
     console.error('Error updating user:', error);
@@ -99,15 +99,15 @@ router.put('/:id', (req, res) => {
 });
 
 // Delete user
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const existing = prepare('SELECT id FROM users WHERE id = ?').get(id);
+    const existing = await prepare('SELECT id FROM users WHERE id = ?').get(id);
     if (!existing) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    prepare('DELETE FROM users WHERE id = ?').run(id);
+    await prepare('DELETE FROM users WHERE id = ?').run(id);
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
     console.error('Error deleting user:', error);

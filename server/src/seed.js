@@ -258,11 +258,6 @@ export async function seedSampleBookings() {
 
 export async function seedSampleHostels() {
   try {
-    const hostelCount = await prepare('SELECT COUNT(*) as count FROM hostels').get();
-    if (hostelCount && Number(hostelCount.count) > 0) {
-      return;
-    }
-
     const cities = await prepare('SELECT id, slug, name FROM cities').all();
     if (!cities || cities.length === 0) return;
 
@@ -272,6 +267,7 @@ export async function seedSampleHostels() {
     }
 
     const defaultHostels = [
+      // --- COSTA RICA ---
       // La Fortuna
       { citySlug: 'la-fortuna', name: 'Selina La Fortuna', address: 'Calle 468, La Fortuna', phone: '+506 2479 7249' },
       { citySlug: 'la-fortuna', name: 'Arenal Backpackers Resort', address: '350m oeste de la Iglesia Católica, La Fortuna', phone: '+506 2479 7000' },
@@ -295,27 +291,65 @@ export async function seedSampleHostels() {
       { citySlug: 'tamarindo', name: 'Tamarindo Backpackers', address: 'Calle Los Jobos, Tamarindo', phone: '+506 2653 1184' },
       { citySlug: 'tamarindo', name: 'Hotel Diria Tamarindo', address: 'Playa Tamarindo Central', phone: '+506 2653 0031' },
 
+      // Puerto Viejo
+      { citySlug: 'puerto-viejo', name: 'Selina Puerto Viejo', address: 'Playa Cocles, Puerto Viejo', phone: '+506 4001 8503' },
+      { citySlug: 'puerto-viejo', name: 'Tasty Dayz Hostel', address: 'Playa Cocles, 2km sur de Puerto Viejo', phone: '+506 2750 0623' },
+      { citySlug: 'puerto-viejo', name: 'Hotel Banana Azul', address: 'Playa Negra, Puerto Viejo', phone: '+506 2750 0480' },
+
       // Liberia
       { citySlug: 'liberia', name: 'Hotel Hilton Garden Inn Liberia Airport', address: 'Frente a Aeropuerto LIR', phone: '+506 2690 8888' },
       { citySlug: 'liberia', name: 'Hotel Boyeros', address: 'Entrada a Liberia, Carretera Interamericana', phone: '+506 2666 0722' },
       { citySlug: 'liberia', name: 'Aeropuerto Internacional de Guanacaste (LIR)', address: 'Liberia, Guanacaste', phone: '+506 2668 1010' },
 
+      // --- GUATEMALA ---
       // Antigua Guatemala
       { citySlug: 'antigua-guatemala', name: 'Hotel Museo Spa Casa Santo Domingo', address: '3a Calle Oriente 28A, Antigua Guatemala', phone: '+502 7820 1220' },
       { citySlug: 'antigua-guatemala', name: 'Selina Antigua', address: '6a Avenida Norte #43, Antigua Guatemala', phone: '+502 7832 9494' },
       { citySlug: 'antigua-guatemala', name: 'Tropicana Hostel', address: '6a Calle Poniente #2, Antigua Guatemala', phone: '+502 7832 0462' },
       { citySlug: 'antigua-guatemala', name: 'Somos Hostel', address: '4a Avenida Norte #11, Antigua Guatemala', phone: '+502 7832 1530' },
 
-      // San Salvador
-      { citySlug: 'san-salvador', name: 'Hotel Barceló San Salvador', address: 'Boulevard Sergio Vieira de Mello, San Salvador', phone: '+503 2268 4545' },
-      { citySlug: 'san-salvador', name: 'Hostal La Zona', address: 'San Benito, Calle La Reforma #158', phone: '+503 2223 9090' },
-      { citySlug: 'san-salvador', name: 'Hotel Real InterContinental San Salvador', address: 'Boulevard de los Héroes', phone: '+503 2211 3333' },
+      // Flores Petén
+      { citySlug: 'flores-peten', name: 'Los Amigos Hostel Flores', address: 'Calle Central, Isla de Flores', phone: '+502 7867 5202' },
+      { citySlug: 'flores-peten', name: 'Hotel Isla de Flores', address: 'Avenida La Reforma, Flores', phone: '+502 7867 5178' },
+      { citySlug: 'flores-peten', name: 'Hotel Casona del Lago', address: 'Calle 30 de Junio, Flores', phone: '+502 7867 5110' },
 
+      // Panajachel
+      { citySlug: 'panajachel', name: 'Selina Atitlán', address: 'Calle del Embarcadero, Panajachel', phone: '+502 7762 0262' },
+      { citySlug: 'panajachel', name: 'Dreamboat Hostel', address: 'Calle de los Árboles, Panajachel', phone: '+502 7762 1445' },
+      { citySlug: 'panajachel', name: 'Hotel Posada de Don Rodrigo', address: 'Final Calle Santander, Panajachel', phone: '+502 7762 2326' },
+
+      // Quetzaltenango
+      { citySlug: 'quetzaltenango', name: 'Kasa Kiwi Hostel & Rooftop', address: '9a Avenida 8-44, Zona 1, Xela', phone: '+502 7761 4410' },
+      { citySlug: 'quetzaltenango', name: 'Casa Morasan Hostel', address: '12 Avenida 3-03, Zona 1, Xela', phone: '+502 7765 1900' },
+      { citySlug: 'quetzaltenango', name: 'Hotel Pension Bonifaz', address: '4a Calle 10-50, Zona 1, Xela', phone: '+502 7765 1111' },
+
+      // Guatemala City
+      { citySlug: 'guatemala-city', name: 'Hostal Los Volcanes', address: 'Avenida Hincapié 10-25, Zona 13 (Aeropuerto)', phone: '+502 2261 3040' },
+      { citySlug: 'guatemala-city', name: 'Hotel Barceló Guatemala City', address: '7a Avenida 15-45, Zona 9', phone: '+502 2378 9999' },
+      { citySlug: 'guatemala-city', name: 'Hotel Real InterContinental Guatemala', address: '14 Calle 2-51, Zona 10', phone: '+502 2413 4444' },
+
+      // --- EL SALVADOR ---
       // El Tunco
       { citySlug: 'el-tunco', name: 'Boca Olas Resort Villas', address: 'Playa El Tunco, Tamanique', phone: '+503 2389 6300' },
       { citySlug: 'el-tunco', name: 'Papaya Lodge Hostel', address: 'Calle Principal El Tunco', phone: '+503 2389 6231' },
       { citySlug: 'el-tunco', name: 'Mopelia Hostel & Bar', address: 'Playa El Tunco', phone: '+503 2389 6110' },
 
+      // Santa Ana
+      { citySlug: 'santa-ana', name: 'Hostal Casa Verde Santa Ana', address: '7a Calle Poniente entre 8a y 10a Av Sur', phone: '+503 2440 4055' },
+      { citySlug: 'santa-ana', name: 'Hotel Tolteka Plaza', address: 'Avenida 15 de Septiembre, Santa Ana', phone: '+503 2440 3000' },
+      { citySlug: 'santa-ana', name: 'Hostal Velvet Santa Ana', address: 'Calle Libertad Oriente, Santa Ana', phone: '+503 2441 2280' },
+
+      // San Salvador
+      { citySlug: 'san-salvador', name: 'Hotel Barceló San Salvador', address: 'Boulevard Sergio Vieira de Mello, San Salvador', phone: '+503 2268 4545' },
+      { citySlug: 'san-salvador', name: 'Hostal La Zona', address: 'San Benito, Calle La Reforma #158', phone: '+503 2223 9090' },
+      { citySlug: 'san-salvador', name: 'Hotel Real InterContinental San Salvador', address: 'Boulevard de los Héroes', phone: '+503 2211 3333' },
+
+      // Suchitoto
+      { citySlug: 'suchitoto', name: 'Los Almendros de San Lorenzo', address: '4a Calle Poniente #2B, Suchitoto', phone: '+503 2335 1200' },
+      { citySlug: 'suchitoto', name: 'Hostal El Tejado', address: 'Final 3a Avenida Norte, Suchitoto', phone: '+503 2335 1769' },
+      { citySlug: 'suchitoto', name: 'Hotel Posada de Suchitlán', address: 'Final 4a Calle Poniente, Suchitoto', phone: '+503 2335 1064' },
+
+      // --- NICARAGUA ---
       // Granada
       { citySlug: 'granada', name: 'Selina Granada', address: 'Costado Oeste del Parque Central, Granada', phone: '+505 2552 2335' },
       { citySlug: 'granada', name: 'Hotel Plaza Colón', address: 'Frente al Parque Central, Granada', phone: '+505 2552 8484' },
@@ -325,6 +359,65 @@ export async function seedSampleHostels() {
       { citySlug: 'leon', name: 'ViaVia Hostel León', address: 'Frente a Iglesia La Merced, León', phone: '+505 2311 6147' },
       { citySlug: 'leon', name: 'Bigfoot Hostel León', address: 'De la Iglesia San Sebastián 1/2c al norte', phone: '+505 2311 4267' },
       { citySlug: 'leon', name: 'Hotel El Convento', address: 'Frente a Iglesia San Francisco, León', phone: '+505 2311 7053' },
+
+      // San Juan del Sur
+      { citySlug: 'san-juan-del-sur', name: 'Selina Maderas', address: 'Playa Maderas, San Juan del Sur', phone: '+505 2568 2000' },
+      { citySlug: 'san-juan-del-sur', name: 'Pachamama Hostel', address: 'Costado Norte del Mercado, SJDS', phone: '+505 2568 2210' },
+      { citySlug: 'san-juan-del-sur', name: 'Hotel Victoriano', address: 'Frente al Mar, San Juan del Sur', phone: '+505 2568 2110' },
+
+      // Managua
+      { citySlug: 'managua', name: 'Managua Backpackers Inn', address: 'De la Rotonda El Güegüense 1c sur', phone: '+505 2270 4100' },
+      { citySlug: 'managua', name: 'Hotel Real InterContinental Metrocentro', address: 'Frente a Centro Comercial Metrocentro', phone: '+505 2276 8989' },
+      { citySlug: 'managua', name: 'Hotel Hyatt Place Managua', address: 'Km 8.5 Carretera a Masaya', phone: '+505 2253 8200' },
+
+      // --- PANAMÁ ---
+      // Bocas del Toro
+      { citySlug: 'bocas-del-toro', name: 'Selina Bocas del Toro', address: 'Isla Colón, Calle 1ra, Bocas del Toro', phone: '+507 836 7840' },
+      { citySlug: 'bocas-del-toro', name: 'Bambuda Lodge', address: 'Isla Solarte, Bocas del Toro', phone: '+507 6780 4321' },
+      { citySlug: 'bocas-del-toro', name: 'Skully\'s House Hostel', address: 'Playa Big Creek, Isla Colón', phone: '+507 6890 1234' },
+
+      // Boquete
+      { citySlug: 'boquete', name: 'Selina Boquete', address: 'Avenida Central, Bajo Boquete', phone: '+507 836 7842' },
+      { citySlug: 'boquete', name: 'Bambuda Castle', address: 'Alto Boquete, Chiriquí', phone: '+507 720 2230' },
+      { citySlug: 'boquete', name: 'Hostel Mamallena Boquete', address: 'Detrás de la Iglesia Católica, Boquete', phone: '+507 720 1260' },
+
+      // Panama City
+      { citySlug: 'panama-city', name: 'Selina Casco Viejo', address: 'Calle 12 Este y Calle B, Casco Antiguo', phone: '+507 836 7830' },
+      { citySlug: 'panama-city', name: 'Luna\'s Castle Hostel', address: 'Calle 9na, Casco Viejo', phone: '+507 262 1540' },
+      { citySlug: 'panama-city', name: 'Hotel Riu Plaza Panamá', address: 'Calle 50 con 53 Este, Marbella', phone: '+507 378 9000' },
+
+      // --- MÉXICO ---
+      // Palenque
+      { citySlug: 'palenque', name: 'Cabañas Kin Balam Palenque', address: 'Carretera a las Ruinas Km 4.5', phone: '+52 916 345 1478' },
+      { citySlug: 'palenque', name: 'Hotel Maya Tulipanes', address: 'Calle Cañada #6, Palenque', phone: '+52 916 345 0201' },
+      { citySlug: 'palenque', name: 'Yaxkin Hostel Palenque', address: 'Calle Prolongación Jiménez, Palenque', phone: '+52 916 345 2330' },
+
+      // San Cristóbal de las Casas
+      { citySlug: 'san-cristobal-de-las-casas', name: 'Hostal Puerta Vieja', address: 'Calle Real de Guadalupe #74', phone: '+52 967 678 1200' },
+      { citySlug: 'san-cristobal-de-las-casas', name: 'Casa de las Flores', address: 'Calle Real de Mexicanos #16', phone: '+52 967 678 4560' },
+      { citySlug: 'san-cristobal-de-las-casas', name: 'Hotel Diego de Mazariegos', address: 'Calle 5 de Febrero #1', phone: '+52 967 678 0833' },
+
+      // --- BELICE ---
+      // Belize City
+      { citySlug: 'belize-city', name: 'The Red Hut Inn', address: '102 Bella Vista, Belize City', phone: '+501 223 2574' },
+      { citySlug: 'belize-city', name: 'Radisson Fort George Hotel', address: '2 Marine Parade, Belize City', phone: '+501 223 3333' },
+      { citySlug: 'belize-city', name: 'Belcove Hotel', address: '9 Regent Street West, Belize City', phone: '+501 227 3016' },
+
+      // San Ignacio
+      { citySlug: 'san-ignacio', name: 'The Old House Hostel', address: '30 Burns Avenue, San Ignacio', phone: '+501 628 3223' },
+      { citySlug: 'san-ignacio', name: 'Bella\'s Backpackers', address: '4 Galvez Street, San Ignacio', phone: '+501 804 2259' },
+      { citySlug: 'san-ignacio', name: 'Cahal Pech Village Resort', address: 'Cahal Pech Hill, San Ignacio', phone: '+501 824 3740' },
+
+      // --- HONDURAS ---
+      // Copán Ruinas
+      { citySlug: 'copan-ruinas', name: 'Hotel Marina Copán', address: 'Barrio El Centro, Copán Ruinas', phone: '+504 2651 4070' },
+      { citySlug: 'copan-ruinas', name: 'Iguana Azul Hostel', address: 'Costado sur de la Escuela, Copán', phone: '+504 2651 4220' },
+      { citySlug: 'copan-ruinas', name: 'Hotel Don Udo\'s', address: 'Calle de los Hoteles, Copán Ruinas', phone: '+504 2651 4533' },
+
+      // La Ceiba
+      { citySlug: 'la-ceiba', name: 'Hostel 1877 La Ceiba', address: 'Avenida San Isidro, La Ceiba', phone: '+504 2442 1877' },
+      { citySlug: 'la-ceiba', name: 'Hotel Quinta Real', address: 'Frente al Mar, La Ceiba', phone: '+504 2440 3311' },
+      { citySlug: 'la-ceiba', name: 'Hotel Partenon Beach', address: 'Playa de los Maestros, La Ceiba', phone: '+504 2443 0434' },
     ];
 
     const insertHostel = prepare(`
@@ -335,10 +428,13 @@ export async function seedSampleHostels() {
     for (const h of defaultHostels) {
       const cityId = cityMap[h.citySlug];
       if (cityId) {
-        await insertHostel.run(uuidv4(), h.name, cityId, h.address, h.phone);
+        const exists = await prepare('SELECT id FROM hostels WHERE name = ? AND city_id = ?').get(h.name, cityId);
+        if (!exists) {
+          await insertHostel.run(uuidv4(), h.name, cityId, h.address, h.phone);
+        }
       }
     }
-    console.log('✅ Hostales de muestra inicializados con éxito.');
+    console.log('✅ Hostales de todas las ciudades sincronizados con éxito.');
   } catch (err) {
     console.error('Error seeding hostels:', err);
   }

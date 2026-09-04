@@ -307,18 +307,22 @@ export const AdminSettings = () => {
                   Contraseña / App Password
                 </label>
                 <div className="relative">
-                  <Input
+                  <input
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••••••••••"
                     value={formData.smtp_pass}
                     onChange={(e) => setFormData({ ...formData, smtp_pass: e.target.value })}
-                    className="pr-10"
+                    className="flex h-10 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 pr-10 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    tabIndex={-1}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowPassword((prev) => !prev);
+                    }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer z-10"
+                    title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>

@@ -19,25 +19,71 @@ export async function getSettings() {
 }
 
 /**
+ * Helper to get proper From address matching SMTP user
+ */
+export function getFromAddress(config) {
+  const user = (config?.smtp_user || process.env.SMTP_USER || '').trim();
+  const rawFrom = (config?.smtp_from || '').trim();
+
+  if (!rawFrom) {
+    return user ? `Trail Explorer <${user}>` : 'Trail Explorer <no-reply@trailexplorer.com>';
+  }
+
+  // If user entered only a name like "Trail Explorer", attach user email
+  if (!rawFrom.includes('@') && user) {
+    return `"${rawFrom}" <${user}>`;
+  }
+
+  return rawFrom;
+}
+
+/**
  * Creates a Nodemailer transporter using DB settings or provided custom config
  */
 export function createTransporter(config) {
   if (!config) return null;
 
-  const host = config.smtp_host || process.env.SMTP_HOST;
-  const port = Number(config.smtp_port || process.env.SMTP_PORT || 587);
-  const secure = config.smtp_secure === 'true' || config.smtp_secure === true || port === 465;
-  const user = config.smtp_user || process.env.SMTP_USER;
-  const pass = config.smtp_pass || process.env.SMTP_PASS;
+  const rawHost = (config.smtp_host || process.env.SMTP_HOST || '').trim();
+  const rawPort = (config.smtp_port || process.env.SMTP_PORT || '587').toString().trim();
+  const port = Number(rawPort) || 587;
+  const user = (config.smtp_user || process.env.SMTP_USER || '').trim();
+  let pass = (config.smtp_pass || process.env.SMTP_PASS || '').trim();
 
-  if (!host || !user || !pass) {
+  if (!rawHost || !user || !pass) {
     return null;
   }
 
+  // If host is Gmail and pass has spaces (Google App Passwords format "xxxx xxxx xxxx xxxx"), remove spaces
+  if ((rawHost.toLowerCase().includes('gmail') || rawHost.toLowerCase().includes('google')) && pass.includes(' ')) {
+    pass = pass.replace(/\s+/g, '');
+  }
+
+  // Determine secure: port 465 is always SSL direct (secure: true); port 587 is STARTTLS (secure: false)
+  let isSecure = config.smtp_secure === 'true' || config.smtp_secure === true;
+  if (port === 465) {
+    isSecure = true;
+  } else if (port === 587 || port === 25 || port === 2525) {
+    isSecure = false;
+  }
+
+  // Special optimization for Gmail / Google Workspace
+  if (rawHost.toLowerCase().includes('gmail') || rawHost.toLowerCase().includes('googlemail')) {
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user,
+        pass,
+      },
+      tls: {
+        rejectUnauthorized: false,
+      },
+    });
+  }
+
   return nodemailer.createTransport({
-    host,
+    host: rawHost,
     port,
-    secure,
+    secure: isSecure,
     auth: {
       user,
       pass,
@@ -45,6 +91,9 @@ export function createTransporter(config) {
     tls: {
       rejectUnauthorized: false,
     },
+    connectionTimeout: 15000,
+    greetingTimeout: 10000,
+    socketTimeout: 20000,
   });
 }
 
@@ -60,21 +109,21 @@ export async function sendTestEmail(customConfig, targetEmail) {
   // Verify connection configuration
   await transporter.verify();
 
-  const from = customConfig.smtp_from || customConfig.smtp_user || 'Trail Explorer <no-reply@trailexplorer.com>';
+  const from = getFromAddress(customConfig);
 
   const mailOptions = {
     from,
     to: targetEmail,
     subject: '🧪 Correo de Prueba - Configuración SMTP Trail Explorer',
     html: `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; rounded-lg: 12px; background-color: #ffffff;">
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
         <div style="text-align: center; margin-bottom: 24px;">
           <h2 style="color: #059669; margin: 0;">¡Configuración SMTP Exitosa!</h2>
           <p style="color: #64748b; font-size: 14px; margin-top: 8px;">Este es un correo de prueba del sistema Trail Explorer.</p>
         </div>
         <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; border-left: 4px solid #059669; margin-bottom: 20px;">
           <p style="margin: 0; color: #334155; font-size: 14px; line-height: 1.6;">
-            Tu servidor SMTP está correctamente configurado. A partir de ahora, cada vez que un cliente realice una reserva, recibirás una notificación inmediata en el correo configurado.
+            Tu servidor SMTP está correctamente configurado y listo para enviar notificaciones de reservas.
           </p>
         </div>
         <div style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 16px;">

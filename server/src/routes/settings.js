@@ -67,8 +67,18 @@ router.post('/test-smtp', async (req, res) => {
     res.json({ success: true, message: `Correo de prueba enviado exitosamente a ${emailToSend}` });
   } catch (error) {
     console.error('Error sending test email:', error);
+    let errorMsg = error.message || error.response || 'Error de conexión con el servidor SMTP';
+    
+    if (errorMsg.includes('535') || errorMsg.includes('BadCredentials') || errorMsg.includes('Username and Password not accepted') || error.code === 'EAUTH') {
+      errorMsg = 'Error de autenticación SMTP: Usuario o contraseña incorrectos. Si usas Gmail/Google Workspace, debes usar una Contraseña de Aplicación de 16 caracteres (con Verificación en 2 pasos activada en tu cuenta de Google).';
+    } else if (error.code === 'ETIMEDOUT' || error.code === 'ESOCKET' || errorMsg.includes('timeout')) {
+      errorMsg = 'Tiempo de espera agotado al conectar al servidor SMTP. Verifica que el Servidor (Host) y el Puerto (587 o 465) sean correctos.';
+    } else if (error.code === 'ENOTFOUND') {
+      errorMsg = `No se pudo encontrar el servidor SMTP (${req.body.smtp_host}). Verifica que el nombre del host sea correcto.`;
+    }
+
     res.status(400).json({
-      error: `Error al enviar correo de prueba: ${error.message || 'Verifica los datos SMTP'}`,
+      error: errorMsg,
     });
   }
 });

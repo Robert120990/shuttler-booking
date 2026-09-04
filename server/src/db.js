@@ -142,12 +142,18 @@ async function initSqlite() {
 }
 
 export async function initDb() {
-  const databaseUrl = process.env.DATABASE_URL || process.env.SUPABASE_DATABASE_URL || process.env.POSTGRES_URL;
+  const databaseUrl =
+    process.env.DATABASE_URL ||
+    process.env.DATABASE_PRIVATE_URL ||
+    process.env.DATABASE_PUBLIC_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRESQL_URL ||
+    process.env.SUPABASE_DATABASE_URL;
 
   // Only try PostgreSQL if databaseUrl exists and doesn't contain unfilled placeholder
   if (databaseUrl && !databaseUrl.includes('[YOUR-PASSWORD]') && !databaseUrl.includes('[tu-password]')) {
     try {
-      console.log('🔌 Conectando a PostgreSQL (Supabase)...');
+      console.log('🔌 Conectando a PostgreSQL (Base de datos en la nube)...');
       
       const pool = new Pool({
         connectionString: databaseUrl,

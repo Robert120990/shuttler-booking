@@ -17,6 +17,7 @@ import hostelsRoutes from './routes/hostels.js';
 import reviewsRoutes from './routes/reviews.js';
 import paymentsRoutes from './routes/payments.js';
 import { PUBLIC_URL, IMAGES_DIR, ensureDir } from './config.js';
+import { generateShuttleImage } from './utils/imageUtils.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -71,6 +72,47 @@ app.use('/images', express.static(IMAGES_DIR));
 if (fs.existsSync(repoImagesDir)) {
   app.use('/images', express.static(repoImagesDir));
 }
+
+// 2.5: Dynamic on-demand recovery for missing shuttle fusion banners (handles ephemeral container restarts)
+app.get('/images/shuttles/:filename', async (req, res, next) => {
+  try {
+    const filename = path.basename(req.params.filename);
+    const diskPath = path.join(IMAGES_DIR, 'shuttles', filename);
+    const repoPath = path.join(repoImagesDir, 'shuttles', filename);
+
+    // If file already exists on disk, serve it
+    if (fs.existsSync(diskPath) && fs.statSync(diskPath).size > 0) {
+      return res.sendFile(diskPath);
+    }
+    if (fs.existsSync(repoPath) && fs.statSync(repoPath).size > 0) {
+      return res.sendFile(repoPath);
+    }
+
+    // Look up shuttle in database to reconstruct on-the-fly
+    const cleanId = filename.replace(/\.webp$/i, '').replace(/^shuttle-/, '');
+    const shuttle = await prepare(`
+      SELECT s.id, s.image_url, o.image_url as origin_image, d.image_url as destination_image
+      FROM shuttles s
+      JOIN cities o ON s.origin_city_id = o.id
+      JOIN cities d ON s.destination_city_id = d.id
+      WHERE s.image_url LIKE ? OR s.id = ?
+    `).get(`%${filename}%`, cleanId);
+
+    if (shuttle && shuttle.origin_image && shuttle.destination_image) {
+      console.log(`⚡ Reconstrucción en tiempo real de banner fusionado: ${filename} (shuttle ${shuttle.id})`);
+      const generated = await generateShuttleImage(shuttle.origin_image, shuttle.destination_image, filename);
+      if (generated) {
+        const finalPath = path.join(IMAGES_DIR, 'shuttles', filename);
+        if (fs.existsSync(finalPath) && fs.statSync(finalPath).size > 0) {
+          return res.sendFile(finalPath);
+        }
+      }
+    }
+  } catch (err) {
+    console.error(`Error en auto-recuperación de imagen de shuttle ${req.params.filename}:`, err);
+  }
+  next();
+});
 
 // 3. Fallback for any missing /images/* file: serve placeholder image instead of 404 JSON
 const fallbackPlaceholder = path.join(repoImagesDir, 'cities', 'placeholder.png');
@@ -297,6 +339,54 @@ app.get('*', async (req, res) => {
   }
 });
 
+async function healMissingShuttleImages() {
+  try {
+    const shuttles = await prepare(`
+      SELECT s.id, s.name, s.image_url, o.image_url as origin_image, d.image_url as destination_image
+      FROM shuttles s
+      JOIN cities o ON s.origin_city_id = o.id
+      JOIN cities d ON s.destination_city_id = d.id
+    `).all();
+
+    if (!shuttles || shuttles.length === 0) return;
+
+    let healedCount = 0;
+    for (const s of shuttles) {
+      if (!s.origin_image || !s.destination_image) continue;
+
+      let filename = null;
+      if (s.image_url && s.image_url.includes('/images/shuttles/')) {
+        filename = path.basename(s.image_url.split('?')[0]);
+      } else {
+        filename = `shuttle-${s.id}.webp`;
+      }
+
+      const diskPath = path.join(IMAGES_DIR, 'shuttles', filename);
+      const repoPath = path.join(repoImagesDir, 'shuttles', filename);
+
+      const exists = (fs.existsSync(diskPath) && fs.statSync(diskPath).size > 0) ||
+                     (fs.existsSync(repoPath) && fs.statSync(repoPath).size > 0);
+
+      if (!exists) {
+        console.log(`🔄 Auto-sanación en arranque: regenerando banner fusionado para "${s.name}" (${filename})...`);
+        const generated = await generateShuttleImage(s.origin_image, s.destination_image, filename);
+        if (generated && (!s.image_url || !s.image_url.includes(filename))) {
+          await prepare('UPDATE shuttles SET image_url = ? WHERE id = ?').run(generated, s.id);
+        }
+        healedCount++;
+      }
+    }
+
+    if (healedCount > 0) {
+      console.log(`✅ Auto-sanación completada: ${healedCount} imágenes fusionadas restauradas exitosamente.`);
+    } else {
+      console.log('✅ Todas las imágenes fusionadas de los shuttles están presentes en disco.');
+    }
+  } catch (error) {
+    console.warn('Aviso en auto-sanación de imágenes:', error.message);
+  }
+}
+
 // Start listening immediately so Railway health checks pass instantly
 app.listen(PORT, '0.0.0.0', async () => {
   console.log(`🚀 Server running on port ${PORT}`);
@@ -305,6 +395,7 @@ app.listen(PORT, '0.0.0.0', async () => {
     await initDb();
     const { seedData } = await import('./seed.js');
     await seedData();
+    await healMissingShuttleImages();
     console.log('✨ Sistema y base de datos listos para procesar solicitudes.');
   } catch (err) {
     console.error('⚠️ Error inicializando base de datos:', err);

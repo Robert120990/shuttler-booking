@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Loader2, X, Package, Building2, MapPin, CreditCard, Wallet, ShieldCheck, Lock, AlertCircle } from 'lucide-react';
+import { 
+  Loader2, X, Building2, MapPin, CreditCard, Wallet, ShieldCheck, Lock, AlertCircle,
+  Calendar, User, Phone, Mail, UserCheck, Users, Luggage, Ticket, Clock, Bus,
+  Plus, Minus, Sparkles
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Button } from '../ui/Button';
@@ -366,12 +370,25 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-lg max-h-[92vh] overflow-y-auto shadow-2xl border border-slate-100">
-        <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-slate-100">
-          <div>
-            <CardTitle className="text-xl font-bold text-slate-900">{t('bookingModal.title')}</CardTitle>
-            <p className="text-xs text-slate-500 mt-0.5">{shuttle.name}</p>
+        <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-slate-100 bg-slate-50/70 rounded-t-2xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 flex-shrink-0">
+              <Bus className="w-5 h-5" />
+            </div>
+            <div>
+              <CardTitle className="text-xl font-bold text-slate-900 leading-tight">{t('bookingModal.title')}</CardTitle>
+              <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                <span className="font-semibold text-slate-700">{shuttle.name}</span>
+                {shuttle.schedule && (
+                  <span className="inline-flex items-center gap-1 text-[11px] bg-white border border-slate-200 px-1.5 py-0.5 rounded font-medium text-slate-600">
+                    <Clock className="w-3 h-3 text-slate-400" />
+                    {shuttle.schedule}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={onClose}>
+          <Button variant="ghost" size="sm" onClick={onClose} className="rounded-full hover:bg-slate-200/60 p-2">
             <X className="w-5 h-5 text-slate-400 hover:text-slate-700" />
           </Button>
         </CardHeader>
@@ -379,78 +396,119 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
         <CardContent className="pt-4">
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Price banner */}
-            <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl p-3 flex justify-between items-center">
-              <div>
-                <span className="text-xs font-semibold text-emerald-800 uppercase tracking-wide">{t('bookingModal.ratePerPerson')}</span>
-                <p className="text-2xl font-black text-emerald-700">${shuttle.price} <span className="text-xs font-normal text-emerald-600">USD</span></p>
+            <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl p-3.5 flex justify-between items-center shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+                  <Ticket className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider block">
+                    {t('bookingModal.ratePerPerson')}
+                  </span>
+                  <p className="text-2xl font-black text-emerald-700 leading-none">
+                    ${shuttle.price} <span className="text-xs font-normal text-emerald-600">USD</span>
+                  </p>
+                </div>
               </div>
-              <div className="text-right text-xs text-slate-500">
-                <span className="font-semibold text-slate-700">{shuttle.duration_hours}h</span> {t('bookingModal.tripDuration')}
+              <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-white/90 border border-emerald-200/60 px-2.5 py-1.5 rounded-lg shadow-2xs">
+                <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="font-bold text-slate-800">{shuttle.duration_hours}h</span>
+                <span className="text-slate-500">{t('bookingModal.tripDuration')}</span>
               </div>
             </div>
 
             {/* Date selection */}
             <Select
-              label={t('bookingModal.tripDate')}
+              label={
+                <span className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
+                  <Calendar className="w-4 h-4 text-emerald-600" />
+                  {t('bookingModal.tripDate')}
+                </span>
+              }
               options={[{ value: '', label: t('bookingModal.selectDate') }, ...dates]}
               value={bookingData.date}
               onChange={(e) => setBookingData({ date: e.target.value })}
               required
             />
 
-            {/* Passengers & Contact details */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label={t('bookingModal.bookerName')}
-                placeholder={t('bookingModal.passengerNamePlaceholder')}
-                value={bookingData.passenger_name || user?.name || ''}
-                onChange={(e) => handlePassengerNameChange(e.target.value)}
-                required
-              />
-              <Input
-                label={t('bookingModal.phone')}
-                placeholder="+506 8888 8888"
-                value={bookingData.passenger_phone || ''}
-                onChange={(e) => setBookingData({ passenger_phone: e.target.value })}
-                required
-              />
-            </div>
-
-            <Input
-              label={t('bookingModal.email')}
-              type="email"
-              placeholder="tu-correo@ejemplo.com"
-              value={bookingData.passenger_email || user?.email || ''}
-              onChange={(e) => setBookingData({ passenger_email: e.target.value })}
-              required
-            />
-
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label className="block text-sm font-medium text-slate-700">
-                  {t('bookingModal.pickupPerson')}
-                </label>
-                {isCustomPickupPerson && (
-                  <button
-                    type="button"
-                    onClick={handleResetPickupPerson}
-                    className="text-xs text-emerald-600 hover:text-emerald-700 font-medium hover:underline flex items-center gap-1"
-                  >
-                    {t('bookingModal.useSameName')}
-                  </button>
-                )}
+            {/* Section: Passenger Details */}
+            <div className="pt-2 border-t border-slate-100">
+              <div className="flex items-center gap-2 mb-3">
+                <User className="w-4 h-4 text-emerald-600" />
+                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                  Datos de Contacto del Pasajero
+                </span>
               </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
+                <Input
+                  label={
+                    <span className="flex items-center gap-1.5 text-xs font-medium text-slate-700">
+                      <User className="w-3.5 h-3.5 text-slate-400" />
+                      {t('bookingModal.bookerName')}
+                    </span>
+                  }
+                  placeholder={t('bookingModal.passengerNamePlaceholder')}
+                  value={bookingData.passenger_name || user?.name || ''}
+                  onChange={(e) => handlePassengerNameChange(e.target.value)}
+                  required
+                />
+                <Input
+                  label={
+                    <span className="flex items-center gap-1.5 text-xs font-medium text-slate-700">
+                      <Phone className="w-3.5 h-3.5 text-slate-400" />
+                      {t('bookingModal.phone')}
+                    </span>
+                  }
+                  placeholder="+506 8888 8888"
+                  value={bookingData.passenger_phone || ''}
+                  onChange={(e) => setBookingData({ passenger_phone: e.target.value })}
+                  required
+                />
+              </div>
+
               <Input
-                placeholder={t('bookingModal.pickupPersonPlaceholder')}
-                value={bookingData.pickup_person_name || (isCustomPickupPerson ? '' : (bookingData.passenger_name || user?.name || ''))}
-                onChange={(e) => handlePickupPersonChange(e.target.value)}
+                label={
+                  <span className="flex items-center gap-1.5 text-xs font-medium text-slate-700">
+                    <Mail className="w-3.5 h-3.5 text-slate-400" />
+                    {t('bookingModal.email')}
+                  </span>
+                }
+                type="email"
+                placeholder="tu-correo@ejemplo.com"
+                value={bookingData.passenger_email || user?.email || ''}
+                onChange={(e) => setBookingData({ passenger_email: e.target.value })}
                 required
               />
-              <p className="text-[11px] text-slate-500">
-                {isCustomPickupPerson
-                  ? t('bookingModal.pickupPersonDifferent')
-                  : t('bookingModal.pickupPersonDefault')}
-              </p>
+
+              <div className="space-y-1 mt-3">
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-1.5 text-xs font-medium text-slate-700">
+                    <UserCheck className="w-3.5 h-3.5 text-slate-400" />
+                    {t('bookingModal.pickupPerson')}
+                  </label>
+                  {isCustomPickupPerson && (
+                    <button
+                      type="button"
+                      onClick={handleResetPickupPerson}
+                      className="text-xs text-emerald-600 hover:text-emerald-700 font-medium hover:underline flex items-center gap-1"
+                    >
+                      {t('bookingModal.useSameName')}
+                    </button>
+                  )}
+                </div>
+                <Input
+                  placeholder={t('bookingModal.pickupPersonPlaceholder')}
+                  value={bookingData.pickup_person_name || (isCustomPickupPerson ? '' : (bookingData.passenger_name || user?.name || ''))}
+                  onChange={(e) => handlePickupPersonChange(e.target.value)}
+                  required
+                />
+                <p className="text-[11px] text-slate-500">
+                  {isCustomPickupPerson
+                    ? t('bookingModal.pickupPersonDifferent')
+                    : t('bookingModal.pickupPersonDefault')}
+                </p>
+              </div>
             </div>
 
             {/* ORIGIN PICKUP LOCATION (HOSTELS OF ORIGIN CITY) */}
@@ -493,7 +551,7 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
                   required
                 >
                   <option value="">{t('bookingModal.selectPickupHostel')}</option>
-                  {originHostels.map((h) => {
+                  {originHostels.map((h: Hostel) => {
                     const fullVal = `${h.name}${h.address ? ' - ' + h.address : ''}`;
                     return (
                       <option key={h.id} value={fullVal}>
@@ -556,7 +614,7 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
                   required
                 >
                   <option value="">{t('bookingModal.selectDropoffHostel')}</option>
-                  {destHostels.map((h) => {
+                  {destHostels.map((h: Hostel) => {
                     const fullVal = `${h.name}${h.address ? ' - ' + h.address : ''}`;
                     return (
                       <option key={h.id} value={fullVal}>
@@ -579,23 +637,50 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
               )}
             </div>
 
-            {/* Passenger Count */}
-            <Input
-              type="number"
-              label={t('bookingModal.passengersCount')}
-              min="1"
-              max="15"
-              value={String(bookingData.passengers)}
-              onChange={(e) => setBookingData({ passengers: Number(e.target.value) || 1 })}
-              required
-            />
+            {/* Passenger Count Stepper */}
+            <div className="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                  <Users className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-sm font-semibold text-slate-800 block">
+                    {t('bookingModal.passengersCount')}
+                  </span>
+                  <span className="text-[11px] text-slate-500">
+                    Asientos reservados para esta salida
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-lg border border-slate-200 shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setBookingData({ passengers: Math.max(1, (bookingData.passengers || 1) - 1) })}
+                  className="w-7 h-7 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition-colors disabled:opacity-40 cursor-pointer"
+                  disabled={bookingData.passengers <= 1}
+                >
+                  <Minus className="w-3.5 h-3.5" />
+                </button>
+                <span className="text-base font-bold text-slate-900 w-7 text-center select-none">
+                  {bookingData.passengers || 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setBookingData({ passengers: Math.min(15, (bookingData.passengers || 1) + 1) })}
+                  className="w-7 h-7 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-700 flex items-center justify-center transition-colors disabled:opacity-40 cursor-pointer"
+                  disabled={bookingData.passengers >= 15}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
 
             {/* Extra Luggage */}
             {luggageOptions.length > 0 && (
               <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <Package className="w-4 h-4 text-emerald-600" />
+                    <Luggage className="w-4 h-4 text-emerald-600" />
                     {t('bookingModal.extraLuggage')}
                   </label>
                   <button
@@ -840,17 +925,21 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
               </div>
             </div>
 
-            {/* Summary and Total */}
-            <div className="border-t border-slate-200 pt-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600">${shuttle.price} x {bookingData.passengers} {t('bookingModal.passengers')}</span>
+            {/* Total Breakdown */}
+            <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 space-y-2">
+              <div className="flex justify-between text-xs text-slate-600">
+                <span className="flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-slate-400" />
+                  ${shuttle.price} × {bookingData.passengers} {t('bookingModal.passengers')}
+                </span>
                 <span className="font-semibold text-slate-900">${shuttle.price * bookingData.passengers} USD</span>
               </div>
               {bookingData.extra_luggage.map((item, index) => (
                 luggageOptions[item.typeIndex] && item.quantity > 0 && (
-                  <div key={index} className="flex justify-between text-sm">
-                    <span className="text-slate-600">
-                      {luggageOptions[item.typeIndex].name} x {item.quantity}
+                  <div key={index} className="flex justify-between text-xs text-slate-600">
+                    <span className="flex items-center gap-1.5">
+                      <Luggage className="w-3.5 h-3.5 text-slate-400" />
+                      {luggageOptions[item.typeIndex].name} × {item.quantity}
                     </span>
                     <span className="font-semibold text-slate-900">
                       +${luggageOptions[item.typeIndex].price * item.quantity} USD
@@ -858,9 +947,12 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
                   </div>
                 )
               ))}
-              <div className="flex justify-between text-lg font-black pt-2 border-t border-slate-200 text-slate-900">
-                <span>{t('bookingModal.totalToPay')}</span>
-                <span className="text-emerald-600">${total} USD</span>
+              <div className="flex justify-between text-lg font-black pt-2.5 border-t border-slate-200 text-slate-900 items-center">
+                <span className="flex items-center gap-1.5 text-sm font-bold">
+                  <Sparkles className="w-4 h-4 text-emerald-600" />
+                  {t('bookingModal.totalToPay')}
+                </span>
+                <span className="text-xl font-black text-emerald-700">${total} <span className="text-xs font-normal text-emerald-600">USD</span></span>
               </div>
             </div>
 

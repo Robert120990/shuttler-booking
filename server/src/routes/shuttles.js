@@ -141,7 +141,8 @@ router.post('/generate-fusion', async (req, res) => {
       return res.status(404).json({ error: 'Una o ambas ciudades no fueron encontradas' });
     }
 
-    const generatedImage = await generateShuttleImage(originCity.image_url, destCity.image_url);
+    const targetFilename = shuttle_id ? `shuttle-${shuttle_id}.webp` : null;
+    const generatedImage = await generateShuttleImage(originCity.image_url, destCity.image_url, targetFilename);
     if (!generatedImage) {
       return res.status(500).json({ error: 'No se pudo generar la imagen de fusión de ruta' });
     }
@@ -183,7 +184,7 @@ router.post('/regenerate-all-fusion', async (req, res) => {
     let updatedCount = 0;
     for (const shuttle of shuttles) {
       try {
-        const generated = await generateShuttleImage(shuttle.origin_image, shuttle.destination_image);
+        const generated = await generateShuttleImage(shuttle.origin_image, shuttle.destination_image, `shuttle-${shuttle.id}.webp`);
         if (generated) {
           if (shuttle.image_url && shuttle.image_url !== generated) {
             await deleteShuttleImage(shuttle.image_url);
@@ -233,7 +234,8 @@ router.post('/', async (req, res) => {
       if (originCity && destCity) {
         const generatedImage = await generateShuttleImage(
           originCity.image_url,
-          destCity.image_url
+          destCity.image_url,
+          `shuttle-${id}.webp`
         );
         if (generatedImage) {
           shuttleImageUrl = generatedImage;
@@ -305,9 +307,13 @@ router.put('/:id', async (req, res) => {
         if (existingShuttle.image_url && existingShuttle.image_url.includes('/images/shuttles/')) {
           await deleteShuttleImage(existingShuttle.image_url);
         }
+        const targetFilename = existingShuttle.image_url && existingShuttle.image_url.includes('/images/shuttles/')
+          ? path.basename(existingShuttle.image_url.split('?')[0])
+          : `shuttle-${id}.webp`;
         const generatedImage = await generateShuttleImage(
           originCity.image_url,
-          destCity.image_url
+          destCity.image_url,
+          targetFilename
         );
         if (generatedImage) {
           newImageUrl = generatedImage;

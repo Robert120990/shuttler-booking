@@ -170,7 +170,7 @@ async function getImageBuffer(imageUrl, defaultWidth = 400, defaultHeight = 400)
  * Generates an optimized, premium composite route banner combining origin and destination city photos
  * Dimensions: 800 x 400 (2:1 aspect ratio) with SVG route divider, emerald arrow badge and bottom vignette
  */
-export async function generateShuttleImage(originImageUrl, destinationImageUrl) {
+export async function generateShuttleImage(originImageUrl, destinationImageUrl, targetFilename = null) {
   const shuttlesDir = path.join(publicDir, 'shuttles');
   ensureDir(shuttlesDir);
 
@@ -178,7 +178,7 @@ export async function generateShuttleImage(originImageUrl, destinationImageUrl) 
   const repoShuttlesDir = path.join(serverRoot, 'public', 'images', 'shuttles');
   ensureDir(repoShuttlesDir);
 
-  const filename = `shuttle-${uuidv4()}.webp`;
+  const filename = targetFilename ? path.basename(targetFilename) : `shuttle-${uuidv4()}.webp`;
   const filepath = path.join(shuttlesDir, filename);
 
   try {

@@ -6,15 +6,18 @@ La aplicación soporta **dos modos de base de datos automáticamente**:
 
 ---
 
-## ⚡ Conectar con Supabase (Recomendado para no perder datos en cuentas gratis)
+## ⚡ Conectar con Supabase (Persistencia permanente ante Deploys)
 
-1. Crea un proyecto gratuito en **[Supabase](https://supabase.com)**.
-2. En Supabase ve a **Project Settings** → **Database** → **Connection String** → pestaña **URI** (o modo **Node.js** / **Session/Transaction Pooler**).
-3. Copia la URL de conexión (reemplazando `[YOUR-PASSWORD]` por la contraseña de tu base de datos Supabase).
-   - Ejemplo: `postgresql://postgres.[ref]:miPassword@aws-0-[region].pooler.supabase.com:6543/postgres`
-4. En **Railway Dashboard** → tu Servicio → pestaña **Variables**, agrega:
-   - `DATABASE_URL` = `tu_url_de_supabase`
-5. ¡Listo! La app creará automáticamente las tablas (`users`, `countries`, `cities`, `shuttles`, `bookings`, `settings`, `faqs`) y poblará los datos iniciales. Tus reservas y configuraciones nunca se borrarán.
+1. Crea o entra a tu proyecto en **[Supabase](https://supabase.com)**.
+2. Ve a **Project Settings** (icono de tuerca) → **Database**.
+3. Baja hasta la sección **Connection Pooling (Supavisor)**.
+   - ⚠️ **ATENCIÓN:** NO uses la "Direct Connection" (`db.[ref].supabase.co`) porque resuelve a IPv6 y Railway solo soporta IPv4, lo cual causará error de conexión y la app volverá a SQLite local.
+   - En **Connection Pooling**, selecciona modo **Session** (puerto `5432`) o **Transaction** (puerto `6543`).
+4. Copia la URL URI de conexión, que tiene este formato:
+   - `postgresql://postgres.[ref]:miPassword@aws-0-[region].pooler.supabase.com:6543/postgres`
+5. En **Railway Dashboard** → tu Servicio → pestaña **Variables**, crea o actualiza:
+   - `DATABASE_URL` = la URI copiada (reemplazando `[YOUR-PASSWORD]` por la contraseña de tu base de datos Supabase).
+6. ¡Listo! La app detectará Supabase automáticamente, creará las tablas y mantendrá todas las configuraciones, reservas y datos para siempre sin borrarse en ningún deploy.
 
 ---
 

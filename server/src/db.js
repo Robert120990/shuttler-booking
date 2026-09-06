@@ -12,6 +12,24 @@ const dbPath = join(dataDir, 'database.sqlite');
 let isPg = false;
 let pgPool = null;
 let sqliteDb = null;
+let pgConnectionError = null;
+
+export function getDbStatus() {
+  const rawDbUrl =
+    process.env.DATABASE_URL ||
+    process.env.DATABASE_PRIVATE_URL ||
+    process.env.DATABASE_PUBLIC_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRESQL_URL ||
+    process.env.SUPABASE_DATABASE_URL;
+
+  return {
+    isPg,
+    type: isPg ? 'PostgreSQL (Supabase)' : 'SQLite Local (Temporal)',
+    error: pgConnectionError,
+    hasDbUrl: Boolean((rawDbUrl || '').trim()),
+  };
+}
 
 async function initSqlite() {
   console.log('📁 Inicializando base de datos local SQLite...');
@@ -142,13 +160,15 @@ async function initSqlite() {
 }
 
 export async function initDb() {
-  const databaseUrl =
+  const rawDbUrl =
     process.env.DATABASE_URL ||
     process.env.DATABASE_PRIVATE_URL ||
     process.env.DATABASE_PUBLIC_URL ||
     process.env.POSTGRES_URL ||
     process.env.POSTGRESQL_URL ||
     process.env.SUPABASE_DATABASE_URL;
+
+  const databaseUrl = (rawDbUrl || '').trim();
 
   // Only try PostgreSQL if databaseUrl exists and doesn't contain unfilled placeholder
   if (databaseUrl && !databaseUrl.includes('[YOUR-PASSWORD]') && !databaseUrl.includes('[tu-password]')) {
@@ -273,14 +293,29 @@ export async function initDb() {
 
       pgPool = pool;
       isPg = true;
+      pgConnectionError = null;
       console.log('✅ PostgreSQL (Supabase) conectado e inicializado con éxito.');
       return pgPool;
     } catch (pgError) {
-      console.error('⚠️ No se pudo conectar a PostgreSQL/Supabase:', pgError.message);
+      const errLower = (pgError.message || '').toLowerCase();
+      if (errLower.includes('enetunreach') || errLower.includes('network is unreachable') || (databaseUrl.includes('db.') && databaseUrl.includes('.supabase.co'))) {
+        pgConnectionError = `Error de red IPv6 (${pgError.message}). Railway solo soporta IPv4. En Supabase debes usar el 'Connection Pooling' (Supavisor) con host 'aws-0-...pooler.supabase.com' (puerto 6543 o 5432) en lugar de la conexión directa db.xxx.supabase.co.`;
+      } else if (errLower.includes('password authentication failed') || errLower.includes('authentication failed')) {
+        pgConnectionError = `Error de autenticación: Contraseña de base de datos incorrecta en Supabase (${pgError.message}). Verifica tu contraseña en Supabase -> Project Settings -> Database.`;
+      } else {
+        pgConnectionError = `Error al conectar con PostgreSQL/Supabase: ${pgError.message}`;
+      }
+
+      console.error('⚠️ No se pudo conectar a PostgreSQL/Supabase:', pgConnectionError);
       console.log('🔄 Activando respaldo con base de datos local SQLite...');
       isPg = false;
       pgPool = null;
     }
+  } else if (databaseUrl) {
+    pgConnectionError = 'La variable DATABASE_URL contiene texto de ejemplo ([YOUR-PASSWORD] o [tu-password]). Reemplázalo por tu contraseña real de Supabase.';
+    console.warn('⚠️ ' + pgConnectionError);
+  } else {
+    pgConnectionError = 'No se ha configurado la variable DATABASE_URL en Railway (Variables del servicio).';
   }
 
   return await initSqlite();

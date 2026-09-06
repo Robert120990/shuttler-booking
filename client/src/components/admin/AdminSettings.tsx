@@ -1,10 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, Server, Shield, Send, CheckCircle2, AlertCircle, Loader2, Save, Eye, EyeOff, Info, ExternalLink, Zap, PhoneCall, ArrowRight } from 'lucide-react';
+import { Mail, Server, Shield, Send, CheckCircle2, AlertCircle, Loader2, Save, Eye, EyeOff, Info, ExternalLink, Zap, PhoneCall, ArrowRight, Database } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { settingsApi } from '../../api/endpoints';
+
+interface DbStatus {
+  isPg: boolean;
+  type: string;
+  error: string | null;
+  hasDbUrl: boolean;
+}
 
 export const AdminSettings = () => {
   const [loading, setLoading] = useState(true);
@@ -15,6 +22,7 @@ export const AdminSettings = () => {
   const [showBrevoKey, setShowBrevoKey] = useState(false);
   const [testEmail, setTestEmail] = useState('');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [dbStatus, setDbStatus] = useState<DbStatus | null>(null);
 
   const [formData, setFormData] = useState({
     email_provider: 'smtp',
@@ -40,7 +48,10 @@ export const AdminSettings = () => {
       setLoading(true);
       const res = await settingsApi.getAll();
       if (res.data) {
-        const raw = res.data;
+        const raw = res.data as any;
+        if (raw._db_status) {
+          setDbStatus(raw._db_status);
+        }
         const smtpUser = raw.smtp_user?.trim() || 'trailexplorersv@gmail.com';
         const smtpPass = raw.smtp_pass?.trim() || 'nxwmwvjkpgdbofyw';
         const notifEmail = raw.notification_email?.trim() || 'trailexplorersv@gmail.com';
@@ -264,6 +275,80 @@ export const AdminSettings = () => {
           <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </div>
+
+      {/* Database Persistence Status Card */}
+      {dbStatus && (
+        dbStatus.isPg ? (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3 text-emerald-900 shadow-sm">
+            <div className="p-2 bg-emerald-600 text-white rounded-lg mt-0.5">
+              <Database className="w-5 h-5" />
+            </div>
+            <div className="text-xs space-y-1 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-sm text-emerald-950">Base de Datos Persistente: Supabase (PostgreSQL)</span>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-800 text-[10px] font-bold uppercase tracking-wider">
+                  En Línea
+                </span>
+              </div>
+              <p className="text-emerald-800/90 text-xs">
+                Tu sistema está conectado correctamente a Supabase en la nube. Todas las reservas, rutas y configuraciones de correo se guardan de forma permanente y <strong>no se perderán cuando Railway haga nuevos deploys</strong>.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-amber-50/90 border border-amber-300 rounded-xl p-4 flex items-start gap-3.5 text-amber-950 shadow-sm">
+            <div className="p-2 bg-amber-500 text-white rounded-lg mt-0.5 flex-shrink-0">
+              <AlertCircle className="w-5 h-5" />
+            </div>
+            <div className="text-xs space-y-2.5 flex-1">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-sm text-amber-950">
+                    Alerta: Base de Datos Temporal SQLite (No conectada a Supabase)
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 text-[10px] font-bold uppercase tracking-wider">
+                    Temporal
+                  </span>
+                </div>
+              </div>
+              <p className="text-amber-900 leading-relaxed">
+                El servidor actualmente está guardando los datos en la memoria local temporal del contenedor de Railway. <strong>Por este motivo, cada vez que Railway compila o hace un deploy nuevo, los datos guardados se reinician a los valores por defecto</strong>.
+              </p>
+
+              {dbStatus.error && (
+                <div className="p-3 bg-amber-100/80 rounded-lg font-mono text-[11px] text-amber-950 border border-amber-300">
+                  <span className="font-bold text-amber-900 font-sans block mb-1">Diagnóstico del error al conectar con Supabase:</span>
+                  {dbStatus.error}
+                </div>
+              )}
+
+              <div className="bg-white/95 border border-amber-200 rounded-lg p-3.5 text-slate-800 space-y-2">
+                <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                  <Database className="w-4 h-4 text-emerald-600" />
+                  <span>¿Cómo conectar Supabase a Railway para que los datos nunca se pierdan?</span>
+                </div>
+                <ol className="list-decimal list-inside space-y-1.5 text-slate-700 text-xs leading-relaxed">
+                  <li>
+                    Entra a tu proyecto en <strong>Supabase</strong> &gt; icono de engranaje (<strong>Project Settings</strong>) &gt; <strong>Database</strong>.
+                  </li>
+                  <li>
+                    Baja hasta la sección <strong>Connection Pooling (Supavisor)</strong>.
+                    <p className="ml-4 text-[11px] text-slate-600 font-sans mt-0.5">
+                      ⚠️ <em>Importante: No utilices la "Direct connection" (db.xxxx.supabase.co) porque Railway no tiene soporte para IPv6 y fallará. Debes usar el Connection Pooler (host aws-0-...pooler.supabase.com) que sí soporta IPv4.</em>
+                    </p>
+                  </li>
+                  <li>
+                    Copia la URL de conexión en modo <strong>Session</strong> o <strong>Transaction</strong> (puerto <strong>6543</strong> o <strong>5432</strong>).
+                  </li>
+                  <li>
+                    En tu panel de <strong>Railway</strong> &gt; tu Servicio &gt; pestaña <strong>Variables</strong>, crea o edita la variable <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-emerald-700 font-semibold">DATABASE_URL</code> y pega la URL reemplazando <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-red-600">[YOUR-PASSWORD]</code> por la contraseña real de tu base de datos de Supabase.
+                  </li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        )
+      )}
 
       {/* In-page Feedback Banner */}
       {feedback && (

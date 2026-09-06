@@ -26,11 +26,25 @@ router.get('/public', async (req, res) => {
   }
 });
 
+// GET /api/settings/db-status - Database connectivity diagnosis
+router.get('/db-status', async (req, res) => {
+  try {
+    const { getDbStatus } = await import('../db.js');
+    res.json(getDbStatus());
+  } catch (err) {
+    res.status(500).json({ error: 'Error al consultar estado de base de datos' });
+  }
+});
+
 // GET /api/settings - Retrieve all settings
 router.get('/', async (req, res) => {
   try {
+    const { getDbStatus } = await import('../db.js');
     const settings = await getSettings();
-    res.json(settings);
+    res.json({
+      ...settings,
+      _db_status: getDbStatus(),
+    });
   } catch (error) {
     console.error('Error fetching settings:', error);
     res.status(500).json({ error: 'Error al obtener la configuración' });

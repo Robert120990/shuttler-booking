@@ -9,6 +9,7 @@ import { shuttlesApi, citiesApi } from '../../api/endpoints';
 import { getImageUrl } from '../../api/client';
 import type { Shuttle, City, LuggageOption } from '../../types';
 import { TripServicesSelector } from './TripServicesSelector';
+import { TripToBringSelector } from './TripToBringSelector';
 
 export const CONVENTIONAL_SHUTTLE_DEFAULTS = {
   schedule: '8:00 AM',
@@ -17,7 +18,7 @@ export const CONVENTIONAL_SHUTTLE_DEFAULTS = {
   availability: 'Todos los días',
   service_type: 'local' as 'local' | 'international',
   included: 'A/C, Parada de Servicio, Asientos Reclinables, Enchufe de Carga, Wifi, Alimentos y Bebidas',
-  to_bring: 'Agua, Pasaporte / Documento de identidad, Audífonos, Ropa cómoda',
+  to_bring: 'Pasaporte / Identificación, Agua, Chaqueta o Suéter, Audífonos, Ropa Cómoda, Cargador de Celular, Dinero en Efectivo',
   luggage_policy: '1 mochila o maleta principal y 1 bolso de mano por persona',
   pickup_info: 'Recogida directa en el lobby de tu hotel u hostal. Por favor estar listo 15 minutos antes de la hora indicada.',
   cancellation_policy: 'Cancelación gratuita hasta 24 horas antes de la salida.',
@@ -998,12 +999,10 @@ export const AdminShuttles = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Qué Traer (separados por coma)</label>
-                <Input 
-                  placeholder="Libro, Audífonos, Agua" 
-                  value={formData.to_bring} 
-                  onChange={(e) => setFormData({ ...formData, to_bring: e.target.value })} 
+              <div className="border-t pt-4">
+                <TripToBringSelector
+                  value={formData.to_bring}
+                  onChange={(newToBring) => setFormData({ ...formData, to_bring: newToBring })}
                 />
               </div>
 

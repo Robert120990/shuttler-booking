@@ -14,10 +14,10 @@ import { getImageUrl } from '../../api/client';
 import { BookingModal } from './BookingModal';
 import { BookingConfirmationModal } from './BookingConfirmationModal';
 import { TripServicesGrid } from './TripServicesGrid';
+import { TripToBringGrid } from './TripToBringGrid';
 import { SEO } from '../seo/SEO';
 import {
   translateRouteName,
-  translateList,
   translateLuggagePolicy,
   translateLuggageOptions,
   translatePickupInfo,
@@ -222,7 +222,6 @@ export const ShuttlePage = () => {
   const baseRouteName = originName && destName ? `${originName} to ${destName}` : shuttle.name;
   const routeName = translateRouteName(baseRouteName, language);
 
-  const toBring = translateList(shuttle.to_bring, language);
   const serviceTypeLabel = shuttle.service_type === 'international' ? t('shuttle.internationalService') : t('shuttle.localService');
   const duration = Number(shuttle.duration_hours);
   const rating = Number(shuttle.rating) || 5.0;
@@ -430,17 +429,10 @@ export const ShuttlePage = () => {
                     </div>
                   )}
 
-                  {toBring.length > 0 && (
+                  {shuttle.to_bring && shuttle.to_bring.trim().length > 0 && (
                     <div>
-                      <h3 className="font-semibold text-slate-900 mb-2">{t('shuttle.whatToBring')}</h3>
-                      <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {toBring.map((item, index) => (
-                          <li key={index} className="flex items-center gap-2 text-sm text-slate-600">
-                            <CheckCircle className="w-4 h-4 text-blue-500" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
+                      <h3 className="font-semibold text-slate-900 mb-3">{t('shuttle.whatToBring')}</h3>
+                      <TripToBringGrid toBringRaw={shuttle.to_bring} language={language} />
                     </div>
                   )}
 

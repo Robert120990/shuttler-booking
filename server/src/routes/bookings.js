@@ -1,7 +1,7 @@
 import express from 'express';
 import { prepare } from '../db.js';
 import { v4 as uuidv4 } from 'uuid';
-import { sendBookingNotification } from '../utils/mailer.js';
+import { sendBookingNotification, sendBookingStatusNotification } from '../utils/mailer.js';
 
 const router = express.Router();
 
@@ -105,11 +105,23 @@ router.post('/', async (req, res) => {
 router.patch('/:id/status', async (req, res) => {
   try {
     const { status } = req.body;
+    const oldBooking = await prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
+    if (!oldBooking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
     
     await prepare('UPDATE bookings SET status = ? WHERE id = ?').run(status, req.params.id);
     
-    const booking = await prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
-    res.json(booking);
+    const updatedBooking = await prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
+    
+    // Notify customer when status transitions to confirmed or cancelled
+    if (oldBooking.status !== status && (status === 'confirmed' || status === 'cancelled')) {
+      sendBookingStatusNotification(updatedBooking, status).catch((mailErr) => {
+        console.error(`Error enviando notificación de estado (${status}) al cliente:`, mailErr);
+      });
+    }
+
+    res.json(updatedBooking);
   } catch (error) {
     console.error('Error updating booking status:', error);
     res.status(500).json({ error: 'Failed to update booking status' });
@@ -119,11 +131,23 @@ router.patch('/:id/status', async (req, res) => {
 router.patch('/:id/payment', async (req, res) => {
   try {
     const { payment_status } = req.body;
+    const oldBooking = await prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
+    if (!oldBooking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
     
     await prepare('UPDATE bookings SET payment_status = ?, status = ? WHERE id = ?').run(payment_status, 'confirmed', req.params.id);
     
-    const booking = await prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
-    res.json(booking);
+    const updatedBooking = await prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
+
+    // Notify customer when marked confirmed via payment update
+    if (oldBooking.status !== 'confirmed') {
+      sendBookingStatusNotification(updatedBooking, 'confirmed').catch((mailErr) => {
+        console.error('Error enviando notificación de confirmación al cliente:', mailErr);
+      });
+    }
+
+    res.json(updatedBooking);
   } catch (error) {
     console.error('Error updating booking payment:', error);
     res.status(500).json({ error: 'Failed to update booking payment' });

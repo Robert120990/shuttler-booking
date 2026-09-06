@@ -560,3 +560,228 @@ export async function sendBookingNotification(booking, shuttle = null) {
     console.error('Error al procesar envío de notificación de reserva:', error);
   }
 }
+
+/**
+ * HTML Template for Booking Confirmed Status Notification
+ */
+export function buildCustomerBookingConfirmedHtml(booking, shuttle, shuttleName, bookingDate) {
+  const bookingCode = (booking.id || '').slice(0, 8).toUpperCase();
+  return `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 620px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+      <!-- Header -->
+      <div style="background-color: #059669; padding: 26px; text-align: center; color: #ffffff;">
+        <h1 style="margin: 0; font-size: 22px; font-weight: 700;">¡Tu Reserva está Confirmada! 🚐</h1>
+        <p style="margin: 6px 0 0; opacity: 0.95; font-size: 15px; font-family: monospace; font-weight: 600;">Reserva #${bookingCode}</p>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px;">
+        <p style="color: #334155; font-size: 15px; line-height: 1.6; margin-top: 0;">
+          Hola <strong>${booking.passenger_name || 'Viajero'}</strong>, nos complace informarte que tu viaje en shuttle ha sido <strong>CONFIRMADO</strong> oficialmente. Tu conductor y el operador de transporte tienen programado tu servicio.
+        </p>
+
+        <!-- Route & Status Summary Card -->
+        <div style="background-color: #f0fdf4; border: 1px solid #86efac; border-radius: 10px; padding: 18px; margin: 20px 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="color: #14532d; font-weight: 700; font-size: 17px;">${shuttleName}</span>
+          </div>
+          <div style="color: #15803d; font-size: 22px; font-weight: 800; margin-bottom: 6px;">
+            Total: $${booking.total_price} USD
+          </div>
+          <div style="color: #374151; font-size: 14px; margin-bottom: 10px;">
+            📅 Fecha del viaje: <strong>${bookingDate}</strong>
+            ${shuttle?.schedule ? `<br/>⏰ Horario establecido: <strong>${shuttle.schedule}</strong>` : ''}
+          </div>
+          <div style="display: inline-block; background-color: #059669; color: #ffffff; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+            ✓ Confirmado
+          </div>
+        </div>
+
+        <!-- Meeting Points -->
+        <h3 style="color: #1e293b; font-size: 15px; margin: 0 0 12px; border-bottom: 2px solid #f1f5f9; padding-bottom: 6px;">
+          📍 Puntos de Recogida y Entrega
+        </h3>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px;">
+          <tr>
+            <td style="padding: 8px 0; color: #64748b; width: 38%;">Lugar de recogida:</td>
+            <td style="padding: 8px 0; color: #0f172a; font-weight: 600;">${booking.pickup_location}</td>
+          </tr>
+          ${booking.pickup_person_name ? `
+          <tr>
+            <td style="padding: 8px 0; color: #64748b;">Persona a recoger:</td>
+            <td style="padding: 8px 0; color: #047857; font-weight: 700;">${booking.pickup_person_name}</td>
+          </tr>
+          ` : ''}
+          <tr>
+            <td style="padding: 8px 0; color: #64748b;">Lugar de entrega:</td>
+            <td style="padding: 8px 0; color: #0f172a; font-weight: 600;">${booking.dropoff_location}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #64748b;">Pasajeros / Asientos:</td>
+            <td style="padding: 8px 0; color: #0f172a; font-weight: 600;">${booking.seats || 1} persona(s)</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #64748b;">Equipaje extra:</td>
+            <td style="padding: 8px 0; color: #0f172a;">${booking.extra_luggage > 0 ? `${booking.extra_luggage} pieza(s) extra` : 'Sin equipaje extra'}</td>
+          </tr>
+        </table>
+
+        <!-- Travel Recommendations -->
+        <div style="background-color: #f8fafc; border-left: 4px solid #059669; border-radius: 6px; padding: 14px; margin-bottom: 20px; font-size: 13px; color: #334155; line-height: 1.6;">
+          <strong style="color: #0f172a;">Recomendaciones para el día del viaje:</strong>
+          <ul style="margin: 6px 0 0; padding-left: 18px;">
+            <li>Por favor preséntate en la recepción o lobby del hostal/hotel <strong>15 minutos antes</strong> de la hora acordada.</li>
+            <li>Ten listo tu pasaporte o documento de identidad oficial si tu viaje cruza fronteras.</li>
+            <li>En caso de requerir coordinar el acceso, el conductor se comunicará al teléfono/WhatsApp: <strong>${booking.passenger_phone || 'registrado en tu reserva'}</strong>.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="background-color: #f1f5f9; padding: 18px; text-align: center; font-size: 12px; color: #64748b; line-height: 1.5;">
+        Trail Explorer &bull; Servicio al Cliente y Soporte de Viaje<br/>
+        ¿Necesitas cambios o ayuda urgente? Responde directamente a este correo.
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * HTML Template for Booking Cancelled Status Notification
+ */
+export function buildCustomerBookingCancelledHtml(booking, shuttle, shuttleName, bookingDate) {
+  const bookingCode = (booking.id || '').slice(0, 8).toUpperCase();
+  return `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 620px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+      <!-- Header -->
+      <div style="background-color: #dc2626; padding: 26px; text-align: center; color: #ffffff;">
+        <h1 style="margin: 0; font-size: 22px; font-weight: 700;">Reserva Cancelada ❌</h1>
+        <p style="margin: 6px 0 0; opacity: 0.95; font-size: 15px; font-family: monospace; font-weight: 600;">Reserva #${bookingCode}</p>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 24px;">
+        <p style="color: #334155; font-size: 15px; line-height: 1.6; margin-top: 0;">
+          Hola <strong>${booking.passenger_name || 'Viajero'}</strong>, te informamos que tu reserva <strong>#${bookingCode}</strong> para la ruta <strong>${shuttleName}</strong> programada para el día <strong>${bookingDate}</strong> ha sido <strong>CANCELADA</strong>.
+        </p>
+
+        <!-- Route & Status Summary Card -->
+        <div style="background-color: #fef2f2; border: 1px solid #fca5a5; border-radius: 10px; padding: 18px; margin: 20px 0;">
+          <div style="color: #991b1b; font-weight: 700; font-size: 17px; margin-bottom: 4px;">
+            ${shuttleName}
+          </div>
+          <div style="color: #7f1d1d; font-size: 14px; margin-bottom: 10px;">
+            📅 Fecha original del viaje: <strong>${bookingDate}</strong>
+          </div>
+          <div style="display: inline-block; background-color: #dc2626; color: #ffffff; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+            ✕ Cancelado
+          </div>
+        </div>
+
+        <!-- Cancellation & Refund Details -->
+        <div style="background-color: #f8fafc; border-left: 4px solid #dc2626; border-radius: 6px; padding: 14px; margin-bottom: 20px; font-size: 13px; color: #334155; line-height: 1.6;">
+          <strong style="color: #0f172a;">Política de Cancelación y Reembolso:</strong>
+          <p style="margin: 6px 0 0;">
+            Si tu cancelación cumple con las condiciones aplicables (solicitada con al menos 24 horas de anticipación a la salida), cualquier reembolso correspondiente será procesado a tu método de pago original en un plazo de <strong>3 a 5 días hábiles</strong>.
+          </p>
+        </div>
+
+        <p style="color: #64748b; font-size: 13px; line-height: 1.5;">
+          ¿Deseas reprogramar tu viaje en otra fecha o necesitas asistencia personalizada? Responde directamente a este correo y nuestro equipo te ayudará con gusto.
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div style="background-color: #f1f5f9; padding: 18px; text-align: center; font-size: 12px; color: #64748b; line-height: 1.5;">
+        Trail Explorer &bull; Soporte y Asistencia de Viaje
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Sends an email notification to the customer when the booking status changes (confirmed or cancelled)
+ */
+export async function sendBookingStatusNotification(booking, newStatus, shuttle = null) {
+  try {
+    if (!booking || !booking.passenger_email) {
+      console.log('No se puede enviar notificación de estado: No hay correo de pasajero registrado.');
+      return;
+    }
+
+    const settings = await getSettings();
+    const isResend =
+      settings.email_provider === 'resend' ||
+      (settings.email_provider !== 'smtp' && (
+        Boolean(settings.resend_api_key?.trim()) ||
+        Boolean(settings.smtp_pass && settings.smtp_pass.trim().startsWith('re_'))
+      ));
+
+    // Resolve shuttle info if not passed
+    let resolvedShuttle = shuttle;
+    if (!resolvedShuttle && booking.shuttle_id) {
+      try {
+        resolvedShuttle = await prepare('SELECT * FROM shuttles WHERE id = ?').get(booking.shuttle_id);
+      } catch (dbErr) {
+        // fallback to booking properties
+      }
+    }
+
+    const shuttleName = resolvedShuttle?.name || booking.shuttle_name || 'Ruta de Shuttle';
+    const bookingCode = (booking.id || '').slice(0, 8).toUpperCase();
+    const bookingDate = new Date(booking.date).toLocaleDateString('es-ES', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    let subject = '';
+    let emailHtml = '';
+
+    if (newStatus === 'confirmed') {
+      subject = `🚐 ¡Tu Reserva está Confirmada! #${bookingCode} - ${shuttleName}`;
+      emailHtml = buildCustomerBookingConfirmedHtml(booking, resolvedShuttle, shuttleName, bookingDate);
+    } else if (newStatus === 'cancelled') {
+      subject = `❌ Reserva Cancelada: #${bookingCode} - ${shuttleName}`;
+      emailHtml = buildCustomerBookingCancelledHtml(booking, resolvedShuttle, shuttleName, bookingDate);
+    } else {
+      console.log(`No hay plantilla de notificación configurada para el estado: ${newStatus}`);
+      return;
+    }
+
+    if (isResend) {
+      const apiKey = (settings.resend_api_key || settings.smtp_pass || '').trim();
+      let resendFrom = settings.smtp_from?.trim() || 'Trail Explorer <onboarding@resend.dev>';
+
+      await sendViaResend(apiKey, {
+        from: resendFrom,
+        to: booking.passenger_email,
+        subject,
+        html: emailHtml,
+        replyTo: settings.notification_email || settings.smtp_user || undefined,
+      });
+      console.log(`✅ [Resend] Notificación de estado (${newStatus}) enviada al cliente: ${booking.passenger_email}`);
+      return;
+    }
+
+    // SMTP path:
+    const transporter = createTransporter(settings);
+    if (!transporter) {
+      console.log('SMTP no configurado: Omitiendo envío de notificación de cambio de estado.');
+      return;
+    }
+
+    const senderOptions = getMailSenderOptions(settings);
+    await transporter.sendMail({
+      ...senderOptions,
+      to: booking.passenger_email,
+      subject,
+      html: emailHtml,
+    });
+    console.log(`✅ [SMTP] Notificación de estado (${newStatus}) enviada al cliente: ${booking.passenger_email}`);
+  } catch (error) {
+    console.error(`Error enviando notificación de estado (${newStatus}) al cliente:`, error);
+  }
+}
+

@@ -1,7 +1,7 @@
 import express from 'express';
 import { prepare } from '../db.js';
 import { v4 as uuidv4 } from 'uuid';
-import { getSettings, sendTestEmail } from '../utils/mailer.js';
+import { getSettings, sendTestEmail, DEFAULT_SETTINGS } from '../utils/mailer.js';
 
 const router = express.Router();
 
@@ -47,30 +47,33 @@ router.post('/', async (req, res) => {
 // POST /api/settings/test-smtp - Send test email
 router.post('/test-smtp', async (req, res) => {
   try {
-    const { smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from, target_email, notification_email, test_email } = req.body;
+    const savedSettings = await getSettings();
 
-    const rawEmail = target_email || test_email || notification_email || smtp_user;
-    if (!rawEmail) {
-      return res.status(400).json({ error: 'Debes especificar un correo destinatario para la prueba.' });
+    let host = (req.body.smtp_host || savedSettings.smtp_host || DEFAULT_SETTINGS.smtp_host).trim();
+    let port = (req.body.smtp_port || savedSettings.smtp_port || DEFAULT_SETTINGS.smtp_port).toString().trim();
+    let secure = req.body.smtp_secure !== undefined ? req.body.smtp_secure : savedSettings.smtp_secure;
+    let user = (req.body.smtp_user || savedSettings.smtp_user || DEFAULT_SETTINGS.smtp_user).trim();
+    let pass = (req.body.smtp_pass || savedSettings.smtp_pass || DEFAULT_SETTINGS.smtp_pass).trim();
+    let from = (req.body.smtp_from || savedSettings.smtp_from || DEFAULT_SETTINGS.smtp_from).trim();
+
+    // Sanitize any legacy placeholder values
+    if (user === 'smtp_account@gmail.com' || !user) {
+      user = DEFAULT_SETTINGS.smtp_user;
+    }
+    if (pass === 'secretpassword' || !pass) {
+      pass = DEFAULT_SETTINGS.smtp_pass;
     }
 
-    // If multiple emails were provided (e.g. comma-separated), use the first one for the test
+    const rawEmail = req.body.target_email || req.body.test_email || req.body.notification_email || user;
     const emailToSend = rawEmail.split(',')[0].trim();
 
-    // If password was omitted in the request body, fallback to saved DB settings
-    let passToUse = smtp_pass;
-    if (!passToUse) {
-      const savedSettings = await getSettings();
-      passToUse = savedSettings.smtp_pass;
-    }
-
     const config = {
-      smtp_host,
-      smtp_port,
-      smtp_secure,
-      smtp_user,
-      smtp_pass: passToUse,
-      smtp_from,
+      smtp_host: host,
+      smtp_port: port,
+      smtp_secure: secure,
+      smtp_user: user,
+      smtp_pass: pass,
+      smtp_from: from,
     };
 
     await sendTestEmail(config, emailToSend);

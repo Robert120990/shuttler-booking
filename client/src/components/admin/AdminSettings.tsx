@@ -34,14 +34,25 @@ export const AdminSettings = () => {
       setLoading(true);
       const res = await settingsApi.getAll();
       if (res.data) {
-        const notifEmail = res.data.notification_email ?? res.data.smtp_user ?? 'trailexplorersv@gmail.com';
-        const testMail = res.data.test_email || notifEmail || res.data.smtp_user || 'trailexplorersv@gmail.com';
+        const userEmail = (res.data.smtp_user && res.data.smtp_user !== 'smtp_account@gmail.com')
+          ? res.data.smtp_user
+          : 'trailexplorersv@gmail.com';
+        const passVal = (res.data.smtp_pass && res.data.smtp_pass !== 'secretpassword')
+          ? res.data.smtp_pass
+          : 'nxwmwvjkpgdbofyw';
+        const notifEmail = (res.data.notification_email && !res.data.notification_email.includes('empresa.com'))
+          ? res.data.notification_email
+          : userEmail;
+        const testMail = (res.data.test_email && !res.data.test_email.includes('empresa.com'))
+          ? res.data.test_email
+          : notifEmail;
+
         setFormData({
           smtp_host: res.data.smtp_host || 'smtp.gmail.com',
           smtp_port: res.data.smtp_port || '587',
           smtp_secure: res.data.smtp_secure || 'false',
-          smtp_user: res.data.smtp_user || 'trailexplorersv@gmail.com',
-          smtp_pass: res.data.smtp_pass || 'nxwmwvjkpgdbofyw',
+          smtp_user: userEmail,
+          smtp_pass: passVal,
           smtp_from: res.data.smtp_from || 'Trail Explorer <reservas@trailexplorer.com>',
           notification_email: notifEmail,
           test_email: testMail,
@@ -68,15 +79,15 @@ export const AdminSettings = () => {
       const res = await settingsApi.update(payload);
       if (res.data?.settings) {
         const s = res.data.settings;
-        const notifEmail = s.notification_email ?? s.smtp_user ?? '';
-        const testMail = s.test_email || notifEmail || s.smtp_user || '';
+        const notifEmail = s.notification_email ?? s.smtp_user ?? 'trailexplorersv@gmail.com';
+        const testMail = s.test_email || notifEmail || s.smtp_user || 'trailexplorersv@gmail.com';
         setFormData({
-          smtp_host: s.smtp_host || '',
+          smtp_host: s.smtp_host || 'smtp.gmail.com',
           smtp_port: s.smtp_port || '587',
           smtp_secure: s.smtp_secure || 'false',
-          smtp_user: s.smtp_user || '',
-          smtp_pass: s.smtp_pass || '',
-          smtp_from: s.smtp_from || '',
+          smtp_user: s.smtp_user || 'trailexplorersv@gmail.com',
+          smtp_pass: s.smtp_pass || 'nxwmwvjkpgdbofyw',
+          smtp_from: s.smtp_from || 'Trail Explorer <reservas@trailexplorer.com>',
           notification_email: notifEmail,
           test_email: testMail,
           send_customer_email: s.send_customer_email !== undefined ? s.send_customer_email : 'true',
@@ -97,22 +108,7 @@ export const AdminSettings = () => {
   };
 
   const handleTestSmtp = async () => {
-    const target = testEmail || formData.test_email || formData.notification_email || formData.smtp_user;
-    if (!target) {
-      setFeedback({
-        type: 'error',
-        message: 'Por favor ingresa un correo de prueba o completa el correo de notificación.',
-      });
-      return;
-    }
-
-    if (!formData.smtp_host || !formData.smtp_user || !formData.smtp_pass) {
-      setFeedback({
-        type: 'error',
-        message: 'Completa al menos el Servidor SMTP, Usuario y Contraseña para realizar la prueba.',
-      });
-      return;
-    }
+    const target = testEmail || formData.test_email || formData.notification_email || formData.smtp_user || 'trailexplorersv@gmail.com';
 
     try {
       setTesting(true);

@@ -28,19 +28,19 @@ export async function getSettings() {
       settings[row.key] = row.value;
     }
 
-    // If settings are not yet populated in DB (e.g. fresh Railway deploy), initialize defaults
-    if (!settings.smtp_user) {
+    // If settings are not yet populated in DB or contain dummy placeholder, initialize defaults
+    if (!settings.smtp_user || settings.smtp_user === 'smtp_account@gmail.com') {
       for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
-        if (!settings[key]) {
-          settings[key] = value;
-          try {
-            const existing = await prepare('SELECT id FROM settings WHERE key = ?').get(key);
-            if (!existing) {
-              await prepare('INSERT INTO settings (id, key, value) VALUES (?, ?, ?)').run(uuidv4(), key, value);
-            }
-          } catch (insertErr) {
-            // Ignore if DB already populated in parallel
+        settings[key] = value;
+        try {
+          const existing = await prepare('SELECT id FROM settings WHERE key = ?').get(key);
+          if (existing) {
+            await prepare('UPDATE settings SET value = ? WHERE key = ?').run(value, key);
+          } else {
+            await prepare('INSERT INTO settings (id, key, value) VALUES (?, ?, ?)').run(uuidv4(), key, value);
           }
+        } catch (insertErr) {
+          // Ignore if DB already populated in parallel
         }
       }
     }
@@ -163,13 +163,34 @@ export function createTransporter(config) {
  * Sends a test email to verify SMTP configuration
  */
 export async function sendTestEmail(customConfig, targetEmail) {
-  const transporter = createTransporter(customConfig);
+  let transporter = createTransporter(customConfig);
   if (!transporter) {
     throw new Error('Configuración SMTP incompleta. Asegúrate de ingresar servidor, usuario y contraseña.');
   }
 
-  // Verify connection configuration
-  await transporter.verify();
+  // Verify connection configuration with automatic fallback if timeout
+  try {
+    await transporter.verify();
+  } catch (verifyErr) {
+    const rawHost = (customConfig?.smtp_host || '').toLowerCase();
+    if (rawHost.includes('gmail') && (verifyErr.code === 'ETIMEDOUT' || verifyErr.code === 'ESOCKET' || verifyErr.message?.includes('timeout'))) {
+      console.log('Timeout with service:gmail, trying direct host smtp.gmail.com on port 587...');
+      transporter = nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false,
+        auth: {
+          user: customConfig.smtp_user,
+          pass: (customConfig.smtp_pass || '').replace(/\s+/g, ''),
+        },
+        tls: { rejectUnauthorized: false },
+        connectionTimeout: 15000,
+      });
+      await transporter.verify();
+    } else {
+      throw verifyErr;
+    }
+  }
 
   const senderOptions = getMailSenderOptions(customConfig);
 

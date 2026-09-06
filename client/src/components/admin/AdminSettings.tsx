@@ -574,28 +574,28 @@ export const AdminSettings = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Llave Pública de Wompi (Public Key)
+                      App ID / Client ID (Wompi El Salvador)
                     </label>
                     <Input
                       type="text"
-                      placeholder="pub_test_... o pub_prod_..."
+                      placeholder="Ej. e7a9... o App ID del negocio"
                       value={formData.wompi_public_key}
                       onChange={(e) => setFormData((prev) => ({ ...prev, wompi_public_key: e.target.value }))}
                     />
                     <p className="text-xs text-slate-500 mt-1">
-                      Identificador público utilizado para inicializar el checkout seguro de Wompi.
+                      Corresponde al <strong>App ID</strong> (client_id) en el detalle de tu negocio en Wompi SV.
                     </p>
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Llave Privada de Wompi (Private Secret Key)
+                    API Secret / Client Secret (Llave Secreta)
                   </label>
                   <div className="relative">
                     <Input
                       type={showWompiSecret ? 'text' : 'password'}
-                      placeholder="prv_test_... o prv_prod_..."
+                      placeholder="Ej. API Secret del negocio en panel.wompi.sv"
                       value={formData.wompi_private_key}
                       onChange={(e) => setFormData((prev) => ({ ...prev, wompi_private_key: e.target.value }))}
                       className="pr-10"
@@ -609,19 +609,19 @@ export const AdminSettings = () => {
                     </button>
                   </div>
                   <p className="text-xs text-slate-500 mt-1">
-                    Se almacena cifrada en el servidor para verificar y capturar transacciones. Nunca se expone a los clientes.
+                    Corresponde al <strong>API Secret</strong> (client_secret) utilizado para generar tokens OAuth en Wompi SV. Nunca se expone al cliente.
                   </p>
                 </div>
 
                 <div className="bg-purple-50/70 border border-purple-200 rounded-xl p-3.5 text-xs text-purple-950 space-y-1.5">
                   <div className="font-semibold flex items-center gap-1.5">
                     <Info className="w-4 h-4 text-purple-600" />
-                    <span>¿Cómo obtener tus llaves en Wompi El Salvador?</span>
+                    <span>¿Cómo obtener tus credenciales en Wompi El Salvador?</span>
                   </div>
                   <p className="text-purple-900 leading-relaxed">
-                    1. Regístrate o inicia sesión en el portal de comercios de <strong><a href="https://wompi.sv" target="_blank" rel="noreferrer" className="underline font-semibold hover:text-purple-700 inline-flex items-center gap-0.5">wompi.sv <ExternalLink className="w-3 h-3" /></a></strong>.<br />
-                    2. Ingresa a la sección <strong>Desarrolladores &gt; Llaves de API</strong>.<br />
-                    3. Copia tu <strong>Llave Pública</strong> y tu <strong>Llave Privada</strong> y pégalas arriba.
+                    1. Inicia sesión en el <strong><a href="https://panel.wompi.sv" target="_blank" rel="noreferrer" className="underline font-semibold hover:text-purple-700 inline-flex items-center gap-0.5">Panel de Control de Wompi SV (panel.wompi.sv) <ExternalLink className="w-3 h-3" /></a></strong>.<br />
+                    2. Ve al menú <strong>Negocios</strong> y selecciona / edita tu negocio.<br />
+                    3. En la sección de credenciales de la API, copia el <strong>App ID</strong> (client_id) y el <strong>API Secret</strong> (client_secret) y pégalos en los campos de arriba.
                   </p>
                 </div>
               </CardContent>

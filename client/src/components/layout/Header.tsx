@@ -6,6 +6,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useLanguageStore } from '../../i18n';
 import { useThemeStore } from '../../stores/themeStore';
 import { Button } from '../ui/Button';
+import { translateCountryName } from '../../utils/shuttleTranslator';
 
 const COUNTRIES = [
   { name: 'México', slug: 'mexico' },
@@ -82,7 +83,7 @@ export const Header = () => {
                         to={`/countries/${country.slug}`}
                         className="block px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
                       >
-                        {country.name}
+                        {translateCountryName(country.name, language)}
                       </Link>
                     ))}
                   </div>
@@ -172,7 +173,7 @@ export const Header = () => {
                   className="block px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  {country.name}
+                  {translateCountryName(country.name, language)}
                 </Link>
               ))}
               <div className="border-t border-slate-200 dark:border-slate-700 my-2" />

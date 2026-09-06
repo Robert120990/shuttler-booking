@@ -1,5 +1,8 @@
 import { Link } from 'react-router-dom';
 import { MapPin, Mail, Phone } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { useLanguageStore } from '../../i18n';
+import { translateCountryName } from '../../utils/shuttleTranslator';
 
 const COUNTRIES = [
   { name: 'México', slug: 'mexico' },
@@ -12,15 +15,18 @@ const COUNTRIES = [
   { name: 'Panamá', slug: 'panama' },
 ];
 
-const LINKS = [
-  { name: 'FAQs', href: '/faqs' },
-  { name: 'Terms & Conditions', href: '/terms' },
-  { name: 'Privacy Policy', href: '/privacy' },
-  { name: 'Cookie Policy', href: '/cookies' },
-  { name: 'Contact Us', href: '/contact' },
-];
-
 export const Footer = () => {
+  const { t } = useTranslation();
+  const { language } = useLanguageStore();
+
+  const links = [
+    { name: t('footer.faqs'), href: '/faqs' },
+    { name: t('footer.terms'), href: '/terms' },
+    { name: t('footer.privacy'), href: '/privacy' },
+    { name: t('footer.cookies'), href: '/cookies' },
+    { name: t('footer.contactUs'), href: '/contact' },
+  ];
+
   return (
     <footer className="bg-slate-900 text-slate-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -31,15 +37,15 @@ export const Footer = () => {
               <span className="font-semibold text-white">Trail Explorer</span>
             </div>
             <p className="text-sm text-slate-400">
-              Your adventure begins with a single booking. Book shuttles, transfers, and tours across Central America.
+              {t('footer.tagline')}
             </p>
             <div className="flex gap-4 mt-4">
-              <span className="text-slate-400 text-sm">Follow us:</span>
+              <span className="text-slate-400 text-sm">{t('footer.followUs')}</span>
             </div>
           </div>
 
           <div>
-            <h3 className="font-semibold text-white mb-4">Explore</h3>
+            <h3 className="font-semibold text-white mb-4">{t('footer.explore')}</h3>
             <ul className="space-y-2">
               {COUNTRIES.map((country) => (
                 <li key={country.slug}>
@@ -47,7 +53,7 @@ export const Footer = () => {
                     to={`/countries/${country.slug}`}
                     className="text-sm text-slate-400 hover:text-white transition-colors"
                   >
-                    {country.name}
+                    {translateCountryName(country.name, language)}
                   </Link>
                 </li>
               ))}
@@ -55,9 +61,9 @@ export const Footer = () => {
           </div>
 
           <div>
-            <h3 className="font-semibold text-white mb-4">Support</h3>
+            <h3 className="font-semibold text-white mb-4">{t('footer.support')}</h3>
             <ul className="space-y-2">
-              {LINKS.map((link) => (
+              {links.map((link) => (
                 <li key={link.href}>
                   <Link
                     to={link.href}
@@ -71,7 +77,7 @@ export const Footer = () => {
           </div>
 
           <div>
-            <h3 className="font-semibold text-white mb-4">Contact</h3>
+            <h3 className="font-semibold text-white mb-4">{t('footer.contact')}</h3>
             <div className="space-y-3">
               <div className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 mt-0.5 text-slate-400" />
@@ -93,7 +99,7 @@ export const Footer = () => {
 
         <div className="border-t border-slate-800 mt-8 pt-8 text-center">
           <p className="text-sm text-slate-500">
-            &copy; {new Date().getFullYear()} Trail Explorer. All rights reserved.
+            &copy; {new Date().getFullYear()} Trail Explorer. {t('footer.allRightsReserved')}
           </p>
         </div>
       </div>

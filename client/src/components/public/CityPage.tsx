@@ -1,64 +1,81 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Star, Clock, MapPin, ArrowRight, Calendar, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { citiesApi, shuttlesApi } from '../../api/endpoints';
 import { getImageUrl } from '../../api/client';
 import { SEO } from '../seo/SEO';
+import { useLanguageStore } from '../../i18n';
+import {
+  translateRouteName,
+  translateAvailability,
+  translateCountryName,
+  translateCityDescription,
+} from '../../utils/shuttleTranslator';
 import type { City, Shuttle } from '../../types';
 
 interface ShuttleCardProps {
   shuttle: Shuttle;
 }
 
-const ShuttleCard = ({ shuttle }: ShuttleCardProps) => (
-  <Link to={`/shuttles/${shuttle.slug}`} className="block">
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full group">
-      <div className="relative h-36">
-        <img 
-          src={getImageUrl(shuttle.image_url)} 
-          alt={shuttle.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-          loading="lazy"
-        />
-        <div className="absolute top-3 right-3">
-          <Badge variant={shuttle.service_type === 'international' ? 'warning' : 'success'}>
-            {shuttle.service_type === 'international' ? 'International' : 'Local'}
-          </Badge>
-        </div>
-      </div>
-      <CardContent className="pt-4">
-        <div className="flex items-center gap-1 text-sm text-amber-500 mb-2">
-          <Star className="w-4 h-4 fill-current" />
-          <span className="font-medium">{shuttle.rating || 5.0}</span>
-        </div>
-        <h3 className="font-semibold text-slate-900 mb-2 line-clamp-2">{shuttle.name}</h3>
-        <div className="flex items-center gap-4 text-sm text-slate-500 mb-3">
-          <div className="flex items-center gap-1">
-            <Clock className="w-4 h-4" />
-            <span>{shuttle.duration_hours}h</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Calendar className="w-4 h-4" />
-            <span className="truncate">{shuttle.schedule || 'Daily'}</span>
+const ShuttleCard = ({ shuttle }: ShuttleCardProps) => {
+  const { t } = useTranslation();
+  const { language } = useLanguageStore();
+
+  return (
+    <Link to={`/shuttles/${shuttle.slug}`} className="block">
+      <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full group">
+        <div className="relative h-36">
+          <img 
+            src={getImageUrl(shuttle.image_url)} 
+            alt={translateRouteName(shuttle.name, language)}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+            loading="lazy"
+          />
+          <div className="absolute top-3 right-3">
+            <Badge variant={shuttle.service_type === 'international' ? 'warning' : 'success'}>
+              {shuttle.service_type === 'international' ? t('shuttle.internationalService') : t('shuttle.localService')}
+            </Badge>
           </div>
         </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-xl font-bold text-emerald-600">${shuttle.price}</span>
-            <span className="text-sm text-slate-500">/person</span>
+        <CardContent className="pt-4">
+          <div className="flex items-center gap-1 text-sm text-amber-500 mb-2">
+            <Star className="w-4 h-4 fill-current" />
+            <span className="font-medium">{shuttle.rating || 5.0}</span>
           </div>
-          <Button size="sm">Book Now</Button>
-        </div>
-      </CardContent>
-    </Card>
-  </Link>
-);
+          <h3 className="font-semibold text-slate-900 mb-2 line-clamp-2">
+            {translateRouteName(shuttle.name, language)}
+          </h3>
+          <div className="flex items-center gap-4 text-sm text-slate-500 mb-3">
+            <div className="flex items-center gap-1">
+              <Clock className="w-4 h-4" />
+              <span>{shuttle.duration_hours}h</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Calendar className="w-4 h-4" />
+              <span className="truncate">{translateAvailability(shuttle.schedule, language)}</span>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="text-xl font-bold text-emerald-600">${shuttle.price}</span>
+              <span className="text-sm text-slate-500">{t('shuttle.perPerson')}</span>
+            </div>
+            <Button size="sm">{t('shuttle.bookNow')}</Button>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+};
 
 export const CityPage = () => {
   const { slug } = useParams<{ slug: string }>();
+  const { t } = useTranslation();
+  const { language } = useLanguageStore();
   const [city, setCity] = useState<City | null>(null);
   const [departureShuttles, setDepartureShuttles] = useState<Shuttle[]>([]);
   const [arrivalShuttles, setArrivalShuttles] = useState<Shuttle[]>([]);
@@ -99,37 +116,25 @@ export const CityPage = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-slate-900">City not found</h1>
-          <p className="text-slate-500 mt-2">Try selecting a country from the home page.</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('city.notFound')}</h1>
+          <p className="text-slate-500 mt-2">{t('city.notFoundDesc')}</p>
           <Link to="/" className="text-emerald-600 hover:underline mt-4 inline-block">
-            Back to Home
+            {t('city.backToHome')}
           </Link>
         </div>
       </div>
     );
   }
 
-  const countryName = (city as any).country?.name || (city as any).country || '';
-
-  if (!city) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-slate-900">City not found</h1>
-          <p className="text-slate-500 mt-2">Try selecting a country from the home page.</p>
-          <Link to="/" className="text-emerald-600 hover:underline mt-4 inline-block">
-            Back to Home
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  const rawCountryName = (city as any).country?.name || (city as any).country || '';
+  const localizedCountryName = translateCountryName(rawCountryName, language);
+  const localizedCityDesc = translateCityDescription(city.description, language);
 
   return (
     <div className="bg-slate-50">
       <SEO
         title={`Shuttles from ${city.name}`}
-        description={city.description || `Book shuttles to and from ${city.name}, ${countryName}. Compare prices and times for shuttles, transfers and transport.`}
+        description={localizedCityDesc || `Book shuttles to and from ${city.name}, ${localizedCountryName}. Compare prices and times for shuttles, transfers and transport.`}
         path={`/cities/${city.slug}`}
         image={getImageUrl(city.image_url)}
         jsonLd={[
@@ -137,8 +142,8 @@ export const CityPage = () => {
             '@context': 'https://schema.org',
             '@type': 'BreadcrumbList',
             itemListElement: [
-              { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://trailexplorer.com/' },
-              { '@type': 'ListItem', position: 2, name: countryName, item: `https://trailexplorer.com/countries/${(city as any).country_slug || ''}` },
+              { '@type': 'ListItem', position: 1, name: t('nav.home'), item: 'https://trailexplorer.com/' },
+              { '@type': 'ListItem', position: 2, name: localizedCountryName, item: `https://trailexplorer.com/countries/${(city as any).country_slug || ''}` },
               { '@type': 'ListItem', position: 3, name: city.name, item: `https://trailexplorer.com/cities/${city.slug}` },
             ],
           },
@@ -151,10 +156,10 @@ export const CityPage = () => {
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center gap-2 text-white/80 text-sm mb-2">
               <MapPin className="w-4 h-4" />
-              <span>{countryName}</span>
+              <span>{localizedCountryName}</span>
             </div>
             <h1 className="text-4xl font-bold text-white">{city.name}</h1>
-            <p className="mt-2 text-lg text-white/90">{city.description}</p>
+            <p className="mt-2 text-lg text-white/90">{localizedCityDesc}</p>
           </div>
         </div>
       </section>
@@ -166,7 +171,7 @@ export const CityPage = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <ArrowRight className="w-5 h-5 text-emerald-600" />
-                  Departure Shuttles
+                  {t('city.departureShuttles')}
                 </CardTitle>
               </CardHeader>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -182,7 +187,7 @@ export const CityPage = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MapPin className="w-5 h-5 text-emerald-600" />
-                  Arrival Shuttles
+                  {t('city.arrivalShuttles')}
                 </CardTitle>
               </CardHeader>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -194,7 +199,7 @@ export const CityPage = () => {
           )}
 
           {departureShuttles.length === 0 && arrivalShuttles.length === 0 && (
-            <p className="text-slate-500 text-center py-8">No shuttles available for this city yet.</p>
+            <p className="text-slate-500 text-center py-8">{t('city.noShuttles')}</p>
           )}
         </div>
       </section>

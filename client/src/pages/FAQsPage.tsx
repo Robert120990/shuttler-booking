@@ -1,9 +1,11 @@
 import { Link } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { SEO } from '../components/seo/SEO';
+import { useLanguageStore } from '../i18n';
 
-const FAQ_DATA = [
+const FAQ_DATA_EN = [
   {
     category: 'Booking',
     questions: [
@@ -38,8 +40,47 @@ const FAQ_DATA = [
   },
 ];
 
+const FAQ_DATA_ES = [
+  {
+    category: 'Reservas',
+    questions: [
+      { q: '¿Cómo puedo reservar un servicio?', a: 'Para reservar un servicio, haz clic en el botón "Reservar" en nuestro sitio web. Selecciona una fecha disponible, hora de salida, ingresa tus ubicaciones y cantidad de asientos, luego procede a la confirmación.' },
+      { q: '¿Puedo reservar múltiples asientos a la vez?', a: 'Sí, puedes seleccionar el número de asientos que necesitas al completar el formulario de reserva en nuestra web.' },
+      { q: '¿Puedo elegir mis puntos de recogida y destino?', a: 'Sí, durante el proceso de reserva puedes ingresar o seleccionar tu hotel, hostal o dirección de recogida y destino preferido.' },
+    ],
+  },
+  {
+    category: 'Pagos',
+    questions: [
+      { q: '¿Qué métodos de pago son aceptados?', a: 'Aceptamos tarjetas de crédito y débito Visa y Mastercard, ApplePay, GooglePay y PayPal.' },
+      { q: '¿Puedo pagar en efectivo?', a: 'No aceptamos pagos en efectivo al conductor para confirmación de reservas. Por favor utiliza nuestras opciones de pago en línea.' },
+      { q: '¿Hay tarifas de procesamiento?', a: 'Las tarifas de procesamiento de pago están incluidas o detalladas al momento de completar la reserva.' },
+    ],
+  },
+  {
+    category: 'Cancelaciones',
+    questions: [
+      { q: '¿Cuál es la política de cancelación?', a: 'Puedes cancelar cualquier servicio en cualquier momento. Las cancelaciones realizadas al menos 24 horas antes de la salida son elegibles para reembolso completo en 3-5 días hábiles.' },
+      { q: '¿Qué sucede con cancelaciones de último momento?', a: 'Las cancelaciones con menos de 24 horas de anticipación no son reembolsables debido a la reserva garantizada de la unidad de transporte.' },
+      { q: '¿Puedo obtener crédito en lugar de reembolso?', a: '¡Sí! En lugar de un reembolso a tu tarjeta, puedes recibir el monto total como crédito para futuras reservas válido por un año.' },
+    ],
+  },
+  {
+    category: 'Viaje y Equipaje',
+    questions: [
+      { q: '¿Cuál es la política de equipaje?', a: 'El equipaje estándar incluye una mochila o maleta principal y un bolso de mano por persona. Artículos voluminosos como tablas de surf requieren añadir equipaje extra.' },
+      { q: '¿Puedo llevar a mi mascota?', a: 'En rutas internacionales no se permiten mascotas debido a regulaciones migratorias. En rutas nacionales se permiten en transportadora con aviso previo.' },
+      { q: '¿Qué documentos necesito para rutas internacionales?', a: 'Todos los pasajeros deben presentar pasaporte vigente con al menos 6 meses de validez y los visados correspondientes para el cruce de fronteras.' },
+    ],
+  },
+];
+
 export const FAQsPage = () => {
-  const flatFaqs = FAQ_DATA.flatMap((section) => section.questions);
+  const { t } = useTranslation();
+  const { language } = useLanguageStore();
+
+  const faqData = language === 'es' ? FAQ_DATA_ES : FAQ_DATA_EN;
+  const flatFaqs = faqData.flatMap((section) => section.questions);
 
   const faqSchema = {
     '@context': 'https://schema.org',
@@ -57,19 +98,19 @@ export const FAQsPage = () => {
   return (
     <div className="bg-slate-50 min-h-screen py-12">
       <SEO
-        title="Frequently Asked Questions"
-        description="Find answers to common questions about booking shuttles and transfers in Central America. Learn about payments, cancellations, luggage policy and more."
+        title={t('faqs.title')}
+        description={t('faqs.subtitle')}
         path="/faqs"
         jsonLd={[faqSchema]}
       />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-slate-900 mb-4">Frequently Asked Questions</h1>
-          <p className="text-lg text-slate-600">Find answers to common questions about our services</p>
+          <h1 className="text-4xl font-bold text-slate-900 mb-4">{t('faqs.title')}</h1>
+          <p className="text-lg text-slate-600">{t('faqs.subtitle')}</p>
         </div>
 
         <div className="space-y-8">
-          {FAQ_DATA.map((section) => (
+          {faqData.map((section) => (
             <Card key={section.category}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -95,9 +136,9 @@ export const FAQsPage = () => {
         </div>
 
         <div className="mt-12 text-center">
-          <p className="text-slate-600 mb-4">Still have questions?</p>
+          <p className="text-slate-600 mb-4">{t('faqs.stillHaveQuestions')}</p>
           <Link to="/contact" className="text-emerald-600 font-medium hover:underline">
-            Contact Us
+            {t('faqs.contactUs')}
           </Link>
         </div>
       </div>

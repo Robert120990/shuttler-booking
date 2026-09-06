@@ -1,78 +1,94 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowRight, Star, Clock, Calendar, MapPin, Bus, Compass, Navigation, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { countriesApi } from '../../api/endpoints';
 import { getImageUrl } from '../../api/client';
 import { SEO } from '../seo/SEO';
+import { useLanguageStore } from '../../i18n';
+import {
+  translateRouteName,
+  translateAvailability,
+  translateCountryName,
+  translateCountryDescription,
+  translateCityDescription,
+} from '../../utils/shuttleTranslator';
 import type { Country, Shuttle } from '../../types';
 
 interface ShuttleCardProps {
   shuttle: Shuttle;
 }
 
-const ShuttleCard = ({ shuttle }: ShuttleCardProps) => (
-  <Link to={`/shuttles/${shuttle.slug}`} className="block h-full group">
-    <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 h-full flex flex-col border border-slate-200/80 hover:border-emerald-500/50">
-      <div className="relative h-44 overflow-hidden bg-slate-100">
-        <img 
-          src={getImageUrl(shuttle.image_url)} 
-          alt={shuttle.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-          loading="lazy"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
-        <div className="absolute top-3 right-3 z-10">
-          <Badge variant={shuttle.service_type === 'international' ? 'warning' : 'success'}>
-            {shuttle.service_type === 'international' ? 'Internacional' : 'Local'}
-          </Badge>
-        </div>
-        <div className="absolute bottom-3 left-3 z-10 flex items-center gap-1.5 text-xs text-white bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full">
-          <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-          <span className="font-semibold">{shuttle.rating || 5.0}</span>
-          <span className="text-white/70">({shuttle.review_count || 12})</span>
-        </div>
-      </div>
+const ShuttleCard = ({ shuttle }: ShuttleCardProps) => {
+  const { t } = useTranslation();
+  const { language } = useLanguageStore();
 
-      <CardContent className="p-5 flex flex-col flex-1 justify-between">
-        <div>
-          <h3 className="font-bold text-slate-900 text-base group-hover:text-emerald-600 transition-colors line-clamp-2 mb-2">
-            {shuttle.name}
-          </h3>
-          
-          <div className="flex items-center gap-4 text-xs text-slate-500 mb-4">
-            <div className="flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5 text-slate-400" />
-              <span>{shuttle.duration_hours}h de viaje</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              <span className="truncate">{shuttle.schedule || 'Todos los días'}</span>
-            </div>
+  return (
+    <Link to={`/shuttles/${shuttle.slug}`} className="block h-full group">
+      <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 h-full flex flex-col border border-slate-200/80 hover:border-emerald-500/50">
+        <div className="relative h-44 overflow-hidden bg-slate-100">
+          <img 
+            src={getImageUrl(shuttle.image_url)} 
+            alt={translateRouteName(shuttle.name, language)}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
+          <div className="absolute top-3 right-3 z-10">
+            <Badge variant={shuttle.service_type === 'international' ? 'warning' : 'success'}>
+              {shuttle.service_type === 'international' ? t('shuttle.internationalService') : t('shuttle.localService')}
+            </Badge>
+          </div>
+          <div className="absolute bottom-3 left-3 z-10 flex items-center gap-1.5 text-xs text-white bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full">
+            <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+            <span className="font-semibold">{shuttle.rating || 5.0}</span>
+            <span className="text-white/70">({shuttle.review_count || 12})</span>
           </div>
         </div>
 
-        <div className="pt-3 border-t border-slate-100 flex items-center justify-between mt-auto">
+        <CardContent className="p-5 flex flex-col flex-1 justify-between">
           <div>
-            <p className="text-xs text-slate-400 font-medium">Desde</p>
-            <div className="flex items-baseline gap-0.5">
-              <span className="text-2xl font-black text-emerald-600">${shuttle.price}</span>
-              <span className="text-xs text-slate-500 font-medium">USD /pers</span>
+            <h3 className="font-bold text-slate-900 text-base group-hover:text-emerald-600 transition-colors line-clamp-2 mb-2">
+              {translateRouteName(shuttle.name, language)}
+            </h3>
+            
+            <div className="flex items-center gap-4 text-xs text-slate-500 mb-4">
+              <div className="flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                <span>{shuttle.duration_hours}h {t('shuttle.tripDuration')}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                <span className="truncate">{translateAvailability(shuttle.schedule, language)}</span>
+              </div>
             </div>
           </div>
-          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm">
-            Reservar
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  </Link>
-);
+
+          <div className="pt-3 border-t border-slate-100 flex items-center justify-between mt-auto">
+            <div>
+              <p className="text-xs text-slate-400 font-medium">{t('shuttle.from')}</p>
+              <div className="flex items-baseline gap-0.5">
+                <span className="text-2xl font-black text-emerald-600">${shuttle.price}</span>
+                <span className="text-xs text-slate-500 font-medium">USD {t('shuttle.perPerson')}</span>
+              </div>
+            </div>
+            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm">
+              {t('shuttle.bookNow')}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+};
 
 export const CountryPage = () => {
   const { slug } = useParams<{ slug: string }>();
+  const { t } = useTranslation();
+  const { language } = useLanguageStore();
   const [country, setCountry] = useState<Country | null>(null);
   const [departureShuttles, setDepartureShuttles] = useState<Shuttle[]>([]);
   const [arrivalShuttles, setArrivalShuttles] = useState<Shuttle[]>([]);
@@ -112,10 +128,10 @@ export const CountryPage = () => {
     return (
       <div className="min-h-[60vh] flex items-center justify-center bg-slate-50">
         <div className="text-center px-4">
-          <h1 className="text-2xl font-bold text-slate-900">País no encontrado</h1>
-          <p className="text-slate-500 mt-2">El destino solicitado no está disponible.</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('country.notFound')}</h1>
+          <p className="text-slate-500 mt-2">{t('country.notFoundDesc')}</p>
           <Link to="/" className="text-emerald-600 hover:underline mt-4 inline-block font-medium">
-            Volver al Inicio
+            {t('country.backToHome')}
           </Link>
         </div>
       </div>
@@ -123,21 +139,23 @@ export const CountryPage = () => {
   }
 
   const cities = (country as any).cities || [];
+  const localizedCountryName = translateCountryName(country.name, language);
+  const localizedCountryDesc = translateCountryDescription(country.description, country.name, language);
 
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Inicio', item: 'https://trailexplorer.com/' },
-      { '@type': 'ListItem', position: 2, name: country.name, item: `https://trailexplorer.com/countries/${country.slug}` },
+      { '@type': 'ListItem', position: 1, name: t('nav.home'), item: 'https://trailexplorer.com/' },
+      { '@type': 'ListItem', position: 2, name: localizedCountryName, item: `https://trailexplorer.com/countries/${country.slug}` },
     ],
   };
 
   const citySchemas = cities.map((city: any) => ({
     '@context': 'https://schema.org',
     '@type': 'TouristDestination',
-    name: `${city.name}, ${country.name}`,
-    description: city.description,
+    name: `${city.name}, ${localizedCountryName}`,
+    description: translateCityDescription(city.description, language),
     image: getImageUrl((city as any).image_url),
     url: `https://trailexplorer.com/cities/${city.slug}`,
   }));
@@ -145,8 +163,8 @@ export const CountryPage = () => {
   return (
     <div className="bg-slate-50 min-h-screen pb-16">
       <SEO
-        title={`Shuttles y Destinos en ${country.name} | Trail Explorer`}
-        description={country.description || `Reserva shuttles y transporte hacia y desde ${country.name}. Encuentra las mejores tarifas y traslados seguros.`}
+        title={`Shuttles & ${localizedCountryName} | Trail Explorer`}
+        description={localizedCountryDesc}
         path={`/countries/${country.slug}`}
         image={getImageUrl(country.image_url)}
         jsonLd={[breadcrumbSchema, ...citySchemas]}
@@ -156,7 +174,7 @@ export const CountryPage = () => {
       <section className="relative h-72 md:h-96">
         <img
           src={getImageUrl(country.image_url)}
-          alt={country.name}
+          alt={localizedCountryName}
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/50 to-black/30" />
@@ -164,11 +182,11 @@ export const CountryPage = () => {
           <div className="max-w-7xl mx-auto">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-white text-xs font-semibold mb-3">
               <Compass className="w-3.5 h-3.5 text-emerald-400" />
-              Destino en Centroamérica
+              {t('country.destinationInCA')}
             </div>
-            <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight">{country.name}</h1>
+            <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight">{localizedCountryName}</h1>
             <p className="mt-2 text-base md:text-lg text-slate-200 max-w-3xl leading-relaxed">
-              {country.description || 'Descubre los mejores destinos turísticos, traslados y rutas de shuttles disponibles.'}
+              {localizedCountryDesc}
             </p>
           </div>
         </div>
@@ -187,7 +205,7 @@ export const CountryPage = () => {
               }`}
             >
               <Navigation className="w-4 h-4" />
-              Destinos desde {country.name} ({departureShuttles.length})
+              {t('country.destinationsFrom', { country: localizedCountryName })} ({departureShuttles.length})
             </button>
 
             <button
@@ -199,7 +217,7 @@ export const CountryPage = () => {
               }`}
             >
               <Bus className="w-4 h-4" />
-              Destinos hacia {country.name} ({arrivalShuttles.length})
+              {t('country.destinationsTo', { country: localizedCountryName })} ({arrivalShuttles.length})
             </button>
 
             <button
@@ -211,7 +229,7 @@ export const CountryPage = () => {
               }`}
             >
               <MapPin className="w-4 h-4" />
-              Ciudades Principales ({cities.length})
+              {t('country.mainCities')} ({cities.length})
             </button>
           </div>
         </div>
@@ -225,14 +243,14 @@ export const CountryPage = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-4">
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
-                  Rutas y Destinos Saliendo desde {country.name}
+                  {t('country.routesFrom', { country: localizedCountryName })}
                 </h2>
                 <p className="text-sm text-slate-500">
-                  Shuttles diarios locales e internacionales con punto de partida en {country.name}
+                  {t('country.routesFromSubtitle', { country: localizedCountryName })}
                 </p>
               </div>
               <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full self-start sm:self-auto">
-                {departureShuttles.length} rutas disponibles
+                {t('country.routesAvailable', { count: departureShuttles.length })}
               </span>
             </div>
 
@@ -245,8 +263,8 @@ export const CountryPage = () => {
             ) : (
               <div className="text-center py-12 bg-white rounded-xl border border-slate-200 p-8">
                 <Bus className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <h3 className="text-lg font-semibold text-slate-800">No hay salidas programadas por el momento</h3>
-                <p className="text-sm text-slate-500 mt-1">Pronto agregaremos nuevas rutas para {country.name}.</p>
+                <h3 className="text-lg font-semibold text-slate-800">{t('country.noDepartures')}</h3>
+                <p className="text-sm text-slate-500 mt-1">{t('country.noDeparturesDesc', { country: localizedCountryName })}</p>
               </div>
             )}
           </section>
@@ -258,14 +276,14 @@ export const CountryPage = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-4">
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
-                  Rutas y Shuttles para Viajar Hacia {country.name}
+                  {t('country.routesTo', { country: localizedCountryName })}
                 </h2>
                 <p className="text-sm text-slate-500">
-                  Conexiones desde otros países y ciudades con llegada a destinos en {country.name}
+                  {t('country.routesToSubtitle', { country: localizedCountryName })}
                 </p>
               </div>
               <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full self-start sm:self-auto">
-                {arrivalShuttles.length} rutas de llegada
+                {t('country.arrivalRoutes', { count: arrivalShuttles.length })}
               </span>
             </div>
 
@@ -278,8 +296,8 @@ export const CountryPage = () => {
             ) : (
               <div className="text-center py-12 bg-white rounded-xl border border-slate-200 p-8">
                 <Navigation className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <h3 className="text-lg font-semibold text-slate-800">No hay rutas de llegada registradas</h3>
-                <p className="text-sm text-slate-500 mt-1">Estamos expandiendo nuestra red de shuttles internacionales.</p>
+                <h3 className="text-lg font-semibold text-slate-800">{t('country.noArrivals')}</h3>
+                <p className="text-sm text-slate-500 mt-1">{t('country.noArrivalsDesc', { country: localizedCountryName })}</p>
               </div>
             )}
           </section>
@@ -291,14 +309,14 @@ export const CountryPage = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-4">
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
-                  Ciudades y Destinos en {country.name}
+                  {t('country.topDestinations', { country: localizedCountryName })}
                 </h2>
                 <p className="text-sm text-slate-500">
-                  Explora las principales ciudades turísticas y puntos de conexión
+                  {t('country.topDestinationsSubtitle')}
                 </p>
               </div>
               <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-full self-start sm:self-auto">
-                {cities.length} ciudades
+                {cities.length} {t('country.mainCities')}
               </span>
             </div>
 
@@ -320,9 +338,9 @@ export const CountryPage = () => {
                         </div>
                       </div>
                       <CardContent className="p-4">
-                        <p className="text-sm text-slate-600 line-clamp-2">{city.description}</p>
+                        <p className="text-sm text-slate-600 line-clamp-2">{translateCityDescription(city.description, language)}</p>
                         <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-100 text-sm font-semibold text-emerald-600 group-hover:text-emerald-700">
-                          <span>Ver shuttles en {city.name}</span>
+                          <span>{t('country.viewShuttles')}</span>
                           <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                         </div>
                       </CardContent>
@@ -333,8 +351,8 @@ export const CountryPage = () => {
             ) : (
               <div className="text-center py-12 bg-white rounded-xl border border-slate-200 p-8">
                 <MapPin className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <h3 className="text-lg font-semibold text-slate-800">No hay ciudades disponibles</h3>
-                <p className="text-sm text-slate-500 mt-1">Pronto añadiremos los principales destinos de este país.</p>
+                <h3 className="text-lg font-semibold text-slate-800">{t('country.notFound')}</h3>
+                <p className="text-sm text-slate-500 mt-1">{t('country.notFoundDesc')}</p>
               </div>
             )}
           </section>

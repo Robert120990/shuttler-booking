@@ -1,37 +1,35 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Star, Clock, MapPin, Calendar, CheckCircle, XCircle, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { useBookingStore } from '../../stores/bookingStore';
 import { useAuthStore } from '../../stores/authStore';
+import { useLanguageStore } from '../../i18n';
 import { shuttlesApi } from '../../api/endpoints';
 import { getImageUrl } from '../../api/client';
 import { BookingModal } from './BookingModal';
 import { SEO } from '../seo/SEO';
+import {
+  translateRouteName,
+  translateList,
+  translateLuggagePolicy,
+  translateLuggageOptions,
+  translatePickupInfo,
+  translateCancellationPolicy,
+  translateDescription,
+  translateAvailability,
+  generateLocalizedDates,
+} from '../../utils/shuttleTranslator';
 import type { Shuttle } from '../../types';
-
-const generateDates = (availabilityDays: number[]) => {
-  const dates = [];
-  const today = new Date();
-  for (let i = 1; i < 90; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
-    const dayOfWeek = date.getDay();
-    if (availabilityDays.includes(dayOfWeek)) {
-      dates.push({
-        value: date.toISOString().split('T')[0],
-        label: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-      });
-    }
-  }
-  return dates;
-};
 
 export const ShuttlePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const { language } = useLanguageStore();
   const [shuttle, setShuttle] = useState<Shuttle | null>(null);
   const [loading, setLoading] = useState(true);
   const { setBookingData, setCurrentShuttle } = useBookingStore();
@@ -69,32 +67,35 @@ export const ShuttlePage = () => {
     return (
       <div className="h-96 flex items-center justify-center bg-slate-50">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-slate-900">Shuttle not found</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{t('common.notFound')}</h1>
           <Link to="/" className="text-emerald-600 hover:underline mt-4 inline-block">
-            Back to Home
+            {t('common.backToHome')}
           </Link>
         </div>
       </div>
     );
   }
 
-  let availabilityDays = [0,1,2,3,4,5,6];
+  let availabilityDays = [0, 1, 2, 3, 4, 5, 6];
   try {
-    availabilityDays = typeof (shuttle as any).availability_days === 'string' 
-      ? JSON.parse((shuttle as any).availability_days) 
-      : ((shuttle as any).availability_days || [0,1,2,3,4,5,6]);
-  } catch { availabilityDays = [0,1,2,3,4,5,6]; }
-  
-  const dates = generateDates(availabilityDays);
-  
-  let luggageOptions: { name: string; price: number }[] = [];
+    availabilityDays = typeof (shuttle as any).availability_days === 'string'
+      ? JSON.parse((shuttle as any).availability_days)
+      : ((shuttle as any).availability_days || [0, 1, 2, 3, 4, 5, 6]);
+  } catch {
+    availabilityDays = [0, 1, 2, 3, 4, 5, 6];
+  }
+
+  const dates = generateLocalizedDates(availabilityDays, language);
+
+  let rawLuggageOptions: { name: string; price: number }[] = [];
   try {
-    luggageOptions = typeof shuttle.luggage_options === 'string' 
-      ? JSON.parse(shuttle.luggage_options) 
+    rawLuggageOptions = typeof shuttle.luggage_options === 'string'
+      ? JSON.parse(shuttle.luggage_options)
       : (shuttle.luggage_options || []);
   } catch {
-    luggageOptions = [];
+    rawLuggageOptions = [];
   }
+  const luggageOptions = translateLuggageOptions(rawLuggageOptions, language);
 
   const handleBooking = () => {
     if (!isAuthenticated) {
@@ -107,30 +108,33 @@ export const ShuttlePage = () => {
 
   const handleBookingSuccess = () => {
     setShowBookingModal(false);
-    alert('Booking submitted successfully! You will receive a confirmation email shortly.');
+    alert(t('bookingModal.bookingSuccess'));
     setBookingData({ extra_luggage: [] });
   };
 
-  const included = shuttle.included ? shuttle.included.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
-  const toBring = shuttle.to_bring ? shuttle.to_bring.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
-  const serviceType = shuttle.service_type === 'international' ? 'International' : 'Local';
+  const originName = (shuttle as any).origin_name || '';
+  const destName = (shuttle as any).destination_name || '';
+  const baseRouteName = originName && destName ? `${originName} to ${destName}` : shuttle.name;
+  const routeName = translateRouteName(baseRouteName, language);
+
+  const included = translateList(shuttle.included, language);
+  const toBring = translateList(shuttle.to_bring, language);
+  const serviceTypeLabel = shuttle.service_type === 'international' ? t('shuttle.internationalService') : t('shuttle.localService');
   const duration = shuttle.duration_hours;
   const rating = shuttle.rating || 5.0;
   const petsAllowed = shuttle.pets_allowed || false;
-  const cancellationPolicy = shuttle.cancellation_policy || '';
-  const operator = (shuttle as any).operator || '';
-  const luggagePolicy = shuttle.luggage_policy || '';
-  const pickupInfo = shuttle.pickup_info || '';
+  const cancellationPolicy = translateCancellationPolicy(shuttle.cancellation_policy, language);
+  const operator = (shuttle as any).operator || 'Trail Explorer';
+  const luggagePolicy = translateLuggagePolicy(shuttle.luggage_policy, language);
+  const pickupInfo = translatePickupInfo(shuttle.pickup_info, language);
+  const availability = translateAvailability(shuttle.availability, language);
+  const description = translateDescription(shuttle.description, routeName, language);
 
   const images = [
     shuttle.image_url,
     (shuttle as any).origin_image,
     (shuttle as any).destination_image,
   ].filter(Boolean);
-
-  const originName = (shuttle as any).origin_name || '';
-  const destName = (shuttle as any).destination_name || '';
-  const routeName = originName && destName ? `${originName} to ${destName}` : shuttle.name;
 
   const tripSchema = {
     '@context': 'https://schema.org',
@@ -224,39 +228,39 @@ export const ShuttlePage = () => {
               </div>
               <div className="p-6">
                 <div className="flex items-center gap-2 mb-2">
-                  <Badge variant={serviceType === 'International' ? 'warning' : 'success'}>
-                    {serviceType} Service
+                  <Badge variant={shuttle.service_type === 'international' ? 'warning' : 'success'}>
+                    {serviceTypeLabel}
                   </Badge>
                   <div className="flex items-center gap-1 text-amber-500">
                     <Star className="w-4 h-4 fill-current" />
                     <span className="text-sm font-medium">{rating}</span>
                   </div>
                 </div>
-                <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-4">{shuttle.name}</h1>
+                <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-4">{routeName}</h1>
                 
                 <div className="flex flex-wrap gap-4 text-sm text-slate-600 mb-6">
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4" />
-                    <span>{duration} hours</span>
+                    <span>{duration} {t('shuttle.hours')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
-                    <span>{shuttle.schedule || 'Schedule not available'}</span>
+                    <span>{shuttle.schedule || availability}</span>
                   </div>
-                  {shuttle.availability && (
+                  {availability && (
                     <div className="flex items-center gap-2">
                       <MapPin className="w-4 h-4" />
-                      <span>{shuttle.availability}</span>
+                      <span>{availability}</span>
                     </div>
                   )}
                 </div>
 
-                <p className="text-slate-600 mb-6">{shuttle.description}</p>
+                <p className="text-slate-600 mb-6">{description}</p>
 
                 <div className="space-y-6">
                   {included.length > 0 && (
                     <div>
-                      <h3 className="font-semibold text-slate-900 mb-2">What's Included</h3>
+                      <h3 className="font-semibold text-slate-900 mb-2">{t('shuttle.whatsIncluded')}</h3>
                       <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         {included.map((item, index) => (
                           <li key={index} className="flex items-center gap-2 text-sm text-slate-600">
@@ -270,7 +274,7 @@ export const ShuttlePage = () => {
 
                   {toBring.length > 0 && (
                     <div>
-                      <h3 className="font-semibold text-slate-900 mb-2">What to Bring</h3>
+                      <h3 className="font-semibold text-slate-900 mb-2">{t('shuttle.whatToBring')}</h3>
                       <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         {toBring.map((item, index) => (
                           <li key={index} className="flex items-center gap-2 text-sm text-slate-600">
@@ -283,13 +287,13 @@ export const ShuttlePage = () => {
                   )}
 
                   <div>
-                    <h3 className="font-semibold text-slate-900 mb-2">Luggage Policy</h3>
+                    <h3 className="font-semibold text-slate-900 mb-2">{t('shuttle.luggagePolicy')}</h3>
                     <p className="text-sm text-slate-600">{luggagePolicy}</p>
                   </div>
 
                   {luggageOptions.length > 0 && (
                     <div>
-                      <h3 className="font-semibold text-slate-900 mb-2">Extra Luggage Options</h3>
+                      <h3 className="font-semibold text-slate-900 mb-2">{t('shuttle.extraLuggageOptions')}</h3>
                       <ul className="space-y-2">
                         {luggageOptions.map((option, index) => (
                           <li key={index} className="flex items-center justify-between text-sm text-slate-600">
@@ -303,23 +307,23 @@ export const ShuttlePage = () => {
 
                   {pickupInfo && (
                     <div>
-                      <h3 className="font-semibold text-slate-900 mb-2">Pickup Information</h3>
+                      <h3 className="font-semibold text-slate-900 mb-2">{t('shuttle.pickupInformation')}</h3>
                       <p className="text-sm text-slate-600 whitespace-pre-line">{pickupInfo}</p>
                     </div>
                   )}
 
                   <div>
-                    <h3 className="font-semibold text-slate-900 mb-2">Pets</h3>
+                    <h3 className="font-semibold text-slate-900 mb-2">{t('shuttle.pets')}</h3>
                     <div className="flex items-center gap-2 text-sm text-slate-600">
                       {petsAllowed ? (
                         <>
                           <CheckCircle className="w-4 h-4 text-emerald-500" />
-                          <span>Pets allowed (in carrier)</span>
+                          <span>{t('shuttle.petsAllowed')}</span>
                         </>
                       ) : (
                         <>
                           <XCircle className="w-4 h-4 text-red-500" />
-                          <span>Pets not allowed</span>
+                          <span>{t('shuttle.petsNotAllowed')}</span>
                         </>
                       )}
                     </div>
@@ -327,14 +331,14 @@ export const ShuttlePage = () => {
 
                   {cancellationPolicy && (
                     <div>
-                      <h3 className="font-semibold text-slate-900 mb-2">Cancellation Policy</h3>
+                      <h3 className="font-semibold text-slate-900 mb-2">{t('shuttle.cancellationPolicy')}</h3>
                       <p className="text-sm text-slate-600">{cancellationPolicy}</p>
                     </div>
                   )}
 
                   {operator && (
                     <div>
-                      <h3 className="font-semibold text-slate-900 mb-2">Operated By</h3>
+                      <h3 className="font-semibold text-slate-900 mb-2">{t('shuttle.operatedBy')}</h3>
                       <p className="text-sm text-slate-600">{operator}</p>
                     </div>
                   )}
@@ -346,17 +350,17 @@ export const ShuttlePage = () => {
           <div className="lg:col-span-1">
             <Card className="sticky top-24">
               <CardHeader>
-                <CardTitle>Book This Shuttle</CardTitle>
+                <CardTitle>{t('shuttle.bookThisShuttle')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="mb-4">
                   <span className="text-3xl font-bold text-emerald-600">${shuttle.price}</span>
-                  <span className="text-slate-500">/person</span>
+                  <span className="text-slate-500"> {t('shuttle.perPerson')}</span>
                 </div>
 
                 {pickupInfo && (
                   <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                    <p className="text-sm font-medium text-amber-800 mb-1">Pickup Information</p>
+                    <p className="text-sm font-medium text-amber-800 mb-1">{t('shuttle.pickupInformation')}</p>
                     <p className="text-xs text-amber-700 whitespace-pre-line">{pickupInfo}</p>
                   </div>
                 )}
@@ -364,19 +368,19 @@ export const ShuttlePage = () => {
                 <div className="space-y-3 text-sm text-slate-600 mb-4">
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-slate-400" />
-                    <span>{duration} hours</span>
+                    <span>{duration} {t('shuttle.hours')}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-slate-400" />
-                    <span>{dates.length} available dates</span>
+                    <span>{dates.length} {language === 'es' ? 'fechas disponibles' : 'available dates'}</span>
                   </div>
                 </div>
 
                 <Button className="w-full" size="lg" onClick={handleBooking}>
-                  Reserve Now
+                  {t('shuttle.reserveNow')}
                 </Button>
                 <p className="text-xs text-center text-slate-500 mt-2">
-                  Demo mode - no payment will be processed
+                  {t('shuttle.demoMode')}
                 </p>
               </CardContent>
             </Card>
@@ -386,7 +390,7 @@ export const ShuttlePage = () => {
 
       {showBookingModal && (
         <BookingModal
-          shuttle={shuttle}
+          shuttle={{ ...shuttle, name: routeName }}
           dates={dates}
           luggageOptions={luggageOptions}
           onClose={() => setShowBookingModal(false)}

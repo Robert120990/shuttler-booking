@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Loader2, X, Package, Building2, MapPin } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -18,6 +19,7 @@ interface BookingModalProps {
 }
 
 export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSuccess }: BookingModalProps) => {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const { bookingData, setBookingData } = useBookingStore();
   const [submitting, setSubmitting] = useState(false);
@@ -188,12 +190,12 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
     const dropoff = selectedDropoffMode === 'custom' ? customDropoff.trim() : bookingData.dropoff_location;
 
     if (!pickup) {
-      alert('Por favor selecciona o ingresa el lugar de recogida (hostal/hotel).');
+      alert(t('bookingModal.pickupRequired'));
       return;
     }
 
     if (!dropoff) {
-      alert('Por favor selecciona o ingresa el lugar de destino (hostal/hotel).');
+      alert(t('bookingModal.dropoffRequired'));
       return;
     }
 
@@ -253,7 +255,7 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
       <Card className="w-full max-w-lg max-h-[92vh] overflow-y-auto shadow-2xl border border-slate-100">
         <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-slate-100">
           <div>
-            <CardTitle className="text-xl font-bold text-slate-900">Reservar Shuttle</CardTitle>
+            <CardTitle className="text-xl font-bold text-slate-900">{t('bookingModal.title')}</CardTitle>
             <p className="text-xs text-slate-500 mt-0.5">{shuttle.name}</p>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose}>
@@ -266,18 +268,18 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
             {/* Price banner */}
             <div className="bg-emerald-50 border border-emerald-200/80 rounded-xl p-3 flex justify-between items-center">
               <div>
-                <span className="text-xs font-semibold text-emerald-800 uppercase tracking-wide">Tarifa por persona</span>
+                <span className="text-xs font-semibold text-emerald-800 uppercase tracking-wide">{t('bookingModal.ratePerPerson')}</span>
                 <p className="text-2xl font-black text-emerald-700">${shuttle.price} <span className="text-xs font-normal text-emerald-600">USD</span></p>
               </div>
               <div className="text-right text-xs text-slate-500">
-                <span className="font-semibold text-slate-700">{shuttle.duration_hours}h</span> de trayecto
+                <span className="font-semibold text-slate-700">{shuttle.duration_hours}h</span> {t('bookingModal.tripDuration')}
               </div>
             </div>
 
             {/* Date selection */}
             <Select
-              label="Fecha del Viaje"
-              options={[{ value: '', label: 'Selecciona una fecha disponible' }, ...dates]}
+              label={t('bookingModal.tripDate')}
+              options={[{ value: '', label: t('bookingModal.selectDate') }, ...dates]}
               value={bookingData.date}
               onChange={(e) => setBookingData({ date: e.target.value })}
               required
@@ -286,14 +288,14 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
             {/* Passengers & Contact details */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
-                label="Nombre de Quien Reserva"
-                placeholder="Nombre y Apellido"
+                label={t('bookingModal.bookerName')}
+                placeholder={t('bookingModal.passengerNamePlaceholder')}
                 value={bookingData.passenger_name || user?.name || ''}
                 onChange={(e) => handlePassengerNameChange(e.target.value)}
                 required
               />
               <Input
-                label="Teléfono / WhatsApp"
+                label={t('bookingModal.phone')}
                 placeholder="+506 8888 8888"
                 value={bookingData.passenger_phone || ''}
                 onChange={(e) => setBookingData({ passenger_phone: e.target.value })}
@@ -302,7 +304,7 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
             </div>
 
             <Input
-              label="Correo Electrónico"
+              label={t('bookingModal.email')}
               type="email"
               placeholder="tu-correo@ejemplo.com"
               value={bookingData.passenger_email || user?.email || ''}
@@ -313,7 +315,7 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <label className="block text-sm font-medium text-slate-700">
-                  Persona a Recoger en el Origen
+                  {t('bookingModal.pickupPerson')}
                 </label>
                 {isCustomPickupPerson && (
                   <button
@@ -321,20 +323,20 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
                     onClick={handleResetPickupPerson}
                     className="text-xs text-emerald-600 hover:text-emerald-700 font-medium hover:underline flex items-center gap-1"
                   >
-                    ↺ Usar mismo nombre de quien reserva
+                    {t('bookingModal.useSameName')}
                   </button>
                 )}
               </div>
               <Input
-                placeholder="Nombre de la persona a recoger"
+                placeholder={t('bookingModal.pickupPersonPlaceholder')}
                 value={bookingData.pickup_person_name || (isCustomPickupPerson ? '' : (bookingData.passenger_name || user?.name || ''))}
                 onChange={(e) => handlePickupPersonChange(e.target.value)}
                 required
               />
               <p className="text-[11px] text-slate-500">
                 {isCustomPickupPerson
-                  ? '⚠️ Has especificado a una persona distinta para la recogida.'
-                  : '✓ Por defecto se recogerá a la misma persona que realiza la reserva.'}
+                  ? t('bookingModal.pickupPersonDifferent')
+                  : t('bookingModal.pickupPersonDefault')}
               </p>
             </div>
 
@@ -343,7 +345,7 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
               <div className="flex items-center justify-between">
                 <label className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
                   <Building2 className="w-4 h-4 text-emerald-600" />
-                  Lugar de Recogida (Hostal / Hotel en Origen)
+                  {t('bookingModal.pickupLocation')}
                 </label>
                 {originHostels.length > 0 && (
                   <button
@@ -360,7 +362,7 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
                     }}
                     className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
                   >
-                    {selectedPickupMode === 'hostel' ? '✍️ Ingresar otra dirección' : '🏢 Elegir de la lista'}
+                    {selectedPickupMode === 'hostel' ? t('bookingModal.enterCustomAddress') : t('bookingModal.chooseFromList')}
                   </button>
                 )}
               </div>
@@ -368,7 +370,7 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
               {loadingHostels ? (
                 <div className="flex items-center gap-2 text-xs text-slate-500 py-2">
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
-                  Cargando hostales de la ciudad...
+                  {t('bookingModal.loadingHostels')}
                 </div>
               ) : selectedPickupMode === 'hostel' && originHostels.length > 0 ? (
                 <select
@@ -377,7 +379,7 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
                   required
                 >
-                  <option value="">Selecciona tu hostal u hotel de recogida...</option>
+                  <option value="">{t('bookingModal.selectPickupHostel')}</option>
                   {originHostels.map((h) => {
                     const fullVal = `${h.name}${h.address ? ' - ' + h.address : ''}`;
                     return (
@@ -386,11 +388,11 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
                       </option>
                     );
                   })}
-                  <option value="__custom__">✍️ Otro hotel / Dirección personalizada...</option>
+                  <option value="__custom__">{t('bookingModal.otherCustomHotel')}</option>
                 </select>
               ) : (
                 <Input
-                  placeholder="Nombre del hotel, hostal o dirección exacta de recogida"
+                  placeholder={t('bookingModal.customPickupPlaceholder')}
                   value={customPickup}
                   onChange={(e) => {
                     setCustomPickup(e.target.value);
@@ -406,7 +408,7 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
               <div className="flex items-center justify-between">
                 <label className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
                   <MapPin className="w-4 h-4 text-emerald-600" />
-                  Lugar de Entrega (Hostal / Hotel en Destino)
+                  {t('bookingModal.dropoffLocation')}
                 </label>
                 {destHostels.length > 0 && (
                   <button
@@ -423,7 +425,7 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
                     }}
                     className="text-xs text-emerald-600 hover:text-emerald-700 font-medium"
                   >
-                    {selectedDropoffMode === 'hostel' ? '✍️ Ingresar otra dirección' : '🏢 Elegir de la lista'}
+                    {selectedDropoffMode === 'hostel' ? t('bookingModal.enterCustomAddress') : t('bookingModal.chooseFromList')}
                   </button>
                 )}
               </div>
@@ -431,7 +433,7 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
               {loadingHostels ? (
                 <div className="flex items-center gap-2 text-xs text-slate-500 py-2">
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
-                  Cargando hostales de destino...
+                  {t('bookingModal.loadingDestHostels')}
                 </div>
               ) : selectedDropoffMode === 'hostel' && destHostels.length > 0 ? (
                 <select
@@ -440,7 +442,7 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
                   required
                 >
-                  <option value="">Selecciona tu hostal u hotel de destino...</option>
+                  <option value="">{t('bookingModal.selectDropoffHostel')}</option>
                   {destHostels.map((h) => {
                     const fullVal = `${h.name}${h.address ? ' - ' + h.address : ''}`;
                     return (
@@ -449,11 +451,11 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
                       </option>
                     );
                   })}
-                  <option value="__custom__">✍️ Otro hotel / Dirección personalizada...</option>
+                  <option value="__custom__">{t('bookingModal.otherCustomHotel')}</option>
                 </select>
               ) : (
                 <Input
-                  placeholder="Nombre del hotel, hostal o dirección de destino"
+                  placeholder={t('bookingModal.customDropoffPlaceholder')}
                   value={customDropoff}
                   onChange={(e) => {
                     setCustomDropoff(e.target.value);
@@ -467,7 +469,7 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
             {/* Passenger Count */}
             <Input
               type="number"
-              label="Número de Pasajeros"
+              label={t('bookingModal.passengersCount')}
               min="1"
               max="15"
               value={String(bookingData.passengers)}
@@ -481,22 +483,22 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                     <Package className="w-4 h-4 text-emerald-600" />
-                    Equipaje Adicional
+                    {t('bookingModal.extraLuggage')}
                   </label>
                   <button
                     type="button"
                     onClick={handleAddLuggage}
                     className="text-xs text-emerald-600 hover:text-emerald-700 font-semibold"
                   >
-                    + Agregar equipaje
+                    {t('bookingModal.addExtraLuggage')}
                   </button>
                 </div>
                 {bookingData.extra_luggage.map((item, index) => (
                   <div key={index} className="flex gap-2 items-end">
                     <Select
-                      label={index === 0 ? 'Tipo de Equipaje' : ''}
+                      label={index === 0 ? t('bookingModal.extraLuggage') : ''}
                       options={[
-                        { value: '-1', label: 'Seleccionar tipo' },
+                        { value: '-1', label: t('bookingModal.selectLuggageType') },
                         ...luggageOptions.map((opt, i) => ({ 
                           value: String(i), 
                           label: `${opt.name} (+$${opt.price} USD)` 
@@ -532,7 +534,7 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
             {/* Summary and Total */}
             <div className="border-t border-slate-200 pt-4 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-slate-600">${shuttle.price} x {bookingData.passengers} pasajero(s)</span>
+                <span className="text-slate-600">${shuttle.price} x {bookingData.passengers} {t('bookingModal.passengers')}</span>
                 <span className="font-semibold text-slate-900">${shuttle.price * bookingData.passengers} USD</span>
               </div>
               {bookingData.extra_luggage.map((item, index) => (
@@ -548,7 +550,7 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
                 )
               ))}
               <div className="flex justify-between text-lg font-black pt-2 border-t border-slate-200 text-slate-900">
-                <span>Total a Pagar</span>
+                <span>{t('bookingModal.totalToPay')}</span>
                 <span className="text-emerald-600">${total} USD</span>
               </div>
             </div>
@@ -563,10 +565,10 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
               {submitting ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  Procesando Reserva...
+                  {t('bookingModal.submitting')}
                 </>
               ) : (
-                'Confirmar y Reservar'
+                t('bookingModal.confirmBooking')
               )}
             </Button>
             <p className="text-xs text-center text-slate-400">

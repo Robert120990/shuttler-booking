@@ -1,37 +1,43 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Star, Clock, MapPin, Shield, CreditCard, Headphones, Calendar, Loader2, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { countriesApi, shuttlesApi } from '../../api/endpoints';
 import { getImageUrl } from '../../api/client';
 import { SEO } from '../seo/SEO';
+import { useLanguageStore } from '../../i18n';
+import { translateRouteName, translateCountryName, translateCountryDescription } from '../../utils/shuttleTranslator';
 import type { Country, Shuttle } from '../../types';
 
-const FEATURES = [
-  {
-    icon: Calendar,
-    title: 'Easy Planning',
-    description: 'Change dates and schedules easily or switch to a different service.',
-  },
-  {
-    icon: Shield,
-    title: 'Secure Payments',
-    description: 'Choose from a variety of secure payment methods.',
-  },
-  {
-    icon: CreditCard,
-    title: 'Flexible Options',
-    description: 'Credit/debit cards and digital wallets accepted.',
-  },
-  {
-    icon: Headphones,
-    title: '24/7 Support',
-    description: 'Contact us anytime via chat or email.',
-  },
-];
-
 export const HomePage = () => {
+  const { t } = useTranslation();
+  const { language } = useLanguageStore();
+
+  const features = [
+    {
+      icon: Calendar,
+      title: t('home.easyPlanning'),
+      description: t('home.easyPlanningDesc'),
+    },
+    {
+      icon: Shield,
+      title: t('home.securePayments'),
+      description: t('home.securePaymentsDesc'),
+    },
+    {
+      icon: CreditCard,
+      title: t('home.flexibleOptions'),
+      description: t('home.flexibleOptionsDesc'),
+    },
+    {
+      icon: Headphones,
+      title: t('home.support247'),
+      description: t('home.support247Desc'),
+    },
+  ];
+
   const [countries, setCountries] = useState<Country[]>([]);
   const [featuredShuttles, setFeaturedShuttles] = useState<Shuttle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -137,10 +143,10 @@ export const HomePage = () => {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 flex items-center justify-between">
           <div className="max-w-2xl text-left">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight drop-shadow-lg">
-              Explore Central America
+              {t('home.title')}
             </h1>
             <p className="mt-4 text-base sm:text-lg lg:text-xl text-slate-100 drop-shadow-md max-w-xl">
-              Book shuttles, transfers and transportation across 8 countries. Your adventure starts with a single booking.
+              {t('home.subtitle')}
             </p>
           </div>
         </div>
@@ -150,8 +156,8 @@ export const HomePage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-end justify-between mb-8">
             <div>
-              <h2 className="text-3xl font-bold text-slate-900">Countries</h2>
-              <p className="mt-1 text-slate-500">Explore Central America</p>
+              <h2 className="text-3xl font-bold text-slate-900">{t('home.countries')}</h2>
+              <p className="mt-1 text-slate-500">{t('home.countriesSubtitle')}</p>
             </div>
             <div className="hidden sm:flex gap-2">
               <button
@@ -188,16 +194,16 @@ export const HomePage = () => {
                   <div className="relative h-80 rounded-2xl overflow-hidden shadow-lg group-hover:shadow-xl transition-shadow duration-300">
                     <img
                       src={getImageUrl(country.image_url)}
-                      alt={country.name}
+                      alt={translateCountryName(country.name, language)}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       loading="lazy"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                     <div className="absolute inset-0 p-6 flex flex-col justify-end">
-                      <h3 className="text-2xl font-bold text-white mb-1">{country.name}</h3>
-                      <p className="text-sm text-white/80 line-clamp-2 mb-3">{country.description}</p>
+                      <h3 className="text-2xl font-bold text-white mb-1">{translateCountryName(country.name, language)}</h3>
+                      <p className="text-sm text-white/80 line-clamp-2 mb-3">{translateCountryDescription(country.description, country.name, language)}</p>
                       <span className="inline-flex items-center text-sm font-medium text-emerald-400 group-hover:text-emerald-300 transition-colors">
-                        Explore <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                        {t('home.explore')} <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                       </span>
                     </div>
                   </div>
@@ -207,7 +213,7 @@ export const HomePage = () => {
           </div>
           
           <div className="mt-6 text-center sm:hidden">
-            <p className="text-sm text-slate-500">Swipe to see more destinations</p>
+            <p className="text-sm text-slate-500">{t('home.swipeMore')}</p>
           </div>
         </div>
       </section>
@@ -215,8 +221,8 @@ export const HomePage = () => {
       <section className="py-16 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-slate-900">Top Rated Routes</h2>
-            <p className="mt-2 text-slate-600">Popular shuttles booked by travelers</p>
+            <h2 className="text-3xl font-bold text-slate-900">{t('home.topRoutes')}</h2>
+            <p className="mt-2 text-slate-600">{t('home.topRoutesSubtitle')}</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {featuredShuttles.map((shuttle) => (
@@ -225,7 +231,7 @@ export const HomePage = () => {
                   <div className="relative h-40">
                     <img
                       src={getImageUrl(shuttle.image_url)}
-                      alt={shuttle.name}
+                      alt={translateRouteName(shuttle.name, language)}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       loading="lazy"
                     />
@@ -235,7 +241,7 @@ export const HomePage = () => {
                           ? 'bg-amber-100 text-amber-800' 
                           : 'bg-emerald-100 text-emerald-800'
                       }`}>
-                        {shuttle.service_type === 'international' ? 'International' : 'Local'}
+                        {shuttle.service_type === 'international' ? t('shuttle.internationalService') : t('shuttle.localService')}
                       </span>
                     </div>
                   </div>
@@ -244,7 +250,7 @@ export const HomePage = () => {
                       <Star className="w-4 h-4 fill-current" />
                       <span className="font-medium">{shuttle.rating || 5.0}</span>
                     </div>
-                    <h3 className="font-semibold text-slate-900 mb-1">{shuttle.name}</h3>
+                    <h3 className="font-semibold text-slate-900 mb-1">{translateRouteName(shuttle.name, language)}</h3>
                     <div className="flex items-center gap-2 text-sm text-slate-500 mb-3">
                       <MapPin className="w-4 h-4" />
                       <span>{shuttle.origin_name}</span>
@@ -254,7 +260,7 @@ export const HomePage = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <span className="text-2xl font-bold text-emerald-600">${shuttle.price}</span>
-                        <span className="text-sm text-slate-500">/person</span>
+                        <span className="text-sm text-slate-500">{t('shuttle.perPerson')}</span>
                       </div>
                       <div className="flex items-center gap-1 text-sm text-slate-500">
                         <Clock className="w-4 h-4" />
@@ -262,7 +268,7 @@ export const HomePage = () => {
                       </div>
                     </div>
                     <div className="mt-4">
-                      <Button className="w-full">View Details & Book</Button>
+                      <Button className="w-full">{t('home.viewDetailsAndBook')}</Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -275,11 +281,11 @@ export const HomePage = () => {
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-slate-900">Why Book With Us?</h2>
-            <p className="mt-2 text-slate-600">Everything you need for a stress-free trip</p>
+            <h2 className="text-3xl font-bold text-slate-900">{t('home.whyBook')}</h2>
+            <p className="mt-2 text-slate-600">{t('home.whyBookSubtitle')}</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {FEATURES.map((feature) => (
+            {features.map((feature) => (
               <div key={feature.title} className="text-center">
                 <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center mx-auto mb-4">
                   <feature.icon className="w-6 h-6 text-emerald-600" />
@@ -294,13 +300,13 @@ export const HomePage = () => {
 
       <section className="py-16 bg-gradient-to-br from-emerald-600 to-emerald-800 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold mb-4">Ready to Explore?</h2>
+          <h2 className="text-3xl font-bold mb-4">{t('home.readyToExplore')}</h2>
           <p className="text-xl text-emerald-100 mb-8 max-w-2xl mx-auto">
-            Find and book your route in minutes. Your next adventure is just a click away.
+            {t('home.readyToExploreSubtitle')}
           </p>
           <Link to="/countries/costa-rica">
             <Button size="lg" className="bg-white text-emerald-700 hover:bg-emerald-50">
-              Start Searching
+              {t('home.startSearching')}
               <ArrowRight className="ml-2 w-5 h-5" />
             </Button>
           </Link>

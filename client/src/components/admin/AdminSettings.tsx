@@ -114,8 +114,55 @@ export const AdminSettings = () => {
     }
   };
 
+  const handleSelectProvider = (provider: 'resend' | 'smtp') => {
+    setFormData((prev) => {
+      let nextFrom = prev.smtp_from;
+      if (provider === 'resend') {
+        if (!nextFrom || nextFrom.includes('trailexplorer.com')) {
+          nextFrom = 'Trail Explorer <onboarding@resend.dev>';
+        }
+      } else {
+        if (!nextFrom || nextFrom.includes('onboarding@resend.dev')) {
+          nextFrom = 'Trail Explorer <reservas@trailexplorer.com>';
+        }
+      }
+      return {
+        ...prev,
+        email_provider: provider,
+        smtp_from: nextFrom,
+      };
+    });
+  };
+
   const handleTestSmtp = async () => {
-    const target = testEmail || formData.test_email || formData.notification_email || formData.smtp_user || 'trailexplorersv@gmail.com';
+    const rawTarget = testEmail || formData.test_email || formData.notification_email || formData.smtp_user || 'trailexplorersv@gmail.com';
+    const target = rawTarget.split(',')[0].trim();
+
+    if (!target || !target.includes('@')) {
+      setFeedback({
+        type: 'error',
+        message: 'Por favor ingresa un correo destinatario de prueba válido (ejemplo: tu-correo@gmail.com).',
+      });
+      return;
+    }
+
+    if (formData.email_provider === 'resend') {
+      if (!formData.resend_api_key?.trim()) {
+        setFeedback({
+          type: 'error',
+          message: 'Debes ingresar tu Clave API de Resend (comienza con re_) antes de enviar la prueba.',
+        });
+        return;
+      }
+    } else {
+      if (!formData.smtp_user?.trim() || !formData.smtp_pass?.trim()) {
+        setFeedback({
+          type: 'error',
+          message: 'Debes completar el usuario y la contraseña SMTP antes de realizar la prueba de envío.',
+        });
+        return;
+      }
+    }
 
     try {
       setTesting(true);
@@ -276,7 +323,7 @@ export const AdminSettings = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Opción 1: Resend API */}
               <div
-                onClick={() => setFormData({ ...formData, email_provider: 'resend' })}
+                onClick={() => handleSelectProvider('resend')}
                 className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                   formData.email_provider === 'resend'
                     ? 'border-emerald-600 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-600'
@@ -301,7 +348,7 @@ export const AdminSettings = () => {
 
               {/* Opción 2: SMTP Clásico */}
               <div
-                onClick={() => setFormData({ ...formData, email_provider: 'smtp' })}
+                onClick={() => handleSelectProvider('smtp')}
                 className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
                   formData.email_provider === 'smtp'
                     ? 'border-emerald-600 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-600'
@@ -382,16 +429,25 @@ export const AdminSettings = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Nombre y Correo Remitente (From)
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium text-slate-700">
+                      Nombre y Correo Remitente (From)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, smtp_from: 'Trail Explorer <onboarding@resend.dev>' }))}
+                      className="text-xs text-emerald-600 hover:text-emerald-700 font-medium underline"
+                    >
+                      Restaurar onboarding@resend.dev
+                    </button>
+                  </div>
                   <Input
                     placeholder="Trail Explorer <onboarding@resend.dev>"
                     value={formData.smtp_from}
                     onChange={(e) => setFormData({ ...formData, smtp_from: e.target.value })}
                   />
                   <p className="text-xs text-slate-500 mt-1">
-                    Usa <code className="font-mono text-slate-700 bg-slate-100 px-1 py-0.5 rounded">Trail Explorer &lt;onboarding@resend.dev&gt;</code> para pruebas inmediatas. Si tienes tu propio dominio verificado en Resend, puedes colocar ej. <code className="font-mono text-slate-700 bg-slate-100 px-1 py-0.5 rounded">Trail Explorer &lt;reservas@tudominio.com&gt;</code>.
+                    Usa <code className="font-mono text-slate-700 bg-slate-100 px-1 py-0.5 rounded">Trail Explorer &lt;onboarding@resend.dev&gt;</code> para pruebas inmediatas gratuitas. Si tienes tu propio dominio verificado en Resend, puedes colocar ej. <code className="font-mono text-slate-700 bg-slate-100 px-1 py-0.5 rounded">Trail Explorer &lt;reservas@tudominio.com&gt;</code>.
                   </p>
                 </div>
               </div>
@@ -546,9 +602,15 @@ export const AdminSettings = () => {
                   value={testEmail}
                   onChange={(e) => setTestEmail(e.target.value)}
                 />
-                <p className="text-xs text-slate-400 mt-1">
-                  Recibirás un correo de confirmación validando la configuración.
-                </p>
+                {formData.email_provider === 'resend' ? (
+                  <p className="text-xs text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-200 mt-1.5 leading-relaxed">
+                    💡 <strong>Prueba con Resend gratuito:</strong> Al usar <code className="font-mono bg-amber-100 px-1 py-0.2 rounded">onboarding@resend.dev</code> sin dominio propio verificado, Resend requiere que el destinatario sea el <strong>correo con el que te registraste en resend.com</strong>.
+                  </p>
+                ) : (
+                  <p className="text-xs text-slate-500 mt-1">
+                    Se enviará un correo de prueba para verificar la conexión SMTP ({formData.smtp_host || 'smtp.gmail.com'}).
+                  </p>
+                )}
               </div>
               <Button
                 type="button"

@@ -109,11 +109,11 @@ export function getFromAddress(config) {
 /**
  * Creates a Nodemailer transporter using DB settings or provided custom config
  */
-export function createTransporter(config) {
+export function createTransporter(config, forcePort = null) {
   if (!config) return null;
 
-  const rawHost = (config.smtp_host || process.env.SMTP_HOST || '').trim();
-  const rawPort = (config.smtp_port || process.env.SMTP_PORT || '587').toString().trim();
+  const rawHost = (config.smtp_host || process.env.SMTP_HOST || 'smtp.gmail.com').trim();
+  const rawPort = forcePort || (config.smtp_port || process.env.SMTP_PORT || '587').toString().trim();
   const port = Number(rawPort) || 587;
   const user = (config.smtp_user || process.env.SMTP_USER || '').trim();
   let pass = (config.smtp_pass || process.env.SMTP_PASS || '').trim();
@@ -127,29 +127,14 @@ export function createTransporter(config) {
     pass = pass.replace(/\s+/g, '');
   }
 
-  // Determine secure: port 465 is always SSL direct (secure: true); port 587 is STARTTLS (secure: false)
-  let isSecure = config.smtp_secure === 'true' || config.smtp_secure === true;
-  if (port === 465) {
-    isSecure = true;
-  } else if (port === 587 || port === 25 || port === 2525) {
-    isSecure = false;
-  }
-
-  // Special optimization for Gmail / Google Workspace
-  if (rawHost.toLowerCase().includes('gmail') || rawHost.toLowerCase().includes('googlemail')) {
-    return nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user,
-        pass,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-      connectionTimeout: 12000,
-      greetingTimeout: 8000,
-      socketTimeout: 15000,
-    });
+  // Determine secure: port 465 is SSL direct (secure: true); port 587/25/2525 is STARTTLS (secure: false)
+  let isSecure = port === 465;
+  if (config.smtp_secure !== undefined && config.smtp_secure !== null) {
+    if (config.smtp_secure === 'true' || config.smtp_secure === true) {
+      isSecure = true;
+    } else if (config.smtp_secure === 'false' || config.smtp_secure === false) {
+      isSecure = false;
+    }
   }
 
   return nodemailer.createTransport({
@@ -162,10 +147,11 @@ export function createTransporter(config) {
     },
     tls: {
       rejectUnauthorized: false,
+      minVersion: 'TLSv1.2',
     },
-    connectionTimeout: 12000,
-    greetingTimeout: 8000,
-    socketTimeout: 15000,
+    connectionTimeout: 9000,
+    greetingTimeout: 6000,
+    socketTimeout: 12000,
   });
 }
 
@@ -205,7 +191,7 @@ export async function sendViaResend(apiKey, options) {
     payload.reply_to = options.replyTo;
   }
 
-  const res = await fetch('https://api.resend.com/emails', {
+  let res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${cleanKey}`,
@@ -214,13 +200,44 @@ export async function sendViaResend(apiKey, options) {
     body: JSON.stringify(payload),
   });
 
-  const data = await res.json();
+  let data = await res.json();
   if (!res.ok) {
-    const errMessage = data.message || data.error?.message || 'Error desconocido al conectar con Resend API';
-    if (errMessage.includes('domain_not_verified') || errMessage.includes('from address') || errMessage.includes('testing emails')) {
-      throw new Error(`Resend: Para pruebas inmediatas sin verificar tu dominio, usa 'Trail Explorer <onboarding@resend.dev>' como Remitente. Mensaje: ${errMessage}`);
+    const errMessage = data.message || data.error?.message || '';
+
+    // Auto-retry with onboarding@resend.dev if custom domain is unverified
+    if (
+      (errMessage.includes('domain_not_verified') ||
+        errMessage.includes('from address') ||
+        errMessage.includes('domain is not verified') ||
+        errMessage.includes('validation_error') ||
+        errMessage.includes('testing emails')) &&
+      !payload.from.includes('onboarding@resend.dev')
+    ) {
+      console.log('Dominio de Resend no verificado, reintentando automáticamente con onboarding@resend.dev...');
+      payload.from = 'Trail Explorer <onboarding@resend.dev>';
+      res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${cleanKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      data = await res.json();
     }
-    throw new Error(`Error de Resend API: ${errMessage}`);
+
+    if (!res.ok) {
+      const finalMsg = data.message || data.error?.message || errMessage || 'Error desconocido al conectar con Resend API';
+      if (finalMsg.includes('testing emails to your own email address') || finalMsg.includes('only send testing')) {
+        throw new Error(
+          `Resend (Modo Prueba gratuito): Al usar 'onboarding@resend.dev', Resend únicamente permite enviar correos a la dirección con la que te registraste en resend.com. Por favor ingresa esa dirección en el campo 'Correo Destinatario de Prueba'.`
+        );
+      }
+      if (finalMsg.includes('API key') || finalMsg.includes('restricted') || finalMsg.includes('Unauthorized') || res.status === 401) {
+        throw new Error('Clave API de Resend inválida o no autorizada. Verifica que comience con re_ y esté activa en tu cuenta de resend.com.');
+      }
+      throw new Error(`Error de Resend API: ${finalMsg}`);
+    }
   }
 
   return data;
@@ -350,10 +367,13 @@ export function buildCustomerConfirmationHtml(booking, shuttle, shuttleName, boo
  * Sends a test email to verify SMTP or Resend configuration
  */
 export async function sendTestEmail(customConfig, targetEmail) {
+  // Only use Resend if provider is 'resend' or if provider is not 'smtp' and a resend key exists
   const isResend =
     customConfig?.email_provider === 'resend' ||
-    Boolean(customConfig?.resend_api_key?.trim()) ||
-    (customConfig?.smtp_pass && customConfig.smtp_pass.trim().startsWith('re_'));
+    (customConfig?.email_provider !== 'smtp' && (
+      Boolean(customConfig?.resend_api_key?.trim()) ||
+      Boolean(customConfig?.smtp_pass && customConfig.smtp_pass.trim().startsWith('re_'))
+    ));
 
   const senderOptions = getMailSenderOptions(customConfig);
 
@@ -394,25 +414,28 @@ export async function sendTestEmail(customConfig, targetEmail) {
     throw new Error('Configuración SMTP incompleta. Asegúrate de ingresar servidor, usuario y contraseña.');
   }
 
-  // Verify connection configuration with automatic fallback if timeout
+  // Verify connection configuration with automatic port fallback (587 <-> 465) if timeout
   try {
     await transporter.verify();
   } catch (verifyErr) {
-    const rawHost = (customConfig?.smtp_host || '').toLowerCase();
-    if (rawHost.includes('gmail') && (verifyErr.code === 'ETIMEDOUT' || verifyErr.code === 'ESOCKET' || verifyErr.message?.includes('timeout'))) {
-      console.log('Timeout with default transport, trying direct smtp.gmail.com on port 465 (SSL)...');
-      transporter = nodemailer.createTransport({
-        host: 'smtp.gmail.com',
-        port: 465,
-        secure: true,
-        auth: {
-          user: customConfig.smtp_user,
-          pass: (customConfig.smtp_pass || '').replace(/\s+/g, ''),
-        },
-        tls: { rejectUnauthorized: false },
-        connectionTimeout: 12000,
-      });
-      await transporter.verify();
+    const currentPort = Number(customConfig?.smtp_port || 587);
+    const alternatePort = currentPort === 465 ? 587 : 465;
+    const isTimeout =
+      verifyErr.code === 'ETIMEDOUT' ||
+      verifyErr.code === 'ESOCKET' ||
+      verifyErr.code === 'ECONNRESET' ||
+      verifyErr.code === 'ECONNREFUSED' ||
+      verifyErr.message?.includes('timeout');
+
+    if (isTimeout) {
+      console.log(`Timeout en puerto ${currentPort}, intentando automáticamente con puerto alternativo ${alternatePort}...`);
+      try {
+        const fallbackTransporter = createTransporter(customConfig, alternatePort);
+        await fallbackTransporter.verify();
+        transporter = fallbackTransporter;
+      } catch (fallbackErr) {
+        throw verifyErr; // Throw original error so client gets clear cloud firewall diagnostic
+      }
     } else {
       throw verifyErr;
     }
@@ -429,8 +452,10 @@ export async function sendBookingNotification(booking, shuttle = null) {
     const settings = await getSettings();
     const isResend =
       settings.email_provider === 'resend' ||
-      Boolean(settings.resend_api_key?.trim()) ||
-      (settings.smtp_pass && settings.smtp_pass.trim().startsWith('re_'));
+      (settings.email_provider !== 'smtp' && (
+        Boolean(settings.resend_api_key?.trim()) ||
+        Boolean(settings.smtp_pass && settings.smtp_pass.trim().startsWith('re_'))
+      ));
 
     const rawRecipient = settings.notification_email || settings.smtp_user;
     if (!rawRecipient) {

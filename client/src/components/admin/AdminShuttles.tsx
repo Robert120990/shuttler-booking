@@ -8,6 +8,7 @@ import { Badge } from '../ui/Badge';
 import { shuttlesApi, citiesApi } from '../../api/endpoints';
 import { getImageUrl } from '../../api/client';
 import type { Shuttle, City, LuggageOption } from '../../types';
+import { TripServicesSelector } from './TripServicesSelector';
 
 export const CONVENTIONAL_SHUTTLE_DEFAULTS = {
   schedule: '8:00 AM',
@@ -15,7 +16,7 @@ export const CONVENTIONAL_SHUTTLE_DEFAULTS = {
   availability_days: [0, 1, 2, 3, 4, 5, 6],
   availability: 'Todos los días',
   service_type: 'local' as 'local' | 'international',
-  included: 'Aire acondicionado, Servicio puerta a puerta, WiFi gratuito',
+  included: 'A/C, Parada de Servicio, Asientos Reclinables, Enchufe de Carga, Wifi, Alimentos y Bebidas',
   to_bring: 'Agua, Pasaporte / Documento de identidad, Audífonos, Ropa cómoda',
   luggage_policy: '1 mochila o maleta principal y 1 bolso de mano por persona',
   pickup_info: 'Recogida directa en el lobby de tu hotel u hostal. Por favor estar listo 15 minutos antes de la hora indicada.',
@@ -991,11 +992,9 @@ export const AdminShuttles = () => {
               </div>
 
               <div className="border-t pt-4">
-                <label className="block text-sm font-medium text-slate-700 mb-2">Servicios Incluidos (separados por coma)</label>
-                <Input 
-                  placeholder="Aire acondicionado, Servicio puerta a puerta, WiFi" 
-                  value={formData.included} 
-                  onChange={(e) => setFormData({ ...formData, included: e.target.value })} 
+                <TripServicesSelector
+                  value={formData.included}
+                  onChange={(newIncluded) => setFormData({ ...formData, included: newIncluded })}
                 />
               </div>
 

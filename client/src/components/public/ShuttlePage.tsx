@@ -13,6 +13,7 @@ import { shuttlesApi, reviewsApi } from '../../api/endpoints';
 import { getImageUrl } from '../../api/client';
 import { BookingModal } from './BookingModal';
 import { BookingConfirmationModal } from './BookingConfirmationModal';
+import { TripServicesGrid } from './TripServicesGrid';
 import { SEO } from '../seo/SEO';
 import {
   translateRouteName,
@@ -221,7 +222,6 @@ export const ShuttlePage = () => {
   const baseRouteName = originName && destName ? `${originName} to ${destName}` : shuttle.name;
   const routeName = translateRouteName(baseRouteName, language);
 
-  const included = translateList(shuttle.included, language);
   const toBring = translateList(shuttle.to_bring, language);
   const serviceTypeLabel = shuttle.service_type === 'international' ? t('shuttle.internationalService') : t('shuttle.localService');
   const duration = Number(shuttle.duration_hours);
@@ -423,17 +423,10 @@ export const ShuttlePage = () => {
                 <p className="text-slate-600 mb-6">{description}</p>
 
                 <div className="space-y-6">
-                  {included.length > 0 && (
+                  {shuttle.included && shuttle.included.trim().length > 0 && (
                     <div>
-                      <h3 className="font-semibold text-slate-900 mb-2">{t('shuttle.whatsIncluded')}</h3>
-                      <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {included.map((item, index) => (
-                          <li key={index} className="flex items-center gap-2 text-sm text-slate-600">
-                            <CheckCircle className="w-4 h-4 text-emerald-500" />
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
+                      <h3 className="font-semibold text-slate-900 mb-3">{t('shuttle.whatsIncluded')}</h3>
+                      <TripServicesGrid includedRaw={shuttle.included} language={language} />
                     </div>
                   )}
 

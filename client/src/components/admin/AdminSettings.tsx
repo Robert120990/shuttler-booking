@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Mail, Server, Shield, Send, CheckCircle2, AlertCircle, Loader2, Save, Eye, EyeOff, Info } from 'lucide-react';
+import { Mail, Server, Shield, Send, CheckCircle2, AlertCircle, Loader2, Save, Eye, EyeOff, Info, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -226,7 +226,8 @@ export const AdminSettings = () => {
                   const val = e.target.value;
                   setFormData((prev) => ({ ...prev, notification_email: val }));
                   if (!testEmail || testEmail === formData.notification_email) {
-                    setTestEmail(val);
+                    const firstEmail = val.split(',')[0].trim();
+                    setTestEmail(firstEmail);
                   }
                 }}
               />
@@ -359,10 +360,29 @@ export const AdminSettings = () => {
             </div>
 
             {/* Ayuda Gmail */}
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800 flex items-start gap-2">
-              <Info className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-600" />
-              <div>
-                <strong>Nota para Gmail / Google Workspace:</strong> Debes usar una <em>Contraseña de Aplicación (App Password)</em> generada desde tu cuenta de Google con Verificación en 2 pasos activada.
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-900 space-y-2">
+              <div className="flex items-center gap-2 font-semibold text-amber-800 text-sm">
+                <Info className="w-4 h-4 flex-shrink-0 text-amber-600" />
+                <span>¿Usas una cuenta de Gmail (@gmail.com o Google Workspace)?</span>
+              </div>
+              <p className="text-amber-800/90 leading-relaxed">
+                Por seguridad, Google <strong>no acepta tu contraseña habitual</strong> para envíos SMTP. Debes generar una <strong>Contraseña de Aplicación (16 letras)</strong>:
+              </p>
+              <ol className="list-decimal list-inside space-y-1 text-amber-800/90 pl-1">
+                <li>Asegúrate de tener activada la <strong>Verificación en 2 pasos</strong> en tu cuenta de Google.</li>
+                <li>Genera una contraseña de aplicación con nombre ej. <em>"Trail Explorer"</em>.</li>
+                <li>Copia el código de 16 caracteres generado y pégalo en el campo <strong>Contraseña / App Password</strong> de arriba.</li>
+              </ol>
+              <div className="pt-1">
+                <a
+                  href="https://myaccount.google.com/apppasswords"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg text-xs transition-colors shadow-sm"
+                >
+                  <span>Abrir Google: Contraseñas de aplicaciones</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
               </div>
             </div>
           </CardContent>
@@ -390,18 +410,21 @@ export const AdminSettings = () => {
                   Correo Destinatario de Prueba
                 </label>
                 <Input
-                  type="email"
+                  type="text"
                   placeholder="tu-correo@ejemplo.com"
                   value={testEmail}
                   onChange={(e) => setTestEmail(e.target.value)}
                 />
+                <p className="text-xs text-slate-400 mt-1">
+                  Ingresa el correo donde deseas recibir el mensaje de confirmación de prueba.
+                </p>
               </div>
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleTestSmtp}
                 disabled={testing}
-                className="w-full sm:w-auto flex-shrink-0 border-purple-200 hover:bg-purple-50 text-purple-700"
+                className="w-full sm:w-auto flex-shrink-0 border-purple-200 hover:bg-purple-50 text-purple-700 cursor-pointer"
               >
                 {testing ? (
                   <>

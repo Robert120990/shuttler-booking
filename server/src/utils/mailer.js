@@ -19,22 +19,47 @@ export async function getSettings() {
 }
 
 /**
- * Helper to get proper From address matching SMTP user
+ * Helper to get proper From and optional Reply-To address matching SMTP user
  */
-export function getFromAddress(config) {
+export function getMailSenderOptions(config) {
   const user = (config?.smtp_user || process.env.SMTP_USER || '').trim();
   const rawFrom = (config?.smtp_from || '').trim();
+  const isGmail = (config?.smtp_host || '').toLowerCase().includes('gmail') || user.toLowerCase().endsWith('@gmail.com');
 
   if (!rawFrom) {
-    return user ? `Trail Explorer <${user}>` : 'Trail Explorer <no-reply@trailexplorer.com>';
+    const address = user ? `Trail Explorer <${user}>` : 'Trail Explorer <no-reply@trailexplorer.com>';
+    return { from: address };
   }
 
   // If user entered only a name like "Trail Explorer", attach user email
-  if (!rawFrom.includes('@') && user) {
-    return `"${rawFrom}" <${user}>`;
+  if (!rawFrom.includes('@')) {
+    return {
+      from: user ? `"${rawFrom}" <${user}>` : `"${rawFrom}" <no-reply@trailexplorer.com>`,
+    };
   }
 
-  return rawFrom;
+  // If using Gmail SMTP and custom sender has a specific email domain:
+  if (isGmail && user) {
+    const nameMatch = rawFrom.match(/^"?([^"<]+)"?\s*<([^>]+)>/);
+    const displayName = nameMatch ? nameMatch[1].trim() : 'Trail Explorer';
+    const senderEmail = nameMatch ? nameMatch[2].trim() : rawFrom.trim();
+
+    if (senderEmail.toLowerCase() !== user.toLowerCase()) {
+      return {
+        from: `"${displayName}" <${user}>`,
+        replyTo: senderEmail,
+      };
+    }
+  }
+
+  return { from: rawFrom };
+}
+
+/**
+ * Helper to get proper From address matching SMTP user (backwards compatibility)
+ */
+export function getFromAddress(config) {
+  return getMailSenderOptions(config).from;
 }
 
 /**
@@ -77,6 +102,9 @@ export function createTransporter(config) {
       tls: {
         rejectUnauthorized: false,
       },
+      connectionTimeout: 15000,
+      greetingTimeout: 10000,
+      socketTimeout: 20000,
     });
   }
 
@@ -109,10 +137,10 @@ export async function sendTestEmail(customConfig, targetEmail) {
   // Verify connection configuration
   await transporter.verify();
 
-  const from = getFromAddress(customConfig);
+  const senderOptions = getMailSenderOptions(customConfig);
 
   const mailOptions = {
-    from,
+    ...senderOptions,
     to: targetEmail,
     subject: '🧪 Correo de Prueba - Configuración SMTP Trail Explorer',
     html: `
@@ -149,13 +177,23 @@ export async function sendBookingNotification(booking, shuttle = null) {
       return;
     }
 
-    const recipientEmail = settings.notification_email || settings.smtp_user;
-    if (!recipientEmail) {
+    const rawRecipient = settings.notification_email || settings.smtp_user;
+    if (!rawRecipient) {
       console.log('No se configuró un correo de notificación en los ajustes.');
       return;
     }
 
-    const from = settings.smtp_from || settings.smtp_user || 'Trail Explorer <reservas@trailexplorer.com>';
+    const recipientEmails = rawRecipient
+      .split(',')
+      .map((e) => e.trim())
+      .filter(Boolean);
+
+    if (recipientEmails.length === 0) {
+      console.log('No hay destinatarios válidos para la notificación.');
+      return;
+    }
+
+    const senderOptions = getMailSenderOptions(settings);
     const shuttleName = shuttle?.name || booking.shuttle_name || 'Ruta de Shuttle';
     const bookingDate = new Date(booking.date).toLocaleDateString('es-ES', {
       weekday: 'long',
@@ -252,19 +290,20 @@ export async function sendBookingNotification(booking, shuttle = null) {
     `;
 
     // 1. Send notification to admin / notification email
+    const primaryRecipients = recipientEmails.join(', ');
     await transporter.sendMail({
-      from,
-      to: recipientEmail,
+      ...senderOptions,
+      to: primaryRecipients,
       subject: `🚐 Nueva Reserva: ${shuttleName} - ${booking.passenger_name || 'Cliente'} ($${booking.total_price})`,
       html: emailHtml,
     });
-    console.log(`✅ Notificación de reserva enviada exitosamente a ${recipientEmail}`);
+    console.log(`✅ Notificación de reserva enviada exitosamente a ${primaryRecipients}`);
 
     // 2. If configured, send confirmation copy to the customer
     if (settings.send_customer_email === 'true' && booking.passenger_email) {
       try {
         await transporter.sendMail({
-          from,
+          ...senderOptions,
           to: booking.passenger_email,
           subject: `✅ Confirmación de Reserva: ${shuttleName} - Trail Explorer`,
           html: `

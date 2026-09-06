@@ -49,9 +49,19 @@ router.post('/test-smtp', async (req, res) => {
   try {
     const { smtp_host, smtp_port, smtp_secure, smtp_user, smtp_pass, smtp_from, target_email, notification_email, test_email } = req.body;
 
-    const emailToSend = target_email || test_email || notification_email || smtp_user;
-    if (!emailToSend) {
+    const rawEmail = target_email || test_email || notification_email || smtp_user;
+    if (!rawEmail) {
       return res.status(400).json({ error: 'Debes especificar un correo destinatario para la prueba.' });
+    }
+
+    // If multiple emails were provided (e.g. comma-separated), use the first one for the test
+    const emailToSend = rawEmail.split(',')[0].trim();
+
+    // If password was omitted in the request body, fallback to saved DB settings
+    let passToUse = smtp_pass;
+    if (!passToUse) {
+      const savedSettings = await getSettings();
+      passToUse = savedSettings.smtp_pass;
     }
 
     const config = {
@@ -59,7 +69,7 @@ router.post('/test-smtp', async (req, res) => {
       smtp_port,
       smtp_secure,
       smtp_user,
-      smtp_pass,
+      smtp_pass: passToUse,
       smtp_from,
     };
 
@@ -70,7 +80,7 @@ router.post('/test-smtp', async (req, res) => {
     let errorMsg = error.message || error.response || 'Error de conexión con el servidor SMTP';
     
     if (errorMsg.includes('535') || errorMsg.includes('BadCredentials') || errorMsg.includes('Username and Password not accepted') || error.code === 'EAUTH') {
-      errorMsg = 'Error de autenticación SMTP: Usuario o contraseña incorrectos. Si usas Gmail/Google Workspace, debes usar una Contraseña de Aplicación de 16 caracteres (con Verificación en 2 pasos activada en tu cuenta de Google).';
+      errorMsg = 'Error de autenticación SMTP (535): Google rechazó las credenciales. Si estás usando una cuenta de Gmail (@gmail.com), Google NO permite usar tu contraseña personal de inicio de sesión. Debes generar una "Contraseña de Aplicación" de 16 letras en https://myaccount.google.com/apppasswords (requiere Verificación en 2 pasos activada).';
     } else if (error.code === 'ETIMEDOUT' || error.code === 'ESOCKET' || errorMsg.includes('timeout')) {
       errorMsg = 'Tiempo de espera agotado al conectar al servidor SMTP. Verifica que el Servidor (Host) y el Puerto (587 o 465) sean correctos.';
     } else if (error.code === 'ENOTFOUND') {

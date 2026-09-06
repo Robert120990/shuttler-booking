@@ -40,14 +40,16 @@ export async function getSettings() {
       settings[row.key] = row.value;
     }
 
-    // Only seed default keys that have never been created in the database
+    // Only seed default keys that have never been created in the database or are empty strings
     for (const [key, defaultValue] of Object.entries(DEFAULT_SETTINGS)) {
-      if (settings[key] === undefined || settings[key] === null) {
+      if (settings[key] === undefined || settings[key] === null || (typeof settings[key] === 'string' && !settings[key].trim() && defaultValue)) {
         settings[key] = defaultValue;
         try {
           const existing = await prepare('SELECT id FROM settings WHERE key = ?').get(key);
           if (!existing) {
             await prepare('INSERT INTO settings (id, key, value) VALUES (?, ?, ?)').run(uuidv4(), key, defaultValue);
+          } else {
+            await prepare('UPDATE settings SET value = ? WHERE key = ?').run(defaultValue, key);
           }
         } catch (dbErr) {
           // Continue if written concurrently

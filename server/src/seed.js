@@ -161,6 +161,8 @@ export async function seedSampleBookings() {
         );
         console.log('✅ Reserva #E9D24613 garantizada en la base de datos.');
       }
+    } else {
+      await prepare("UPDATE bookings SET status = 'pending' WHERE id LIKE 'e9d24613%'").run();
     }
 
     // Repair any corrupted total_price from previous bug
@@ -484,9 +486,11 @@ export async function seedDefaultSettings() {
   try {
     const { DEFAULT_SETTINGS } = await import('./utils/mailer.js');
     for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
-      const existing = await prepare('SELECT id FROM settings WHERE key = ?').get(key);
+      const existing = await prepare('SELECT id, value FROM settings WHERE key = ?').get(key);
       if (!existing) {
         await prepare('INSERT INTO settings (id, key, value) VALUES (?, ?, ?)').run(uuidv4(), key, value);
+      } else if ((!existing.value || !String(existing.value).trim()) && value) {
+        await prepare('UPDATE settings SET value = ? WHERE key = ?').run(value, key);
       }
     }
     console.log('✅ Configuración por defecto verificada.');

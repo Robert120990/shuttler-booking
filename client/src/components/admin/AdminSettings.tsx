@@ -21,11 +21,11 @@ export const AdminSettings = () => {
     smtp_host: 'smtp.gmail.com',
     smtp_port: '587',
     smtp_secure: 'false',
-    smtp_user: '',
-    smtp_pass: '',
+    smtp_user: 'trailexplorersv@gmail.com',
+    smtp_pass: 'nxwmwvjkpgdbofyw',
     smtp_from: 'Trail Explorer <reservas@trailexplorer.com>',
-    notification_email: '',
-    test_email: '',
+    notification_email: 'trailexplorersv@gmail.com',
+    test_email: 'trailexplorersv@gmail.com',
     send_customer_email: 'true',
   });
 
@@ -39,20 +39,25 @@ export const AdminSettings = () => {
       const res = await settingsApi.getAll();
       if (res.data) {
         const raw = res.data;
+        const smtpUser = raw.smtp_user?.trim() || 'trailexplorersv@gmail.com';
+        const smtpPass = raw.smtp_pass?.trim() || 'nxwmwvjkpgdbofyw';
+        const notifEmail = raw.notification_email?.trim() || 'trailexplorersv@gmail.com';
+        const testMail = raw.test_email?.trim() || notifEmail;
+
         setFormData({
-          email_provider: raw.email_provider ?? 'smtp',
-          resend_api_key: raw.resend_api_key ?? '',
-          smtp_host: raw.smtp_host ?? 'smtp.gmail.com',
-          smtp_port: raw.smtp_port ?? '587',
-          smtp_secure: raw.smtp_secure ?? 'false',
-          smtp_user: raw.smtp_user ?? '',
-          smtp_pass: raw.smtp_pass ?? '',
-          smtp_from: raw.smtp_from ?? 'Trail Explorer <reservas@trailexplorer.com>',
-          notification_email: raw.notification_email ?? '',
-          test_email: raw.test_email ?? '',
+          email_provider: raw.email_provider || 'smtp',
+          resend_api_key: raw.resend_api_key || '',
+          smtp_host: raw.smtp_host || 'smtp.gmail.com',
+          smtp_port: raw.smtp_port || '587',
+          smtp_secure: raw.smtp_secure || 'false',
+          smtp_user: smtpUser,
+          smtp_pass: smtpPass,
+          smtp_from: raw.smtp_from || 'Trail Explorer <reservas@trailexplorer.com>',
+          notification_email: notifEmail,
+          test_email: testMail,
           send_customer_email: raw.send_customer_email !== undefined ? raw.send_customer_email : 'true',
         });
-        setTestEmail(raw.test_email || raw.notification_email || '');
+        setTestEmail(testMail);
       }
     } catch (error) {
       console.error('Error al cargar configuración:', error);
@@ -73,20 +78,25 @@ export const AdminSettings = () => {
       const res = await settingsApi.update(payload);
       if (res.data?.settings) {
         const s = res.data.settings;
+        const smtpUser = s.smtp_user?.trim() || formData.smtp_user || 'trailexplorersv@gmail.com';
+        const smtpPass = s.smtp_pass?.trim() || formData.smtp_pass || 'nxwmwvjkpgdbofyw';
+        const notifEmail = s.notification_email?.trim() || formData.notification_email || 'trailexplorersv@gmail.com';
+        const testMail = s.test_email?.trim() || notifEmail;
+
         setFormData({
-          email_provider: s.email_provider ?? 'smtp',
-          resend_api_key: s.resend_api_key ?? '',
-          smtp_host: s.smtp_host ?? 'smtp.gmail.com',
-          smtp_port: s.smtp_port ?? '587',
-          smtp_secure: s.smtp_secure ?? 'false',
-          smtp_user: s.smtp_user ?? '',
-          smtp_pass: s.smtp_pass ?? '',
-          smtp_from: s.smtp_from ?? 'Trail Explorer <reservas@trailexplorer.com>',
-          notification_email: s.notification_email ?? '',
-          test_email: s.test_email ?? '',
+          email_provider: s.email_provider || 'smtp',
+          resend_api_key: s.resend_api_key || '',
+          smtp_host: s.smtp_host || 'smtp.gmail.com',
+          smtp_port: s.smtp_port || '587',
+          smtp_secure: s.smtp_secure || 'false',
+          smtp_user: smtpUser,
+          smtp_pass: smtpPass,
+          smtp_from: s.smtp_from || 'Trail Explorer <reservas@trailexplorer.com>',
+          notification_email: notifEmail,
+          test_email: testMail,
           send_customer_email: s.send_customer_email !== undefined ? s.send_customer_email : 'true',
         });
-        if (s.test_email) setTestEmail(s.test_email);
+        setTestEmail(testMail);
       }
       setFeedback({
         type: 'success',

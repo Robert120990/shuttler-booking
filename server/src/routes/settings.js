@@ -47,12 +47,19 @@ router.post('/', async (req, res) => {
 
     for (const [key, value] of Object.entries(settingsData)) {
       if (typeof key === 'string' && key.trim()) {
-        const strVal = value === undefined || value === null ? '' : String(value);
-        const existing = await prepare('SELECT id FROM settings WHERE key = ?').get(key.trim());
+        const cleanKey = key.trim();
+        const strVal = value === undefined || value === null ? '' : String(value).trim();
+
+        // Do not wipe out existing password or user credentials with empty string
+        if ((cleanKey === 'smtp_pass' || cleanKey === 'smtp_user') && !strVal) {
+          continue;
+        }
+
+        const existing = await prepare('SELECT id FROM settings WHERE key = ?').get(cleanKey);
         if (existing) {
-          await prepare('UPDATE settings SET value = ? WHERE key = ?').run(strVal, key.trim());
+          await prepare('UPDATE settings SET value = ? WHERE key = ?').run(strVal, cleanKey);
         } else {
-          await prepare('INSERT INTO settings (id, key, value) VALUES (?, ?, ?)').run(uuidv4(), key.trim(), strVal);
+          await prepare('INSERT INTO settings (id, key, value) VALUES (?, ?, ?)').run(uuidv4(), cleanKey, strVal);
         }
       }
     }

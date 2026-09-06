@@ -187,6 +187,10 @@ export async function sendViaResend(apiKey, options) {
     html: options.html,
   };
 
+  if (options.text) {
+    payload.text = options.text;
+  }
+
   if (options.replyTo) {
     payload.reply_to = options.replyTo;
   }
@@ -336,6 +340,35 @@ export function buildAdminBookingHtml(booking, shuttle, shuttleName, bookingDate
 }
 
 /**
+ * Plain-text Template for Admin Booking Notification
+ */
+export function buildAdminBookingText(booking, shuttle, shuttleName, bookingDate) {
+  const bookingCode = (booking.id || '').slice(0, 8).toUpperCase();
+  return `¡Nueva Reserva Recibida!
+Reserva #${bookingCode}
+
+Detalles del Viaje:
+- Ruta: ${shuttleName}
+- Total: $${booking.total_price} USD
+- Fecha del viaje: ${bookingDate}
+
+Datos del Pasajero:
+- Nombre: ${booking.passenger_name || 'N/A'}
+- Correo: ${booking.passenger_email || 'N/A'}
+- Teléfono: ${booking.passenger_phone || 'N/A'}
+${booking.pickup_person_name ? `- Persona a recoger: ${booking.pickup_person_name}\n` : ''}- Asientos: ${booking.seats || 1}
+- Equipaje extra: ${booking.extra_luggage > 0 ? `${booking.extra_luggage} maletas` : 'Sin equipaje extra'}
+
+Puntos de Encuentro:
+- Recogida: ${booking.pickup_location || 'N/A'}
+- Entrega: ${booking.dropoff_location || 'N/A'}
+
+Estado de reserva: ${booking.status || 'pending'}
+Estado de pago: ${booking.payment_status || 'pending'}
+`;
+}
+
+/**
  * HTML Template for Customer Booking Confirmation
  */
 export function buildCustomerConfirmationHtml(booking, shuttle, shuttleName, bookingDate) {
@@ -365,6 +398,24 @@ export function buildCustomerConfirmationHtml(booking, shuttle, shuttleName, boo
 }
 
 /**
+ * Plain-text Template for Customer Booking Confirmation
+ */
+export function buildCustomerConfirmationText(booking, shuttle, shuttleName, bookingDate) {
+  return `¡Gracias por tu reserva, ${booking.passenger_name || 'Viajero'}!
+
+Hemos recibido los detalles de tu viaje con éxito. Tu solicitud para la ruta ${shuttleName} el día ${bookingDate} está siendo procesada.
+
+Detalles:
+- Punto de Recogida: ${booking.pickup_location}
+${booking.pickup_person_name ? `- Persona a Recoger: ${booking.pickup_person_name}\n` : ''}- Punto de Entrega: ${booking.dropoff_location}
+- Número de Pasajeros: ${booking.seats || 1}
+- Total Pagado/Estimado: $${booking.total_price} USD
+
+Trail Explorer • Soporte y Asistencia de Viaje
+`;
+}
+
+/**
  * Sends a test email to verify SMTP or Resend configuration
  */
 export async function sendTestEmail(customConfig, targetEmail) {
@@ -377,11 +428,13 @@ export async function sendTestEmail(customConfig, targetEmail) {
     ));
 
   const senderOptions = getMailSenderOptions(customConfig);
+  const providerLabel = isResend ? 'Resend API HTTPS' : 'Servidor SMTP';
 
   const mailOptions = {
     ...senderOptions,
     to: targetEmail,
     subject: '🧪 Correo de Prueba - Configuración Trail Explorer',
+    text: `¡Configuración de Correo Exitosa!\n\nEste es un correo de prueba del sistema Trail Explorer.\nTu servicio de correo (${providerLabel}) está correctamente configurado y listo para enviar notificaciones automáticas de reservas.\n\nTrail Explorer Booking System • ${new Date().toLocaleString('es-ES')}`,
     html: `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
         <div style="text-align: center; margin-bottom: 24px;">
@@ -390,7 +443,7 @@ export async function sendTestEmail(customConfig, targetEmail) {
         </div>
         <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; border-left: 4px solid #059669; margin-bottom: 20px;">
           <p style="margin: 0; color: #334155; font-size: 14px; line-height: 1.6;">
-            Tu servicio de correo (${isResend ? 'Resend API HTTPS' : 'Servidor SMTP'}) está correctamente configurado y listo para enviar notificaciones automáticas de reservas.
+            Tu servicio de correo (${providerLabel}) está correctamente configurado y listo para enviar notificaciones automáticas de reservas.
           </p>
         </div>
         <div style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
@@ -483,6 +536,7 @@ export async function sendBookingNotification(booking, shuttle = null) {
     });
 
     const emailHtml = buildAdminBookingHtml(booking, shuttle, shuttleName, bookingDate);
+    const emailText = buildAdminBookingText(booking, shuttle, shuttleName, bookingDate);
     const adminSubject = `🚐 Nueva Reserva: ${shuttleName} - ${booking.passenger_name || 'Cliente'} ($${booking.total_price} USD)`;
 
     if (isResend) {
@@ -495,6 +549,7 @@ export async function sendBookingNotification(booking, shuttle = null) {
           from: resendFrom,
           to: recipientEmails,
           subject: adminSubject,
+          text: emailText,
           html: emailHtml,
           replyTo: booking.passenger_email || undefined,
         });
@@ -507,10 +562,12 @@ export async function sendBookingNotification(booking, shuttle = null) {
       if (settings.send_customer_email === 'true' && booking.passenger_email) {
         try {
           const customerHtml = buildCustomerConfirmationHtml(booking, shuttle, shuttleName, bookingDate);
+          const customerText = buildCustomerConfirmationText(booking, shuttle, shuttleName, bookingDate);
           await sendViaResend(apiKey, {
             from: resendFrom,
             to: booking.passenger_email,
             subject: `✅ Confirmación de Reserva: ${shuttleName} - Trail Explorer`,
+            text: customerText,
             html: customerHtml,
             replyTo: settings.notification_email || settings.smtp_user || undefined,
           });
@@ -537,6 +594,7 @@ export async function sendBookingNotification(booking, shuttle = null) {
       ...senderOptions,
       to: primaryRecipients,
       subject: adminSubject,
+      text: emailText,
       html: emailHtml,
     });
     console.log(`✅ [SMTP] Notificación de reserva enviada exitosamente a ${primaryRecipients}`);
@@ -545,10 +603,12 @@ export async function sendBookingNotification(booking, shuttle = null) {
     if (settings.send_customer_email === 'true' && booking.passenger_email) {
       try {
         const customerHtml = buildCustomerConfirmationHtml(booking, shuttle, shuttleName, bookingDate);
+        const customerText = buildCustomerConfirmationText(booking, shuttle, shuttleName, bookingDate);
         await transporter.sendMail({
           ...senderOptions,
           to: booking.passenger_email,
           subject: `✅ Confirmación de Reserva: ${shuttleName} - Trail Explorer`,
+          text: customerText,
           html: customerHtml,
         });
         console.log(`✅ [SMTP] Confirmación enviada al cliente: ${booking.passenger_email}`);
@@ -700,6 +760,64 @@ export function buildCustomerBookingCancelledHtml(booking, shuttle, shuttleName,
 }
 
 /**
+ * Plain-text Template for Booking Confirmed Status Notification
+ */
+export function buildCustomerBookingConfirmedText(booking, shuttle, shuttleName, bookingDate) {
+  const bookingCode = (booking.id || '').slice(0, 8).toUpperCase();
+  return `¡Tu Reserva está Confirmada! #${bookingCode} - ${shuttleName}
+
+Hola ${booking.passenger_name || 'Viajero'},
+Nos complace informarte que tu viaje en shuttle ha sido CONFIRMADO oficialmente. Tu conductor y el operador de transporte tienen programado tu servicio.
+
+Detalles del Viaje:
+- Código de Reserva: #${bookingCode}
+- Ruta: ${shuttleName}
+- Total: $${booking.total_price} USD
+- Fecha del viaje: ${bookingDate}
+${shuttle?.schedule ? `- Horario programado: ${shuttle.schedule}\n` : ''}- Estado: Confirmado
+
+Puntos de Recogida y Entrega:
+- Lugar de recogida: ${booking.pickup_location}
+${booking.pickup_person_name ? `- Persona a recoger: ${booking.pickup_person_name}\n` : ''}- Lugar de entrega: ${booking.dropoff_location}
+- Pasajeros / Asientos: ${booking.seats || 1} persona(s)
+- Equipaje extra: ${booking.extra_luggage > 0 ? `${booking.extra_luggage} pieza(s) extra` : 'Sin equipaje extra'}
+
+Recomendaciones para el día del viaje:
+1. Por favor preséntate en la recepción o lobby del hostal/hotel 15 minutos antes de la hora acordada.
+2. Ten listo tu pasaporte o documento de identidad oficial si tu viaje cruza fronteras.
+3. En caso de requerir coordinar el acceso, el conductor se comunicará al teléfono/WhatsApp: ${booking.passenger_phone || 'registrado en tu reserva'}.
+
+Trail Explorer • Servicio al Cliente y Soporte de Viaje
+¿Necesitas cambios o ayuda urgente? Responde directamente a este correo.
+`;
+}
+
+/**
+ * Plain-text Template for Booking Cancelled Status Notification
+ */
+export function buildCustomerBookingCancelledText(booking, shuttle, shuttleName, bookingDate) {
+  const bookingCode = (booking.id || '').slice(0, 8).toUpperCase();
+  return `Reserva Cancelada #${bookingCode} - ${shuttleName}
+
+Hola ${booking.passenger_name || 'Viajero'},
+Te informamos que tu reserva #${bookingCode} para la ruta ${shuttleName} programada para el día ${bookingDate} ha sido CANCELADA.
+
+Detalles:
+- Código de Reserva: #${bookingCode}
+- Ruta: ${shuttleName}
+- Fecha original: ${bookingDate}
+- Estado: CANCELADO
+
+Política de Cancelación y Reembolso:
+Si tu cancelación cumple con las condiciones aplicables (solicitada con al menos 24 horas de anticipación a la salida), cualquier reembolso correspondiente será procesado a tu método de pago original en un plazo de 3 a 5 días hábiles.
+
+¿Deseas reprogramar tu viaje en otra fecha o necesitas asistencia personalizada? Responde directamente a este correo y nuestro equipo te ayudará con gusto.
+
+Trail Explorer • Soporte y Asistencia de Viaje
+`;
+}
+
+/**
  * Sends an email notification to the customer when the booking status changes (confirmed or cancelled)
  */
 export async function sendBookingStatusNotification(booking, newStatus, shuttle = null) {
@@ -738,13 +856,16 @@ export async function sendBookingStatusNotification(booking, newStatus, shuttle 
 
     let subject = '';
     let emailHtml = '';
+    let emailText = '';
 
     if (newStatus === 'confirmed') {
       subject = `🚐 ¡Tu Reserva está Confirmada! #${bookingCode} - ${shuttleName}`;
       emailHtml = buildCustomerBookingConfirmedHtml(booking, resolvedShuttle, shuttleName, bookingDate);
+      emailText = buildCustomerBookingConfirmedText(booking, resolvedShuttle, shuttleName, bookingDate);
     } else if (newStatus === 'cancelled') {
       subject = `❌ Reserva Cancelada: #${bookingCode} - ${shuttleName}`;
       emailHtml = buildCustomerBookingCancelledHtml(booking, resolvedShuttle, shuttleName, bookingDate);
+      emailText = buildCustomerBookingCancelledText(booking, resolvedShuttle, shuttleName, bookingDate);
     } else {
       console.log(`No hay plantilla de notificación configurada para el estado: ${newStatus}`);
       return { success: false, error: `No hay plantilla para el estado ${newStatus}` };
@@ -758,6 +879,7 @@ export async function sendBookingStatusNotification(booking, newStatus, shuttle 
         from: resendFrom,
         to: booking.passenger_email,
         subject,
+        text: emailText,
         html: emailHtml,
         replyTo: settings.notification_email || settings.smtp_user || undefined,
       });
@@ -777,6 +899,7 @@ export async function sendBookingStatusNotification(booking, newStatus, shuttle 
       ...senderOptions,
       to: booking.passenger_email,
       subject,
+      text: emailText,
       html: emailHtml,
     });
     console.log(`✅ [SMTP] Notificación de estado (${newStatus}) enviada al cliente: ${booking.passenger_email}`);

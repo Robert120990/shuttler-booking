@@ -225,7 +225,7 @@ export const AdminReviews = () => {
             </div>
             <div>
               <p className="text-xs text-slate-500 font-medium">Promedio del Sistema</p>
-              <h3 className="text-2xl font-bold text-slate-900">{metrics.averageRating.toFixed(1)} / 5.0</h3>
+              <h3 className="text-2xl font-bold text-slate-900">{(Number(metrics.averageRating) || 5.0).toFixed(1)} / 5.0</h3>
             </div>
           </CardContent>
         </Card>
@@ -377,11 +377,11 @@ export const AdminReviews = () => {
                               <Star
                                 key={s}
                                 className={`w-3.5 h-3.5 ${
-                                  s <= rev.rating ? 'fill-current text-amber-400' : 'text-slate-200'
+                                  s <= Number(rev.rating) ? 'fill-current text-amber-400' : 'text-slate-200'
                                 }`}
                               />
                             ))}
-                            <span className="text-xs font-bold text-slate-700 ml-1">{rev.rating}.0</span>
+                            <span className="text-xs font-bold text-slate-700 ml-1">{Number(rev.rating).toFixed(1)}</span>
                           </div>
                         </td>
 

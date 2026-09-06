@@ -223,8 +223,8 @@ export const ShuttlePage = () => {
   const included = translateList(shuttle.included, language);
   const toBring = translateList(shuttle.to_bring, language);
   const serviceTypeLabel = shuttle.service_type === 'international' ? t('shuttle.internationalService') : t('shuttle.localService');
-  const duration = shuttle.duration_hours;
-  const rating = shuttle.rating || 5.0;
+  const duration = Number(shuttle.duration_hours);
+  const rating = Number(shuttle.rating) || 5.0;
   const petsAllowed = shuttle.pets_allowed || false;
   const cancellationPolicy = translateCancellationPolicy(shuttle.cancellation_policy, language);
   const operator = (shuttle as any).operator || 'Trail Explorer';
@@ -252,8 +252,8 @@ export const ShuttlePage = () => {
     },
     aggregateRating: {
       '@type': 'AggregateRating',
-      ratingValue: shuttle.rating || 5.0,
-      reviewCount: shuttle.review_count || 0,
+      ratingValue: Number(shuttle.rating) || 5.0,
+      reviewCount: Number(shuttle.review_count) || 0,
     },
     offers: {
       '@type': 'Offer',
@@ -344,7 +344,7 @@ export const ShuttlePage = () => {
                   >
                     <Star className="w-4 h-4 fill-current" />
                     <span className="text-sm font-bold text-slate-800">
-                      {(reviewStats?.averageRating || rating).toFixed(1)}
+                      {(Number(reviewStats?.averageRating) || rating).toFixed(1)}
                     </span>
                     <span className="text-xs text-slate-500 font-normal underline decoration-slate-300">
                       ({reviewStats?.reviewCount || reviews.length} {language === 'es' ? 'reseñas' : 'reviews'})
@@ -640,21 +640,24 @@ export const ShuttlePage = () => {
                 {/* Puntuación Media */}
                 <div className="flex flex-col items-center justify-center text-center p-2 md:border-r border-slate-200">
                   <div className="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight">
-                    {(reviewStats?.averageRating || rating).toFixed(1)}
+                    {(Number(reviewStats?.averageRating) || rating).toFixed(1)}
                   </div>
                   <div className="flex items-center gap-1 text-amber-400 my-2">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <Star
-                        key={s}
-                        className={`w-5 h-5 ${
-                          (reviewStats?.averageRating || rating) >= s - 0.2
-                            ? 'fill-current text-amber-400'
-                            : (reviewStats?.averageRating || rating) >= s - 0.7
-                            ? 'text-amber-400 fill-amber-400/50'
-                            : 'text-slate-300'
-                        }`}
-                      />
-                    ))}
+                    {[1, 2, 3, 4, 5].map((s) => {
+                      const currentScore = Number(reviewStats?.averageRating) || rating;
+                      return (
+                        <Star
+                          key={s}
+                          className={`w-5 h-5 ${
+                            currentScore >= s - 0.2
+                              ? 'fill-current text-amber-400'
+                              : currentScore >= s - 0.7
+                              ? 'text-amber-400 fill-amber-400/50'
+                              : 'text-slate-300'
+                          }`}
+                        />
+                      );
+                    })}
                   </div>
                   <div className="text-xs text-slate-500 font-medium">
                     {language === 'es' ? 'Basado en' : 'Based on'}{' '}

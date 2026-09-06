@@ -5,6 +5,18 @@ import { generateShuttleImage, deleteShuttleImage } from '../utils/imageUtils.js
 
 const router = express.Router();
 
+function formatShuttle(s) {
+  if (!s) return s;
+  return {
+    ...s,
+    price: Number(s.price),
+    duration_hours: Number(s.duration_hours),
+    rating: s.rating !== null && s.rating !== undefined ? Number(s.rating) : 5.0,
+    review_count: Number(s.review_count) || 0,
+    pets_allowed: Boolean(s.pets_allowed),
+  };
+}
+
 router.get('/', async (req, res) => {
   try {
     const shuttles = await prepare(`
@@ -16,7 +28,7 @@ router.get('/', async (req, res) => {
       JOIN cities d ON s.destination_city_id = d.id
       ORDER BY s.created_at DESC
     `).all();
-    res.json(shuttles);
+    res.json(shuttles.map(formatShuttle));
   } catch (error) {
     console.error('Error fetching shuttles:', error);
     res.status(500).json({ error: 'Failed to fetch shuttles' });
@@ -35,7 +47,7 @@ router.get('/featured', async (req, res) => {
       ORDER BY s.rating DESC, s.review_count DESC
       LIMIT 6
     `).all();
-    res.json(shuttles);
+    res.json(shuttles.map(formatShuttle));
   } catch (error) {
     console.error('Error fetching featured shuttles:', error);
     res.status(500).json({ error: 'Failed to fetch featured shuttles' });
@@ -69,7 +81,7 @@ router.get('/city/:citySlug', async (req, res) => {
       ORDER BY s.created_at DESC
     `).all(city.id);
     
-    res.json({ departure, arrival });
+    res.json({ departure: departure.map(formatShuttle), arrival: arrival.map(formatShuttle) });
   } catch (error) {
     console.error('Error fetching shuttles for city:', error);
     res.status(500).json({ error: 'Failed to fetch shuttles for city' });
@@ -89,7 +101,7 @@ router.get('/:slug', async (req, res) => {
     `).get(req.params.slug);
     
     if (!shuttle) return res.status(404).json({ error: 'Shuttle not found' });
-    res.json(shuttle);
+    res.json(formatShuttle(shuttle));
   } catch (error) {
     console.error('Error fetching shuttle by slug:', error);
     res.status(500).json({ error: 'Failed to fetch shuttle' });
@@ -135,7 +147,7 @@ router.post('/', async (req, res) => {
     );
     
     const shuttle = await prepare('SELECT * FROM shuttles WHERE id = ?').get(id);
-    res.status(201).json(shuttle);
+    res.status(201).json(formatShuttle(shuttle));
   } catch (error) {
     console.error('Error creating shuttle:', error);
     res.status(500).json({ error: 'Failed to create shuttle' });
@@ -186,7 +198,7 @@ router.put('/:id', async (req, res) => {
     );
     
     const shuttle = await prepare('SELECT * FROM shuttles WHERE id = ?').get(req.params.id);
-    res.json(shuttle);
+    res.json(formatShuttle(shuttle));
   } catch (error) {
     console.error('Error updating shuttle:', error);
     res.status(500).json({ error: 'Failed to update shuttle' });

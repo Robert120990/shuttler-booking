@@ -248,7 +248,7 @@ export const HomePage = () => {
                   <CardContent className="pt-4">
                     <div className="flex items-center gap-1.5 text-sm text-amber-500 mb-2">
                       <Star className="w-4 h-4 fill-current" />
-                      <span className="font-bold text-slate-800">{(shuttle.rating || 5.0).toFixed(1)}</span>
+                      <span className="font-bold text-slate-800">{(Number(shuttle.rating) || 5.0).toFixed(1)}</span>
                       {Number(shuttle.review_count) > 0 && (
                         <span className="text-xs text-slate-400 font-normal">
                           ({shuttle.review_count} {language === 'es' ? 'reseñas' : 'reviews'})

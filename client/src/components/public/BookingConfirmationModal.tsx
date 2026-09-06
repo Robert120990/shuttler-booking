@@ -113,9 +113,12 @@ export const BookingConfirmationModal = ({
             <X className="w-6 h-6" />
           </button>
 
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center flex-shrink-0 text-white">
-              <CheckCircle2 className="w-7 h-7" />
+          <div className="flex items-center gap-4">
+            <div className="relative flex-shrink-0">
+              <div className="absolute -inset-1.5 rounded-full bg-emerald-300/30 animate-ripple pointer-events-none" />
+              <div className="w-12 h-12 rounded-full bg-white text-emerald-600 shadow-md flex items-center justify-center relative z-10">
+                <CheckCircle2 className="w-7 h-7" />
+              </div>
             </div>
             <div>
               <span className="inline-block text-xs font-semibold uppercase tracking-wider bg-emerald-500/30 px-2.5 py-0.5 rounded-full mb-1">

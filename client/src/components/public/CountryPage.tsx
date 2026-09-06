@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Star, Clock, Calendar, MapPin, Bus, Compass, Navigation, Loader2, ChevronLeft, Home } from 'lucide-react';
+import { ArrowRight, Star, Clock, Calendar, MapPin, Bus, Compass, Navigation, ChevronLeft, Home } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '../ui/Card';
-import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
+import { ShuttleCardSkeleton } from '../ui/Skeleton';
 import { countriesApi } from '../../api/endpoints';
 import { getImageUrl } from '../../api/client';
 import { SEO } from '../seo/SEO';
@@ -28,12 +28,12 @@ const ShuttleCard = ({ shuttle }: ShuttleCardProps) => {
 
   return (
     <Link to={`/shuttles/${shuttle.slug}`} className="block h-full group">
-      <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 h-full flex flex-col border border-slate-200/80 hover:border-emerald-500/50">
-        <div className="relative h-44 overflow-hidden bg-slate-100">
+      <Card className="overflow-hidden card-hover-fx h-full flex flex-col border border-slate-200/80 group-hover:border-emerald-400/60 shadow-sm">
+        <div className="relative h-44 overflow-hidden bg-slate-100 shimmer-container">
           <img 
             src={getImageUrl(shuttle.image_url || (shuttle as any).destination_image || (shuttle as any).origin_image)} 
             alt={translateRouteName(shuttle.name, language)}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+            className="w-full h-full object-cover img-zoom-fx" 
             loading="lazy"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
@@ -47,9 +47,21 @@ const ShuttleCard = ({ shuttle }: ShuttleCardProps) => {
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
           <div className="absolute top-3 right-3 z-10">
-            <Badge variant={shuttle.service_type === 'international' ? 'warning' : 'success'}>
+            <span className={`inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full shadow-sm backdrop-blur-xs ${
+              shuttle.service_type === 'international'
+                ? 'bg-amber-100/90 text-amber-900 border border-amber-200' 
+                : 'bg-emerald-100/90 text-emerald-900 border border-emerald-200'
+            }`}>
+              <span className="relative flex h-2 w-2 mr-1.5">
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                  shuttle.service_type === 'international' ? 'bg-amber-400' : 'bg-emerald-400'
+                }`} />
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                  shuttle.service_type === 'international' ? 'bg-amber-500' : 'bg-emerald-500'
+                }`} />
+              </span>
               {shuttle.service_type === 'international' ? t('shuttle.internationalService') : t('shuttle.localService')}
-            </Badge>
+            </span>
           </div>
           <div className="absolute bottom-3 left-3 z-10 flex items-center gap-1.5 text-xs text-white bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-full">
             <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
@@ -128,8 +140,16 @@ export const CountryPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center bg-slate-50">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+      <div className="min-h-screen bg-slate-50">
+        <div className="h-64 bg-slate-800 animate-pulse" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+          <div className="h-6 w-48 bg-slate-200 rounded animate-pulse" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <ShuttleCardSkeleton />
+            <ShuttleCardSkeleton />
+            <ShuttleCardSkeleton />
+          </div>
+        </div>
       </div>
     );
   }

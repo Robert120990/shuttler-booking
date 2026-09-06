@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Star, Clock, MapPin, ArrowRight, Calendar, Loader2, ChevronLeft, Home } from 'lucide-react';
+import { Star, Clock, MapPin, ArrowRight, Calendar, ChevronLeft, Home } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
+import { ShuttleCardSkeleton } from '../ui/Skeleton';
 import { citiesApi, shuttlesApi } from '../../api/endpoints';
 import { getImageUrl } from '../../api/client';
 import { SEO } from '../seo/SEO';
@@ -26,13 +26,13 @@ const ShuttleCard = ({ shuttle }: ShuttleCardProps) => {
   const { language } = useLanguageStore();
 
   return (
-    <Link to={`/shuttles/${shuttle.slug}`} className="block">
-      <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full group">
-        <div className="relative h-36 bg-slate-100">
+    <Link to={`/shuttles/${shuttle.slug}`} className="block group">
+      <Card className="overflow-hidden card-hover-fx border border-slate-200/80 group-hover:border-emerald-400/60 shadow-sm h-full">
+        <div className="relative h-40 bg-slate-100 shimmer-container">
           <img 
             src={getImageUrl(shuttle.image_url || (shuttle as any).destination_image || (shuttle as any).origin_image)} 
             alt={translateRouteName(shuttle.name, language)}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+            className="w-full h-full object-cover img-zoom-fx" 
             loading="lazy"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
@@ -45,9 +45,21 @@ const ShuttleCard = ({ shuttle }: ShuttleCardProps) => {
             }}
           />
           <div className="absolute top-3 right-3">
-            <Badge variant={shuttle.service_type === 'international' ? 'warning' : 'success'}>
+            <span className={`inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full shadow-sm backdrop-blur-xs ${
+              shuttle.service_type === 'international'
+                ? 'bg-amber-100/90 text-amber-900 border border-amber-200' 
+                : 'bg-emerald-100/90 text-emerald-900 border border-emerald-200'
+            }`}>
+              <span className="relative flex h-2 w-2 mr-1.5">
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                  shuttle.service_type === 'international' ? 'bg-amber-400' : 'bg-emerald-400'
+                }`} />
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                  shuttle.service_type === 'international' ? 'bg-amber-500' : 'bg-emerald-500'
+                }`} />
+              </span>
               {shuttle.service_type === 'international' ? t('shuttle.internationalService') : t('shuttle.localService')}
-            </Badge>
+            </span>
           </div>
         </div>
         <CardContent className="pt-4">
@@ -116,8 +128,16 @@ export const CityPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+      <div className="min-h-screen bg-slate-50">
+        <div className="h-64 bg-slate-800 animate-pulse" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+          <div className="h-6 w-48 bg-slate-200 rounded animate-pulse" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <ShuttleCardSkeleton />
+            <ShuttleCardSkeleton />
+            <ShuttleCardSkeleton />
+          </div>
+        </div>
       </div>
     );
   }

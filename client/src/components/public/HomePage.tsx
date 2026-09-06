@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Star, Clock, MapPin, Shield, CreditCard, Headphones, Calendar, Loader2, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
+import { Star, Clock, MapPin, Shield, CreditCard, Headphones, Calendar, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { ShuttleCardSkeleton } from '../ui/Skeleton';
 import { countriesApi, shuttlesApi, citiesApi } from '../../api/endpoints';
 import { getImageUrl } from '../../api/client';
 import { SEO } from '../seo/SEO';
@@ -110,8 +111,23 @@ export const HomePage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+      <div className="min-h-screen bg-slate-50">
+        <div className="h-64 bg-slate-800/80 animate-pulse relative overflow-hidden flex items-center justify-center">
+          <div className="text-center space-y-3 p-4">
+            <div className="h-8 w-64 bg-slate-700/80 rounded-lg mx-auto" />
+            <div className="h-4 w-96 max-w-full bg-slate-700/60 rounded mx-auto" />
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
+          <div>
+            <div className="h-6 w-48 bg-slate-200 rounded mb-6 animate-pulse" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <ShuttleCardSkeleton />
+              <ShuttleCardSkeleton />
+              <ShuttleCardSkeleton />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -143,8 +159,12 @@ export const HomePage = () => {
           <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-black/20 to-black/10" />
         </div>
 
+        {/* Floating Aurora Gradient Orbs */}
+        <div className="absolute top-1/4 left-1/4 w-72 sm:w-96 h-72 sm:h-96 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none animate-float-slow" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 sm:w-112 h-80 sm:h-112 bg-teal-400/20 rounded-full blur-3xl pointer-events-none animate-float-reverse" />
+
         {/* Small logo badge in top right corner */}
-        <div className="absolute top-3 right-3 sm:top-6 sm:right-6 lg:top-6 lg:right-8 z-10">
+        <div className="absolute top-3 right-3 sm:top-6 sm:right-6 lg:top-6 lg:right-8 z-10 animate-fade-in-up">
           <div className="bg-white/95 p-1.5 sm:p-2.5 rounded-2xl shadow-xl border border-white/50 ring-2 ring-black/5 transform hover:scale-105 transition-transform duration-300">
             <img
               src="/logo.jpeg"
@@ -154,8 +174,8 @@ export const HomePage = () => {
           </div>
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 lg:py-16 flex items-center justify-between">
-          <div className="max-w-2xl text-left pr-24 sm:pr-32 md:pr-36 lg:pr-0">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 flex items-center justify-between">
+          <div className="max-w-2xl text-left pr-24 sm:pr-32 md:pr-36 lg:pr-0 animate-fade-in-up">
             <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold leading-tight drop-shadow-lg break-words">
               {t('home.title')}
             </h1>
@@ -277,12 +297,12 @@ export const HomePage = () => {
                   to={`/cities/${city.slug}`}
                   className="flex-shrink-0 w-64 sm:w-72 group"
                 >
-                  <div className="bg-white rounded-2xl overflow-hidden shadow-md group-hover:shadow-xl transition-all duration-300 border border-slate-200/80 group-hover:border-emerald-500/50 flex flex-col h-full">
-                    <div className="relative h-48 overflow-hidden bg-slate-100">
+                  <div className="bg-white rounded-2xl overflow-hidden shadow-md card-hover-fx border border-slate-200/80 group-hover:border-emerald-500/50 flex flex-col h-full">
+                    <div className="relative h-48 overflow-hidden bg-slate-100 shimmer-container">
                       <img
                         src={getImageUrl(city.image_url)}
                         alt={city.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        className="w-full h-full object-cover img-zoom-fx"
                         loading="lazy"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = '/placeholder.jpg';
@@ -327,13 +347,13 @@ export const HomePage = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {featuredShuttles.map((shuttle) => (
-              <Link key={shuttle.id} to={`/shuttles/${shuttle.slug}`} className="block">
-                <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full group">
-                  <div className="relative h-40">
+              <Link key={shuttle.id} to={`/shuttles/${shuttle.slug}`} className="block group">
+                <Card className="overflow-hidden card-hover-fx h-full border border-slate-200/80 group-hover:border-emerald-400/60 shadow-sm">
+                  <div className="relative h-44 overflow-hidden shimmer-container">
                     <img
                       src={getImageUrl(shuttle.image_url || (shuttle as any).destination_image || (shuttle as any).origin_image)}
                       alt={translateRouteName(shuttle.name, language)}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover img-zoom-fx"
                       loading="lazy"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
@@ -346,11 +366,19 @@ export const HomePage = () => {
                       }}
                     />
                     <div className="absolute top-3 right-3">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      <span className={`inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full shadow-sm backdrop-blur-xs ${
                         shuttle.service_type === 'international'
-                          ? 'bg-amber-100 text-amber-800' 
-                          : 'bg-emerald-100 text-emerald-800'
+                          ? 'bg-amber-100/90 text-amber-900 border border-amber-200' 
+                          : 'bg-emerald-100/90 text-emerald-900 border border-emerald-200'
                       }`}>
+                        <span className="relative flex h-2 w-2 mr-1.5">
+                          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                            shuttle.service_type === 'international' ? 'bg-amber-400' : 'bg-emerald-400'
+                          }`} />
+                          <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                            shuttle.service_type === 'international' ? 'bg-amber-500' : 'bg-emerald-500'
+                          }`} />
+                        </span>
                         {shuttle.service_type === 'international' ? t('shuttle.internationalService') : t('shuttle.localService')}
                       </span>
                     </div>

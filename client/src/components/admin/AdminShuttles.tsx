@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, Search, Loader2, X, Sparkles } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Loader2, X, Sparkles, CheckCircle2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -36,10 +36,18 @@ export const AdminShuttles = () => {
   const [typeFilter, setTypeFilter] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingShuttle, setEditingShuttle] = useState<Shuttle | null>(null);
+  const [isGeneratingFusion, setIsGeneratingFusion] = useState(false);
+  const [batchRegenerating, setBatchRegenerating] = useState(false);
+  const [rowRegeneratingId, setRowRegeneratingId] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
   const [formData, setFormData] = useState({
     name: '',
     origin_city_id: '',
     destination_city_id: '',
+    image_url: '',
+    regenerate_image: true,
+    image_mode: 'fusion' as 'fusion' | 'custom',
     price: '55',
     duration_hours: CONVENTIONAL_SHUTTLE_DEFAULTS.duration_hours,
     schedule: CONVENTIONAL_SHUTTLE_DEFAULTS.schedule,
@@ -95,10 +103,17 @@ export const AdminShuttles = () => {
           ? JSON.parse((shuttle as any).availability_days) 
           : ((shuttle as any).availability_days || [0,1,2,3,4,5,6]);
       } catch { availabilityDays = [0,1,2,3,4,5,6]; }
+
+      const currentImg = shuttle.image_url || '';
+      const isFusion = currentImg.includes('/images/shuttles/');
+
       setFormData({
         name: shuttle.name,
         origin_city_id: (shuttle as any).origin_city_id || '',
         destination_city_id: (shuttle as any).destination_city_id || '',
+        image_url: currentImg,
+        regenerate_image: !isFusion, // Default to true if not yet a fusion image
+        image_mode: isFusion || !currentImg ? 'fusion' : 'custom',
         price: String(shuttle.price),
         duration_hours: String(shuttle.duration_hours),
         schedule: shuttle.schedule || '',
@@ -121,6 +136,9 @@ export const AdminShuttles = () => {
         name: '',
         origin_city_id: '',
         destination_city_id: '',
+        image_url: '',
+        regenerate_image: true,
+        image_mode: 'fusion',
         price: '55',
         duration_hours: CONVENTIONAL_SHUTTLE_DEFAULTS.duration_hours,
         schedule: CONVENTIONAL_SHUTTLE_DEFAULTS.schedule,
@@ -284,9 +302,91 @@ export const AdminShuttles = () => {
   const allDaysSelected = formData.availability_days.length === 7;
   const autoAvailability = generateAvailabilityText(formData.availability_days);
 
+  const handleGenerateFusionNow = async () => {
+    if (!formData.origin_city_id || !formData.destination_city_id) {
+      alert('Por favor selecciona primero la Ciudad de Origen y la Ciudad de Destino.');
+      return;
+    }
+    try {
+      setIsGeneratingFusion(true);
+      const res = await shuttlesApi.generateFusion({
+        origin_city_id: formData.origin_city_id,
+        destination_city_id: formData.destination_city_id,
+        shuttle_id: editingShuttle ? editingShuttle.id : undefined,
+      });
+      if (res.data?.image_url) {
+        setFormData(prev => ({
+          ...prev,
+          image_url: res.data.image_url,
+          regenerate_image: false, // already generated right now
+        }));
+        setActionMessage({
+          text: '✨ ¡Portada de fusión (800×400 WebP) generada exitosamente!',
+          type: 'success',
+        });
+        setTimeout(() => setActionMessage(null), 4000);
+      }
+    } catch (error) {
+      console.error('Error generando portada de fusión:', error);
+      alert('Error al generar la portada combinada. Verifica que las ciudades tengan imágenes asociadas.');
+    } finally {
+      setIsGeneratingFusion(false);
+    }
+  };
+
+  const handleRegenerateRowFusion = async (shuttle: Shuttle) => {
+    const originId = (shuttle as any).origin_city_id;
+    const destId = (shuttle as any).destination_city_id;
+    if (!originId || !destId) {
+      alert('Este viaje no tiene ciudades de origen y destino válidas asignadas.');
+      return;
+    }
+    try {
+      setRowRegeneratingId(shuttle.id);
+      await shuttlesApi.generateFusion({
+        origin_city_id: originId,
+        destination_city_id: destId,
+        shuttle_id: shuttle.id,
+      });
+      await fetchData();
+      setActionMessage({
+        text: `✨ ¡Portada combinada regenerada para "${shuttle.name}"!`,
+        type: 'success',
+      });
+      setTimeout(() => setActionMessage(null), 4000);
+    } catch (error) {
+      console.error('Error regenerando fila:', error);
+      alert('Error al regenerar la portada combinada de este viaje.');
+    } finally {
+      setRowRegeneratingId(null);
+    }
+  };
+
+  const handleRegenerateAllFusion = async () => {
+    if (!confirm('¿Deseas regenerar la portada inteligente combinada para TODOS los viajes del sistema? Esto creará una portada optimizada de 800×400 WebP para cada ruta activa.')) {
+      return;
+    }
+    try {
+      setBatchRegenerating(true);
+      const res = await shuttlesApi.regenerateAllFusion();
+      await fetchData();
+      setActionMessage({
+        text: `✨ ¡Se han generado y actualizado ${res.data.updated} portadas de fusión exitosamente!`,
+        type: 'success',
+      });
+      setTimeout(() => setActionMessage(null), 5000);
+    } catch (error) {
+      console.error('Error regenerando todas las fusiones:', error);
+      alert('Error al regenerar las portadas de todos los viajes.');
+    } finally {
+      setBatchRegenerating(false);
+    }
+  };
+
   const handleSave = async () => {
     try {
       setSaving(true);
+      const isCustom = formData.image_mode === 'custom';
       const data = {
         name: formData.name,
         origin_city_id: formData.origin_city_id,
@@ -306,6 +406,8 @@ export const AdminShuttles = () => {
         operator: formData.operator,
         pets_allowed: formData.pets_allowed,
         luggage_options: JSON.stringify(formData.luggage_options),
+        image_url: isCustom ? formData.image_url : (formData.regenerate_image ? '' : formData.image_url),
+        regenerate_image: !isCustom ? formData.regenerate_image : false,
       };
       if (editingShuttle) {
         await shuttlesApi.update(editingShuttle.id, data);
@@ -314,6 +416,11 @@ export const AdminShuttles = () => {
       }
       await fetchData();
       handleCloseModal();
+      setActionMessage({
+        text: '✨ ¡Viaje guardado exitosamente con su portada optimizada!',
+        type: 'success',
+      });
+      setTimeout(() => setActionMessage(null), 4000);
     } catch (error) {
       console.error('Error saving shuttle:', error);
       alert('Error al guardar el shuttle. Por favor intenta de nuevo.');
@@ -359,11 +466,40 @@ export const AdminShuttles = () => {
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Shuttles</h1>
           <p className="text-slate-500 text-sm sm:text-base">Gestiona rutas y servicios de shuttle</p>
         </div>
-        <Button onClick={() => handleOpenModal()} className="w-full sm:w-auto">
-          <Plus className="w-4 h-4 mr-2" />
-          Agregar Shuttle
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            onClick={handleRegenerateAllFusion}
+            disabled={batchRegenerating}
+            className="w-full sm:w-auto border-emerald-300 text-emerald-800 hover:bg-emerald-50 text-xs font-semibold shadow-sm"
+          >
+            {batchRegenerating ? (
+              <Loader2 className="w-4 h-4 mr-1.5 animate-spin text-emerald-600" />
+            ) : (
+              <Sparkles className="w-4 h-4 mr-1.5 text-emerald-600" />
+            )}
+            {batchRegenerating ? 'Regenerando Portadas...' : '⚡ Regenerar Portadas de Fusión'}
+          </Button>
+          <Button onClick={() => handleOpenModal()} className="w-full sm:w-auto">
+            <Plus className="w-4 h-4 mr-2" />
+            Agregar Shuttle
+          </Button>
+        </div>
       </div>
+
+      {actionMessage && (
+        <div className={`p-3.5 rounded-xl border flex items-center justify-between shadow-sm animate-fade-in ${
+          actionMessage.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-950' : 'bg-red-50 border-red-200 text-red-950'
+        }`}>
+          <div className="flex items-center gap-2 text-xs sm:text-sm font-medium">
+            <Sparkles className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            <span>{actionMessage.text}</span>
+          </div>
+          <button onClick={() => setActionMessage(null)} className="text-slate-400 hover:text-slate-600 p-1">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -408,14 +544,25 @@ export const AdminShuttles = () => {
                 {filteredShuttles.map((shuttle) => (
                   <tr key={shuttle.id} className="border-b border-slate-100 hover:bg-slate-50">
                     <td className="py-3 px-4">
-                      <img 
-                        src={getImageUrl(shuttle.image_url || (shuttle as any).destination_image || (shuttle as any).origin_image)} 
-                        alt={shuttle.name} 
-                        className="w-16 h-10 rounded-lg object-cover bg-slate-100" 
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/placeholder.jpg';
-                        }}
-                      />
+                      <div className="relative w-16 h-10 rounded-lg overflow-hidden border border-slate-200 bg-slate-100 flex-shrink-0">
+                        <img 
+                          src={getImageUrl(shuttle.image_url || (shuttle as any).destination_image || (shuttle as any).origin_image)} 
+                          alt={shuttle.name} 
+                          className="w-full h-full object-cover" 
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/placeholder.jpg';
+                          }}
+                        />
+                        {shuttle.image_url?.includes('/images/shuttles/') ? (
+                          <span className="absolute bottom-0 right-0 bg-emerald-600/90 text-white text-[8px] font-bold px-1 py-0.5 rounded-tl shadow">
+                            Fusión
+                          </span>
+                        ) : (
+                          <span className="absolute bottom-0 right-0 bg-slate-700/80 text-white text-[8px] font-medium px-1 py-0.5 rounded-tl shadow">
+                            Simple
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3 px-4">
                       <div>
@@ -434,7 +581,21 @@ export const AdminShuttles = () => {
                       <Badge variant="success">activo</Badge>
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Regenerar Portada de Fusión Inteligente"
+                          onClick={() => handleRegenerateRowFusion(shuttle)}
+                          disabled={rowRegeneratingId === shuttle.id}
+                          className="text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 px-2"
+                        >
+                          {rowRegeneratingId === shuttle.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                          ) : (
+                            <Sparkles className="w-4 h-4 text-emerald-600" />
+                          )}
+                        </Button>
                         <Button variant="ghost" size="sm" onClick={() => handleOpenModal(shuttle)}>
                           <Pencil className="w-4 h-4" />
                         </Button>
@@ -457,15 +618,26 @@ export const AdminShuttles = () => {
             {filteredShuttles.length === 0 ? (
               <p className="text-center py-8 text-slate-500">No se encontraron shuttles</p>
             ) : filteredShuttles.map((shuttle) => (
-              <div key={shuttle.id} className="border border-slate-200 rounded-lg overflow-hidden bg-white">
-                <img 
-                  src={getImageUrl(shuttle.image_url || (shuttle as any).destination_image || (shuttle as any).origin_image)} 
-                  alt={shuttle.name} 
-                  className="w-full h-32 object-cover bg-slate-100" 
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/placeholder.jpg';
-                  }}
-                />
+              <div key={shuttle.id} className="border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                <div className="relative w-full h-32 bg-slate-100">
+                  <img 
+                    src={getImageUrl(shuttle.image_url || (shuttle as any).destination_image || (shuttle as any).origin_image)} 
+                    alt={shuttle.name} 
+                    className="w-full h-full object-cover" 
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/placeholder.jpg';
+                    }}
+                  />
+                  {shuttle.image_url?.includes('/images/shuttles/') ? (
+                    <span className="absolute bottom-2 right-2 bg-emerald-600/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded shadow">
+                      ✨ Fusión Activa
+                    </span>
+                  ) : (
+                    <span className="absolute bottom-2 right-2 bg-slate-800/80 backdrop-blur-sm text-white text-[10px] font-medium px-2 py-0.5 rounded shadow">
+                      Foto Simple
+                    </span>
+                  )}
+                </div>
                 <div className="p-4 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -476,12 +648,26 @@ export const AdminShuttles = () => {
                       {shuttle.service_type === 'international' ? 'Intl.' : 'Local'}
                     </Badge>
                   </div>
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-100">
                     <div className="flex items-center gap-3 text-sm text-slate-600">
                       <span className="font-semibold text-slate-900">${shuttle.price}</span>
                       <span>{shuttle.duration_hours}h</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title="Regenerar Portada"
+                        onClick={() => handleRegenerateRowFusion(shuttle)}
+                        disabled={rowRegeneratingId === shuttle.id}
+                        className="text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 px-2"
+                      >
+                        {rowRegeneratingId === shuttle.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                        ) : (
+                          <Sparkles className="w-4 h-4 text-emerald-600" />
+                        )}
+                      </Button>
                       <Button variant="ghost" size="sm" onClick={() => handleOpenModal(shuttle)}>
                         <Pencil className="w-4 h-4" />
                       </Button>
@@ -541,41 +727,178 @@ export const AdminShuttles = () => {
                 />
               </div>
 
-              {/* Vista Previa de Fusión Inteligente de Portada */}
+              {/* Sección de Gestión de Portada y Fusión Inteligente */}
               {(() => {
                 const origin = cities.find(c => c.id === formData.origin_city_id);
                 const dest = cities.find(c => c.id === formData.destination_city_id);
-                if (!origin || !dest) return null;
+                const hasCities = Boolean(origin && dest);
+                const isFusionMode = formData.image_mode === 'fusion';
+                const hasSavedFusionBanner = Boolean(formData.image_url && formData.image_url.includes('/images/shuttles/'));
+
                 return (
-                  <div className="bg-slate-900 rounded-xl p-3 border border-slate-800 text-white space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-emerald-400 flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5" /> Fusión Inteligente de Portada (800×400 WebP)
-                      </span>
-                      <span className="text-slate-400 text-[11px]">Se optimizará y creará automáticamente al guardar</span>
+                  <div className="bg-slate-900 rounded-xl p-4 border border-slate-800 text-white space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                        <div>
+                          <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                            Portada de Ruta (800×400 WebP)
+                          </h4>
+                          <p className="text-[11px] text-slate-400">
+                            Fusión visual de ciudades optimizada para web y redes sociales (OpenGraph)
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Selector de Modo */}
+                      <div className="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800 self-start sm:self-auto">
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, image_mode: 'fusion' })}
+                          className={`text-xs px-2.5 py-1 rounded-md font-medium transition-all ${
+                            isFusionMode
+                              ? 'bg-emerald-600 text-white shadow-sm'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          ✨ Fusión Automática
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, image_mode: 'custom' })}
+                          className={`text-xs px-2.5 py-1 rounded-md font-medium transition-all ${
+                            !isFusionMode
+                              ? 'bg-emerald-600 text-white shadow-sm'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          🔗 URL Personalizada
+                        </button>
+                      </div>
                     </div>
-                    <div className="relative h-28 rounded-lg overflow-hidden flex border border-slate-700/80 bg-slate-950">
-                      <div className="w-1/2 h-full relative">
-                        <img src={getImageUrl(origin.image_url)} alt={origin.name} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end p-2">
-                          <span className="text-white text-xs font-bold truncate">{origin.name}</span>
-                        </div>
-                      </div>
-                      <div className="w-1/2 h-full relative">
-                        <img src={getImageUrl(dest.image_url)} alt={dest.name} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end p-2">
-                          <span className="text-white text-xs font-bold truncate">{dest.name}</span>
-                        </div>
-                      </div>
-                      {/* Divisor e insignia central */}
-                      <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-0.5 bg-white/75 flex items-center justify-center pointer-events-none">
-                        <div className="w-7 h-7 bg-white rounded-full p-0.5 shadow-lg flex items-center justify-center">
-                          <div className="w-full h-full bg-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-black">
-                            ➔
+
+                    {isFusionMode ? (
+                      <div className="space-y-3">
+                        {hasCities ? (
+                          <>
+                            {/* Preview visual */}
+                            <div className="relative h-32 sm:h-36 rounded-lg overflow-hidden border border-slate-700 bg-slate-950 shadow-inner group">
+                              {hasSavedFusionBanner && !formData.regenerate_image ? (
+                                <>
+                                  <img
+                                    src={getImageUrl(formData.image_url)}
+                                    alt="Portada de fusión generada"
+                                    className="w-full h-full object-cover"
+                                  />
+                                  <div className="absolute top-2 right-2 bg-emerald-600/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3" /> Fusión Generada y Lista
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="w-full h-full flex">
+                                    <div className="w-1/2 h-full relative border-r border-white/20">
+                                      <img
+                                        src={getImageUrl(origin?.image_url)}
+                                        alt={origin?.name}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.jpg'; }}
+                                      />
+                                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-2.5">
+                                        <span className="text-white text-xs font-bold truncate drop-shadow">{origin?.name}</span>
+                                      </div>
+                                    </div>
+                                    <div className="w-1/2 h-full relative">
+                                      <img
+                                        src={getImageUrl(dest?.image_url)}
+                                        alt={dest?.name}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.jpg'; }}
+                                      />
+                                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-2.5">
+                                        <span className="text-white text-xs font-bold truncate drop-shadow">{dest?.name}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Divisor e insignia central */}
+                                  <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-0.5 bg-white/75 flex items-center justify-center pointer-events-none">
+                                    <div className="w-7 h-7 bg-white rounded-full p-0.5 shadow-xl flex items-center justify-center">
+                                      <div className="w-full h-full bg-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-black">
+                                        ➔
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="absolute top-2 right-2 bg-amber-500/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow flex items-center gap-1">
+                                    <Sparkles className="w-3 h-3" /> Se generará al guardar
+                                  </div>
+                                </>
+                              )}
+                            </div>
+
+                            {/* Controles de Fusión */}
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 pt-1">
+                              <label className="flex items-center gap-2 cursor-pointer select-none">
+                                <input
+                                  type="checkbox"
+                                  checked={formData.regenerate_image}
+                                  onChange={(e) => setFormData({ ...formData, regenerate_image: e.target.checked })}
+                                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-700 bg-slate-800"
+                                />
+                                <span className="text-xs text-slate-300">
+                                  {hasSavedFusionBanner 
+                                    ? 'Regenerar portada al guardar' 
+                                    : 'Fusionar automáticamente fotos al guardar (Recomendado)'}
+                                </span>
+                              </label>
+
+                              <button
+                                type="button"
+                                onClick={handleGenerateFusionNow}
+                                disabled={isGeneratingFusion}
+                                className="text-xs font-semibold text-emerald-300 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-700/80 rounded-lg px-3 py-1.5 transition-colors flex items-center gap-1.5 shadow-sm self-end sm:self-auto disabled:opacity-50"
+                              >
+                                {isGeneratingFusion ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                                )}
+                                {isGeneratingFusion ? 'Generando 800×400 WebP...' : '⚡ Generar Fusión Ahora'}
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="p-4 bg-slate-950/60 rounded-lg border border-dashed border-slate-800 text-center text-xs text-slate-400">
+                            👈 Selecciona una <strong>Ciudad de Origen</strong> y una <strong>Ciudad de Destino</strong> para activar la fusión inteligente de portada.
                           </div>
-                        </div>
+                        )}
                       </div>
-                    </div>
+                    ) : (
+                      <div className="space-y-3 pt-1">
+                        <div>
+                          <label className="block text-xs font-medium text-slate-300 mb-1">
+                            URL Directa de la Imagen
+                          </label>
+                          <Input
+                            placeholder="https://images.unsplash.com/... o /images/..."
+                            value={formData.image_url}
+                            onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                            className="bg-slate-950 text-white border-slate-800 text-xs"
+                          />
+                        </div>
+                        {formData.image_url && (
+                          <div className="relative h-28 rounded-lg overflow-hidden border border-slate-800 bg-slate-950">
+                            <img
+                              src={getImageUrl(formData.image_url)}
+                              alt="Vista previa personalizada"
+                              className="w-full h-full object-cover"
+                              onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder.jpg'; }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })()}

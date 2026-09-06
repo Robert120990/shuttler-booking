@@ -31,9 +31,13 @@ export const shuttlesApi = {
   getByCity: (citySlug: string) => api.get<{ departure: Shuttle[]; arrival: Shuttle[] }>(`/shuttles/city/${citySlug}`),
   getBySlug: (slug: string) => api.get<Shuttle>(`/shuttles/${slug}`),
   getFeatured: () => api.get<Shuttle[]>('/shuttles/featured'),
-  create: (data: Partial<Shuttle>) => api.post<Shuttle>('/shuttles', data),
-  update: (id: string, data: Partial<Shuttle>) => api.put<Shuttle>(`/shuttles/${id}`, data),
+  create: (data: Partial<Shuttle> & { regenerate_image?: boolean }) => api.post<Shuttle>('/shuttles', data),
+  update: (id: string, data: Partial<Shuttle> & { regenerate_image?: boolean }) => api.put<Shuttle>(`/shuttles/${id}`, data),
   delete: (id: string) => api.delete(`/shuttles/${id}`),
+  generateFusion: (data: { origin_city_id: string; destination_city_id: string; shuttle_id?: string }) =>
+    api.post<{ success: boolean; image_url: string; shuttle?: Shuttle }>('/shuttles/generate-fusion', data),
+  regenerateAllFusion: () =>
+    api.post<{ success: boolean; total: number; updated: number }>('/shuttles/regenerate-all-fusion'),
 };
 
 export const bookingsApi = {

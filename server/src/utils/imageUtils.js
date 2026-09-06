@@ -18,17 +18,35 @@ const publicDir = IMAGES_DIR;
  */
 function resolveImagePath(imageUrl) {
   if (!imageUrl) return null;
-  const cleanPath = imageUrl.startsWith('/images/') ? imageUrl.slice('/images/'.length) : imageUrl.replace(/^\//, '');
+  if (typeof imageUrl !== 'string') return null;
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) return null;
+
+  // Strip query strings or cache busters
+  const cleanUrl = imageUrl.split('?')[0];
+
+  // If it's already an absolute file path that exists
+  if (path.isAbsolute(cleanUrl) && fs.existsSync(cleanUrl)) {
+    return cleanUrl;
+  }
+
+  const cleanPath = cleanUrl.startsWith('/images/') ? cleanUrl.slice('/images/'.length) : cleanUrl.replace(/^\//, '');
 
   const candidates = [
     path.join(publicDir, cleanPath),
     path.join(serverRoot, 'public', 'images', cleanPath),
     path.join(serverRoot, '..', 'public', 'images', cleanPath),
+    path.join(process.cwd(), 'server', 'public', 'images', cleanPath),
+    path.join(process.cwd(), 'public', 'images', cleanPath),
+    `/data/images/${cleanPath}`,
   ];
 
   for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) {
-      return candidate;
+    try {
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+    } catch {
+      // Ignore filesystem access errors
     }
   }
 
@@ -36,33 +54,72 @@ function resolveImagePath(imageUrl) {
 }
 
 /**
- * Downloads an image buffer over HTTP/HTTPS with redirect support
+ * Downloads an image buffer over HTTP/HTTPS with redirect and timeout support
  */
-function downloadImage(url) {
+function downloadImage(url, maxRedirects = 3) {
   return new Promise((resolve, reject) => {
-    const protocol = url.startsWith('https') ? https : http;
-    protocol.get(url, (response) => {
-      if (response.statusCode === 301 || response.statusCode === 302) {
-        return resolve(downloadImage(response.headers.location));
-      }
-      const chunks = [];
-      response.on('data', (chunk) => chunks.push(chunk));
-      response.on('end', () => resolve(Buffer.concat(chunks)));
-      response.on('error', reject);
-    }).on('error', reject);
+    if (maxRedirects <= 0) {
+      return reject(new Error('Demasiadas redirecciones al descargar imagen'));
+    }
+
+    try {
+      const parsedUrl = new URL(url);
+      const protocol = parsedUrl.protocol === 'https:' ? https : http;
+
+      const req = protocol.get(
+        url,
+        {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 TrailExplorer/1.0',
+            'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+          },
+          timeout: 8000,
+        },
+        (response) => {
+          if (response.statusCode === 301 || response.statusCode === 302 || response.statusCode === 307 || response.statusCode === 308) {
+            const redirectUrl = response.headers.location;
+            if (!redirectUrl) {
+              return reject(new Error('Redirección sin cabecera location'));
+            }
+            const nextUrl = redirectUrl.startsWith('http') ? redirectUrl : new URL(redirectUrl, url).toString();
+            return resolve(downloadImage(nextUrl, maxRedirects - 1));
+          }
+
+          if (response.statusCode && (response.statusCode < 200 || response.statusCode >= 300)) {
+            return reject(new Error(`Error HTTP al descargar imagen: ${response.statusCode}`));
+          }
+
+          const chunks = [];
+          response.on('data', (chunk) => chunks.push(chunk));
+          response.on('end', () => resolve(Buffer.concat(chunks)));
+          response.on('error', reject);
+        }
+      );
+
+      req.on('timeout', () => {
+        req.destroy();
+        reject(new Error('Tiempo de espera agotado al descargar imagen'));
+      });
+
+      req.on('error', reject);
+    } catch (err) {
+      reject(err);
+    }
   });
 }
 
 /**
- * Retrieves a resized image buffer with automatic fallback
+ * Retrieves a resized image buffer with automatic fallback to placeholder or styled canvas
  */
 async function getImageBuffer(imageUrl, defaultWidth = 400, defaultHeight = 400) {
-  if (imageUrl && imageUrl.startsWith('http')) {
+  if (imageUrl && typeof imageUrl === 'string' && (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))) {
     try {
       const buffer = await downloadImage(imageUrl);
-      return await sharp(buffer).resize(defaultWidth, defaultHeight, { fit: 'cover', position: 'center' }).toBuffer();
+      return await sharp(buffer)
+        .resize(defaultWidth, defaultHeight, { fit: 'cover', position: 'center' })
+        .toBuffer();
     } catch (error) {
-      console.error('Error loading image from URL:', error);
+      console.warn(`Aviso: No se pudo descargar imagen remota (${imageUrl}):`, error.message);
     }
   }
 
@@ -70,21 +127,35 @@ async function getImageBuffer(imageUrl, defaultWidth = 400, defaultHeight = 400)
 
   if (imagePath && fs.existsSync(imagePath)) {
     try {
-      return await sharp(imagePath).resize(defaultWidth, defaultHeight, { fit: 'cover', position: 'center' }).toBuffer();
+      return await sharp(imagePath)
+        .resize(defaultWidth, defaultHeight, { fit: 'cover', position: 'center' })
+        .toBuffer();
     } catch (error) {
-      console.error('Error loading local image:', error);
+      console.warn(`Aviso: Error procesando imagen local (${imagePath}):`, error.message);
     }
   }
 
-  const placeholderPath = resolveImagePath('/images/cities/placeholder.png');
-  if (placeholderPath && fs.existsSync(placeholderPath)) {
-    try {
-      return await sharp(placeholderPath).resize(defaultWidth, defaultHeight, { fit: 'cover', position: 'center' }).toBuffer();
-    } catch (error) {
-      console.error('Error loading placeholder image:', error);
+  // Fallback to placeholder image
+  const placeholderCandidates = [
+    resolveImagePath('/images/cities/placeholder.png'),
+    resolveImagePath('/images/placeholder.png'),
+    path.join(serverRoot, 'public', 'images', 'cities', 'placeholder.png'),
+    path.join(serverRoot, 'public', 'images', 'placeholder.png'),
+  ];
+
+  for (const ph of placeholderCandidates) {
+    if (ph && fs.existsSync(ph)) {
+      try {
+        return await sharp(ph)
+          .resize(defaultWidth, defaultHeight, { fit: 'cover', position: 'center' })
+          .toBuffer();
+      } catch (err) {
+        // Continue to canvas fallback
+      }
     }
   }
 
+  // Elegant dark slate canvas fallback
   return await sharp({
     create: {
       width: defaultWidth,
@@ -102,6 +173,10 @@ async function getImageBuffer(imageUrl, defaultWidth = 400, defaultHeight = 400)
 export async function generateShuttleImage(originImageUrl, destinationImageUrl) {
   const shuttlesDir = path.join(publicDir, 'shuttles');
   ensureDir(shuttlesDir);
+
+  // Also ensure server repo shuttles dir exists if publicDir is redirected
+  const repoShuttlesDir = path.join(serverRoot, 'public', 'images', 'shuttles');
+  ensureDir(repoShuttlesDir);
 
   const filename = `shuttle-${uuidv4()}.webp`;
   const filepath = path.join(shuttlesDir, filename);
@@ -125,8 +200,8 @@ export async function generateShuttleImage(originImageUrl, destinationImageUrl) 
           </filter>
           <linearGradient id="bottomVignette" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="#000000" stop-opacity="0"/>
-            <stop offset="60%" stop-color="#000000" stop-opacity="0.1"/>
-            <stop offset="100%" stop-color="#000000" stop-opacity="0.55"/>
+            <stop offset="60%" stop-color="#000000" stop-opacity="0.12"/>
+            <stop offset="100%" stop-color="#000000" stop-opacity="0.6"/>
           </linearGradient>
         </defs>
 
@@ -134,7 +209,7 @@ export async function generateShuttleImage(originImageUrl, destinationImageUrl) 
         <rect x="0" y="0" width="${width}" height="${height}" fill="url(#bottomVignette)"/>
 
         <!-- Vertical divider line with shadow -->
-        <line x1="${halfWidth}" y1="0" x2="${halfWidth}" y2="${height}" stroke="rgba(255,255,255,0.75)" stroke-width="2" filter="url(#shadow)"/>
+        <line x1="${halfWidth}" y1="0" x2="${halfWidth}" y2="${height}" stroke="rgba(255,255,255,0.8)" stroke-width="2" filter="url(#shadow)"/>
 
         <!-- Center route badge -->
         <g transform="translate(${halfWidth}, ${height / 2})" filter="url(#shadow)">
@@ -163,14 +238,24 @@ export async function generateShuttleImage(originImageUrl, destinationImageUrl) 
         { input: destinationBuffer, left: halfWidth, top: 0 },
         { input: svgBuffer, left: 0, top: 0 },
       ])
-      .webp({ quality: 82, effort: 4 })
+      .webp({ quality: 84, effort: 4 })
       .toFile(filepath);
+
+    // If repoShuttlesDir is a different location, copy it there too for dual persistence
+    if (repoShuttlesDir !== shuttlesDir) {
+      try {
+        const repoFilepath = path.join(repoShuttlesDir, filename);
+        fs.copyFileSync(filepath, repoFilepath);
+      } catch {
+        // Non-critical if copy fails
+      }
+    }
 
     const imageUrl = `/images/shuttles/${filename}`;
     console.log(`✨ Portada combinada de shuttle generada exitosamente: ${imageUrl}`);
     return imageUrl;
   } catch (error) {
-    console.error('Error generating shuttle image:', error);
+    console.error('Error generando imagen combinada de shuttle:', error);
     return null;
   }
 }
@@ -179,7 +264,7 @@ export async function generateShuttleImage(originImageUrl, destinationImageUrl) 
  * Safely removes a generated shuttle image when no longer used
  */
 export async function deleteShuttleImage(imageUrl) {
-  if (!imageUrl || !imageUrl.includes('/images/shuttles/')) {
+  if (!imageUrl || typeof imageUrl !== 'string' || !imageUrl.includes('/images/shuttles/')) {
     return;
   }
 
@@ -187,8 +272,9 @@ export async function deleteShuttleImage(imageUrl) {
     const filepath = resolveImagePath(imageUrl);
     if (filepath && fs.existsSync(filepath)) {
       fs.unlinkSync(filepath);
+      console.log(`🗑️ Imagen anterior eliminada: ${filepath}`);
     }
   } catch (error) {
-    console.error('Error deleting shuttle image:', error);
+    console.warn('Aviso: No se pudo eliminar imagen anterior de shuttle:', error.message);
   }
 }

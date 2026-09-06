@@ -99,7 +99,7 @@ export async function syncDatabaseImages() {
       FROM shuttles s
       LEFT JOIN cities c1 ON s.origin_city_id = c1.id
       LEFT JOIN cities c2 ON s.destination_city_id = c2.id
-      WHERE s.image_url IS NULL OR s.image_url LIKE '%placeholder%' OR s.image_url = ''
+      WHERE s.image_url IS NULL OR s.image_url LIKE '%placeholder%' OR s.image_url = '' OR s.image_url LIKE '%/cities/%'
     `).all();
 
     for (const s of shuttlesWithoutImage) {

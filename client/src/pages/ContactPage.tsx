@@ -1,14 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MapPin, Mail, Phone, Send, CheckCircle } from 'lucide-react';
+import { MapPin, Mail, Phone, Send, CheckCircle, MessageCircle, Clock } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { SEO } from '../components/seo/SEO';
+import { useContactStore } from '../stores/contactStore';
 
 export const ContactPage = () => {
   const { t } = useTranslation();
   const [submitted, setSubmitted] = useState(false);
+  const { 
+    contact_email, 
+    contact_phone, 
+    contact_whatsapp, 
+    contact_address, 
+    contact_hours, 
+    fetchContactInfo, 
+    initialized 
+  } = useContactStore();
+
+  useEffect(() => {
+    if (!initialized) {
+      fetchContactInfo();
+    }
+  }, [initialized, fetchContactInfo]);
+
+  const cleanWhatsapp = (contact_whatsapp || '').replace(/[^0-9]/g, '');
+  const whatsappUrl = cleanWhatsapp ? `https://wa.me/${cleanWhatsapp}` : '';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,26 +57,58 @@ export const ContactPage = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-start gap-3">
-                  <MapPin className="w-5 h-5 text-emerald-600 mt-0.5" />
+                  <MapPin className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
                   <div>
                     <h4 className="font-medium text-slate-900">{t('contact.officeLocation')}</h4>
-                    <p className="text-slate-600">San Salvador, El Salvador</p>
+                    <p className="text-slate-600">{contact_address || 'San Salvador, El Salvador'}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Mail className="w-5 h-5 text-emerald-600 mt-0.5" />
+                  <Mail className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
                   <div>
                     <h4 className="font-medium text-slate-900">{t('contact.email')}</h4>
-                    <p className="text-slate-600">info@trailexplorer.com</p>
+                    <a 
+                      href={`mailto:${contact_email || 'info@trailexplorer.com'}`}
+                      className="text-slate-600 hover:text-emerald-600 transition-colors"
+                    >
+                      {contact_email || 'info@trailexplorer.com'}
+                    </a>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Phone className="w-5 h-5 text-emerald-600 mt-0.5" />
+                  <Phone className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
                   <div>
                     <h4 className="font-medium text-slate-900">{t('contact.phone')}</h4>
-                    <p className="text-slate-600">+503 1234 5678</p>
+                    <a 
+                      href={`tel:${(contact_phone || '+503 1234 5678').replace(/\s+/g, '')}`}
+                      className="text-slate-600 hover:text-emerald-600 transition-colors"
+                    >
+                      {contact_phone || '+503 1234 5678'}
+                    </a>
                   </div>
                 </div>
+                {contact_hours && (
+                  <div className="flex items-start gap-3">
+                    <Clock className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-medium text-slate-900">Horario de Atención</h4>
+                      <p className="text-slate-600">{contact_hours}</p>
+                    </div>
+                  </div>
+                )}
+                {whatsappUrl && (
+                  <div className="pt-3 border-t border-slate-100">
+                    <a
+                      href={whatsappUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium text-sm transition-colors shadow-sm"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      <span>Contactar por WhatsApp</span>
+                    </a>
+                  </div>
+                )}
                 <p className="text-xs text-slate-500 pt-2 border-t border-slate-100">
                   {t('contact.responseTime')}
                 </p>

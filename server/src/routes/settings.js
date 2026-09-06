@@ -5,6 +5,27 @@ import { getSettings, sendTestEmail, DEFAULT_SETTINGS } from '../utils/mailer.js
 
 const router = express.Router();
 
+// GET /api/settings/public - Public contact and branding info
+router.get('/public', async (req, res) => {
+  try {
+    const settings = await getSettings();
+    const publicSettings = {
+      contact_email: settings.contact_email || 'info@trailexplorer.com',
+      contact_phone: settings.contact_phone || '+503 1234 5678',
+      contact_whatsapp: settings.contact_whatsapp || '+503 1234 5678',
+      contact_address: settings.contact_address || 'San Salvador, El Salvador',
+      contact_hours: settings.contact_hours || 'Lunes a Domingo: 24/7',
+      social_facebook: settings.social_facebook || '',
+      social_instagram: settings.social_instagram || '',
+      social_tiktok: settings.social_tiktok || '',
+    };
+    res.json(publicSettings);
+  } catch (error) {
+    console.error('Error fetching public settings:', error);
+    res.status(500).json({ error: 'Error al obtener información pública' });
+  }
+});
+
 // GET /api/settings - Retrieve all settings
 router.get('/', async (req, res) => {
   try {

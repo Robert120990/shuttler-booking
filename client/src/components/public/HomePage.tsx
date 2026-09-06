@@ -130,22 +130,22 @@ export const HomePage = () => {
         </div>
 
         {/* Small logo badge in top right corner */}
-        <div className="absolute top-4 right-4 sm:top-6 sm:right-6 lg:top-6 lg:right-8 z-10">
-          <div className="bg-white/95 p-2 sm:p-2.5 rounded-2xl shadow-xl border border-white/50 ring-2 ring-black/5 transform hover:scale-105 transition-transform duration-300">
+        <div className="absolute top-3 right-3 sm:top-6 sm:right-6 lg:top-6 lg:right-8 z-10">
+          <div className="bg-white/95 p-1.5 sm:p-2.5 rounded-2xl shadow-xl border border-white/50 ring-2 ring-black/5 transform hover:scale-105 transition-transform duration-300">
             <img
               src="/logo.jpeg"
               alt="Trail Explorer Logo"
-              className="w-20 sm:w-24 md:w-28 h-auto object-contain rounded-xl"
+              className="w-16 sm:w-24 md:w-28 h-auto object-contain rounded-xl"
             />
           </div>
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 flex items-center justify-between">
-          <div className="max-w-2xl text-left">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight drop-shadow-lg">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 lg:py-16 flex items-center justify-between">
+          <div className="max-w-2xl text-left pr-24 sm:pr-32 md:pr-36 lg:pr-0">
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold leading-tight drop-shadow-lg break-words">
               {t('home.title')}
             </h1>
-            <p className="mt-4 text-base sm:text-lg lg:text-xl text-slate-100 drop-shadow-md max-w-xl">
+            <p className="mt-3 sm:mt-4 text-sm sm:text-lg lg:text-xl text-slate-100 drop-shadow-md max-w-xl">
               {t('home.subtitle')}
             </p>
           </div>

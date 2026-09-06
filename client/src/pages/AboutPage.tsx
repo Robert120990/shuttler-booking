@@ -1,12 +1,27 @@
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MapPin, Mail, Phone, Clock, ShieldCheck, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { SEO } from '../components/seo/SEO';
+import { useContactStore } from '../stores/contactStore';
 
 export const AboutPage = () => {
   const { t } = useTranslation();
+  const { 
+    contact_email, 
+    contact_phone, 
+    contact_address, 
+    fetchContactInfo, 
+    initialized 
+  } = useContactStore();
+
+  useEffect(() => {
+    if (!initialized) {
+      fetchContactInfo();
+    }
+  }, [initialized, fetchContactInfo]);
 
   return (
     <div className="bg-slate-50 min-h-screen">
@@ -112,24 +127,34 @@ export const AboutPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
-                    <MapPin className="w-5 h-5 text-emerald-600 mt-0.5" />
+                    <MapPin className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
                     <div>
                       <h4 className="font-medium text-slate-900">{t('contact.officeLocation')}</h4>
-                      <p className="text-slate-600">San Salvador, El Salvador</p>
+                      <p className="text-slate-600">{contact_address || 'San Salvador, El Salvador'}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <Mail className="w-5 h-5 text-emerald-600 mt-0.5" />
+                    <Mail className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
                     <div>
                       <h4 className="font-medium text-slate-900">{t('contact.email')}</h4>
-                      <p className="text-slate-600">info@trailexplorer.com</p>
+                      <a 
+                        href={`mailto:${contact_email || 'info@trailexplorer.com'}`}
+                        className="text-slate-600 hover:text-emerald-600 transition-colors"
+                      >
+                        {contact_email || 'info@trailexplorer.com'}
+                      </a>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <Phone className="w-5 h-5 text-emerald-600 mt-0.5" />
+                    <Phone className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
                     <div>
                       <h4 className="font-medium text-slate-900">{t('contact.phone')}</h4>
-                      <p className="text-slate-600">+503 1234 5678</p>
+                      <a 
+                        href={`tel:${(contact_phone || '+503 1234 5678').replace(/\s+/g, '')}`}
+                        className="text-slate-600 hover:text-emerald-600 transition-colors"
+                      >
+                        {contact_phone || '+503 1234 5678'}
+                      </a>
                     </div>
                   </div>
                   <p className="text-xs text-slate-500 pt-2 border-t border-slate-100">

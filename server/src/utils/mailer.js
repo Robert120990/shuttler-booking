@@ -3,7 +3,7 @@ import { prepare } from '../db.js';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
- * Default fallback SMTP and notification settings
+ * Default fallback SMTP, notification and contact settings
  */
 export const DEFAULT_SETTINGS = {
   email_provider: 'smtp',
@@ -17,10 +17,20 @@ export const DEFAULT_SETTINGS = {
   notification_email: 'trailexplorersv@gmail.com',
   test_email: 'trailexplorersv@gmail.com',
   send_customer_email: 'true',
+  // Contact and Social Information
+  contact_email: 'info@trailexplorer.com',
+  contact_phone: '+503 1234 5678',
+  contact_whatsapp: '+503 1234 5678',
+  contact_address: 'San Salvador, El Salvador',
+  contact_hours: 'Lunes a Domingo: 24/7',
+  social_facebook: '',
+  social_instagram: '',
+  social_tiktok: '',
 };
 
 /**
- * Retrieves SMTP and notification settings from the database
+ * Retrieves SMTP, notification and contact settings from the database.
+ * Only inserts default keys if they do not exist yet; never overwrites user values.
  */
 export async function getSettings() {
   try {
@@ -30,23 +40,13 @@ export async function getSettings() {
       settings[row.key] = row.value;
     }
 
-    // Ensure all default settings keys exist and clean any legacy placeholders
+    // Only seed default keys that have never been created in the database
     for (const [key, defaultValue] of Object.entries(DEFAULT_SETTINGS)) {
-      const currentVal = settings[key];
-      if (
-        currentVal === undefined ||
-        currentVal === null ||
-        currentVal === '' ||
-        currentVal === 'smtp_account@gmail.com' ||
-        currentVal === 'secretpassword' ||
-        (typeof currentVal === 'string' && currentVal.includes('empresa.com'))
-      ) {
+      if (settings[key] === undefined || settings[key] === null) {
         settings[key] = defaultValue;
         try {
           const existing = await prepare('SELECT id FROM settings WHERE key = ?').get(key);
-          if (existing) {
-            await prepare('UPDATE settings SET value = ? WHERE key = ?').run(defaultValue, key);
-          } else {
+          if (!existing) {
             await prepare('INSERT INTO settings (id, key, value) VALUES (?, ?, ?)').run(uuidv4(), key, defaultValue);
           }
         } catch (dbErr) {

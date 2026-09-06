@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Mail, Server, Shield, Send, CheckCircle2, AlertCircle, Loader2, Save, Eye, EyeOff, Info, ExternalLink, Zap } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Mail, Server, Shield, Send, CheckCircle2, AlertCircle, Loader2, Save, Eye, EyeOff, Info, ExternalLink, Zap, PhoneCall, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -20,11 +21,11 @@ export const AdminSettings = () => {
     smtp_host: 'smtp.gmail.com',
     smtp_port: '587',
     smtp_secure: 'false',
-    smtp_user: 'trailexplorersv@gmail.com',
-    smtp_pass: 'nxwmwvjkpgdbofyw',
+    smtp_user: '',
+    smtp_pass: '',
     smtp_from: 'Trail Explorer <reservas@trailexplorer.com>',
-    notification_email: 'trailexplorersv@gmail.com',
-    test_email: 'trailexplorersv@gmail.com',
+    notification_email: '',
+    test_email: '',
     send_customer_email: 'true',
   });
 
@@ -37,33 +38,21 @@ export const AdminSettings = () => {
       setLoading(true);
       const res = await settingsApi.getAll();
       if (res.data) {
-        const userEmail = (res.data.smtp_user && res.data.smtp_user !== 'smtp_account@gmail.com')
-          ? res.data.smtp_user
-          : 'trailexplorersv@gmail.com';
-        const passVal = (res.data.smtp_pass && res.data.smtp_pass !== 'secretpassword')
-          ? res.data.smtp_pass
-          : 'nxwmwvjkpgdbofyw';
-        const notifEmail = (res.data.notification_email && !res.data.notification_email.includes('empresa.com'))
-          ? res.data.notification_email
-          : userEmail;
-        const testMail = (res.data.test_email && !res.data.test_email.includes('empresa.com'))
-          ? res.data.test_email
-          : notifEmail;
-
+        const raw = res.data;
         setFormData({
-          email_provider: res.data.email_provider || 'smtp',
-          resend_api_key: res.data.resend_api_key || '',
-          smtp_host: res.data.smtp_host || 'smtp.gmail.com',
-          smtp_port: res.data.smtp_port || '587',
-          smtp_secure: res.data.smtp_secure || 'false',
-          smtp_user: userEmail,
-          smtp_pass: passVal,
-          smtp_from: res.data.smtp_from || 'Trail Explorer <reservas@trailexplorer.com>',
-          notification_email: notifEmail,
-          test_email: testMail,
-          send_customer_email: res.data.send_customer_email !== undefined ? res.data.send_customer_email : 'true',
+          email_provider: raw.email_provider ?? 'smtp',
+          resend_api_key: raw.resend_api_key ?? '',
+          smtp_host: raw.smtp_host ?? 'smtp.gmail.com',
+          smtp_port: raw.smtp_port ?? '587',
+          smtp_secure: raw.smtp_secure ?? 'false',
+          smtp_user: raw.smtp_user ?? '',
+          smtp_pass: raw.smtp_pass ?? '',
+          smtp_from: raw.smtp_from ?? 'Trail Explorer <reservas@trailexplorer.com>',
+          notification_email: raw.notification_email ?? '',
+          test_email: raw.test_email ?? '',
+          send_customer_email: raw.send_customer_email !== undefined ? raw.send_customer_email : 'true',
         });
-        setTestEmail(testMail);
+        setTestEmail(raw.test_email || raw.notification_email || '');
       }
     } catch (error) {
       console.error('Error al cargar configuración:', error);
@@ -84,22 +73,20 @@ export const AdminSettings = () => {
       const res = await settingsApi.update(payload);
       if (res.data?.settings) {
         const s = res.data.settings;
-        const notifEmail = s.notification_email ?? s.smtp_user ?? 'trailexplorersv@gmail.com';
-        const testMail = s.test_email || notifEmail || s.smtp_user || 'trailexplorersv@gmail.com';
         setFormData({
-          email_provider: s.email_provider || 'smtp',
-          resend_api_key: s.resend_api_key || '',
-          smtp_host: s.smtp_host || 'smtp.gmail.com',
-          smtp_port: s.smtp_port || '587',
-          smtp_secure: s.smtp_secure || 'false',
-          smtp_user: s.smtp_user || 'trailexplorersv@gmail.com',
-          smtp_pass: s.smtp_pass || 'nxwmwvjkpgdbofyw',
-          smtp_from: s.smtp_from || 'Trail Explorer <reservas@trailexplorer.com>',
-          notification_email: notifEmail,
-          test_email: testMail,
+          email_provider: s.email_provider ?? 'smtp',
+          resend_api_key: s.resend_api_key ?? '',
+          smtp_host: s.smtp_host ?? 'smtp.gmail.com',
+          smtp_port: s.smtp_port ?? '587',
+          smtp_secure: s.smtp_secure ?? 'false',
+          smtp_user: s.smtp_user ?? '',
+          smtp_pass: s.smtp_pass ?? '',
+          smtp_from: s.smtp_from ?? 'Trail Explorer <reservas@trailexplorer.com>',
+          notification_email: s.notification_email ?? '',
+          test_email: s.test_email ?? '',
           send_customer_email: s.send_customer_email !== undefined ? s.send_customer_email : 'true',
         });
-        setTestEmail(testMail);
+        if (s.test_email) setTestEmail(s.test_email);
       }
       setFeedback({
         type: 'success',
@@ -230,6 +217,28 @@ export const AdminSettings = () => {
         <p className="text-slate-500 text-sm sm:text-base">
           Configura el método de envío y el servidor de correo para las notificaciones automáticas de reservas
         </p>
+      </div>
+
+      {/* Quick link to Contact Information */}
+      <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-emerald-600 text-white rounded-xl shadow-sm">
+            <PhoneCall className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">Información de Contacto y Redes de la Página</h3>
+            <p className="text-xs text-slate-600">
+              Edita los teléfonos, WhatsApp, correo de atención al cliente, dirección física y enlaces a redes sociales.
+            </p>
+          </div>
+        </div>
+        <Link
+          to="/admin/contact"
+          className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-all whitespace-nowrap"
+        >
+          <span>Editar Contacto</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
       </div>
 
       {/* In-page Feedback Banner */}

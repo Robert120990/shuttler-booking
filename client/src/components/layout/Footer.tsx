@@ -1,7 +1,9 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Mail, Phone } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLanguageStore } from '../../i18n';
+import { useContactStore } from '../../stores/contactStore';
 import { translateCountryName } from '../../utils/shuttleTranslator';
 
 const COUNTRIES = [
@@ -18,6 +20,22 @@ const COUNTRIES = [
 export const Footer = () => {
   const { t } = useTranslation();
   const { language } = useLanguageStore();
+  const { 
+    contact_email, 
+    contact_phone, 
+    contact_address, 
+    social_facebook, 
+    social_instagram, 
+    social_tiktok,
+    fetchContactInfo,
+    initialized 
+  } = useContactStore();
+
+  useEffect(() => {
+    if (!initialized) {
+      fetchContactInfo();
+    }
+  }, [initialized, fetchContactInfo]);
 
   const links = [
     { name: t('footer.faqs'), href: '/faqs' },
@@ -26,6 +44,8 @@ export const Footer = () => {
     { name: t('footer.cookies'), href: '/cookies' },
     { name: t('footer.contactUs'), href: '/contact' },
   ];
+
+  const hasSocials = Boolean(social_facebook || social_instagram || social_tiktok);
 
   return (
     <footer className="bg-slate-900 text-slate-300">
@@ -39,9 +59,46 @@ export const Footer = () => {
             <p className="text-sm text-slate-400">
               {t('footer.tagline')}
             </p>
-            <div className="flex gap-4 mt-4">
-              <span className="text-slate-400 text-sm">{t('footer.followUs')}</span>
-            </div>
+            {hasSocials && (
+              <div className="mt-4">
+                <span className="text-slate-400 text-xs font-medium uppercase tracking-wider block mb-2">{t('footer.followUs')}</span>
+                <div className="flex items-center gap-3">
+                  {social_facebook && (
+                    <a
+                      href={social_facebook}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2.5 py-1 rounded bg-slate-800 hover:bg-emerald-600 text-white text-xs font-medium transition-colors"
+                      title="Facebook"
+                    >
+                      Facebook
+                    </a>
+                  )}
+                  {social_instagram && (
+                    <a
+                      href={social_instagram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2.5 py-1 rounded bg-slate-800 hover:bg-emerald-600 text-white text-xs font-medium transition-colors"
+                      title="Instagram"
+                    >
+                      Instagram
+                    </a>
+                  )}
+                  {social_tiktok && (
+                    <a
+                      href={social_tiktok}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2.5 py-1 rounded bg-slate-800 hover:bg-emerald-600 text-white text-xs font-medium transition-colors"
+                      title="TikTok"
+                    >
+                      TikTok
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
@@ -80,18 +137,28 @@ export const Footer = () => {
             <h3 className="font-semibold text-white mb-4">{t('footer.contact')}</h3>
             <div className="space-y-3">
               <div className="flex items-start gap-2">
-                <MapPin className="w-4 h-4 mt-0.5 text-slate-400" />
+                <MapPin className="w-4 h-4 mt-0.5 text-slate-400 flex-shrink-0" />
                 <span className="text-sm text-slate-400">
-                  San Salvador, El Salvador
+                  {contact_address || 'San Salvador, El Salvador'}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-slate-400" />
-                <span className="text-sm text-slate-400">info@trailexplorer.com</span>
+                <Mail className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                <a 
+                  href={`mailto:${contact_email || 'info@trailexplorer.com'}`}
+                  className="text-sm text-slate-400 hover:text-white transition-colors"
+                >
+                  {contact_email || 'info@trailexplorer.com'}
+                </a>
               </div>
               <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-slate-400" />
-                <span className="text-sm text-slate-400">+503 1234 5678</span>
+                <Phone className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                <a 
+                  href={`tel:${(contact_phone || '+503 1234 5678').replace(/\s+/g, '')}`}
+                  className="text-sm text-slate-400 hover:text-white transition-colors"
+                >
+                  {contact_phone || '+503 1234 5678'}
+                </a>
               </div>
             </div>
           </div>

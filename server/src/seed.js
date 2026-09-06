@@ -482,19 +482,14 @@ export async function seedSampleHostels() {
 
 export async function seedDefaultSettings() {
   try {
-    const user = await prepare('SELECT value FROM settings WHERE key = ?').get('smtp_user');
-    if (!user || !user.value || user.value === 'smtp_account@gmail.com') {
-      const { DEFAULT_SETTINGS } = await import('./utils/mailer.js');
-      for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
-        const existing = await prepare('SELECT id FROM settings WHERE key = ?').get(key);
-        if (existing) {
-          await prepare('UPDATE settings SET value = ? WHERE key = ?').run(value, key);
-        } else {
-          await prepare('INSERT INTO settings (id, key, value) VALUES (?, ?, ?)').run(uuidv4(), key, value);
-        }
+    const { DEFAULT_SETTINGS } = await import('./utils/mailer.js');
+    for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
+      const existing = await prepare('SELECT id FROM settings WHERE key = ?').get(key);
+      if (!existing) {
+        await prepare('INSERT INTO settings (id, key, value) VALUES (?, ?, ?)').run(uuidv4(), key, value);
       }
-      console.log('✅ Configuración SMTP por defecto sincronizada con éxito.');
     }
+    console.log('✅ Configuración por defecto verificada.');
   } catch (err) {
     console.error('Error seeding default settings:', err);
   }

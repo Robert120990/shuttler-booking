@@ -155,6 +155,25 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Missing required booking fields (shuttle_id, date, pickup_location, dropoff_location)' });
     }
 
+    // Verify shuttle exists to avoid foreign key errors
+    const shuttle = await prepare('SELECT * FROM shuttles WHERE id = ?').get(shuttle_id);
+    if (!shuttle) {
+      return res.status(404).json({ error: 'El viaje o shuttle seleccionado no fue encontrado.' });
+    }
+
+    // Safely validate user_id to prevent foreign key constraint violations (bookings_user_id_fkey)
+    let resolvedUserId = null;
+    if (user_id && typeof user_id === 'string' && user_id.trim() !== '') {
+      try {
+        const existingUser = await prepare('SELECT id FROM users WHERE id = ?').get(user_id.trim());
+        if (existingUser) {
+          resolvedUserId = existingUser.id;
+        }
+      } catch (userLookupErr) {
+        console.warn('Aviso: Error validando user_id para reserva:', userLookupErr.message);
+      }
+    }
+
     const id = uuidv4();
     const resolvedPaymentMethod = payment_method || 'pay_on_arrival';
     const resolvedPaymentStatus = payment_status || 'pending';
@@ -170,7 +189,7 @@ router.post('/', async (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
-      user_id || null,
+      resolvedUserId,
       shuttle_id,
       date,
       pickup_location,
@@ -190,7 +209,6 @@ router.post('/', async (req, res) => {
     );
 
     const booking = await prepare('SELECT * FROM bookings WHERE id = ?').get(id);
-    const shuttle = await prepare('SELECT * FROM shuttles WHERE id = ?').get(shuttle_id);
 
     // Send email notification asynchronously
     sendBookingNotification(booking, shuttle).catch((mailErr) => {

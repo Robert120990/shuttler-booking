@@ -27,6 +27,7 @@ import { AdminHostels } from './components/admin/AdminHostels';
 import { AdminContact } from './components/admin/AdminContact';
 import { AdminReviews } from './components/admin/AdminReviews';
 import { AdminManifest } from './components/admin/AdminManifest';
+import { ScrollToTop } from './components/common/ScrollToTop';
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <ScrollToTop />
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<HomePage />} />

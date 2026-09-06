@@ -75,7 +75,7 @@ export interface LuggageOption {
 
 export interface Booking {
   id: string;
-  user_id?: string;
+  user_id?: string | null;
   user?: User;
   shuttle_id: string;
   shuttle?: Shuttle;

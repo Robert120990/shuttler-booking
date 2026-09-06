@@ -262,7 +262,7 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
     }
 
     const basePayload = {
-      user_id: user?.id,
+      user_id: user?.id && typeof user.id === 'string' && user.id.trim() !== '' ? user.id.trim() : null,
       shuttle_id: shuttle.id,
       date: bookingData.date,
       seats: passengersCount,

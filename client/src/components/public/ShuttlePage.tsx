@@ -56,7 +56,6 @@ export const ShuttlePage = () => {
   const [reviewFeedback, setReviewFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
-    window.scrollTo(0, 0);
     const fetchShuttle = async () => {
       if (!id) return;
       try {

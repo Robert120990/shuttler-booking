@@ -120,6 +120,7 @@ async function initSqlite() {
       total_price REAL NOT NULL,
       status TEXT DEFAULT 'pending',
       payment_status TEXT DEFAULT 'pending',
+      boarding_status TEXT DEFAULT 'pending',
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       pickup_person_name TEXT
     );
@@ -165,6 +166,9 @@ async function initSqlite() {
   try {
     sqliteDb.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_settings_key ON settings (key)');
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_reviews_shuttle_id ON reviews (shuttle_id)');
+    try {
+      sqliteDb.run("ALTER TABLE bookings ADD COLUMN boarding_status TEXT DEFAULT 'pending'");
+    } catch (colErr) {}
   } catch (e) {}
 
   saveDb();
@@ -267,6 +271,7 @@ export async function initDb() {
             total_price NUMERIC NOT NULL,
             status TEXT DEFAULT 'pending',
             payment_status TEXT DEFAULT 'pending',
+            boarding_status TEXT DEFAULT 'pending',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             pickup_person_name TEXT
           );
@@ -310,6 +315,7 @@ export async function initDb() {
 
           CREATE UNIQUE INDEX IF NOT EXISTS idx_settings_key ON settings (key);
           CREATE INDEX IF NOT EXISTS idx_reviews_shuttle_id ON reviews (shuttle_id);
+          ALTER TABLE bookings ADD COLUMN IF NOT EXISTS boarding_status TEXT DEFAULT 'pending';
         `);
       } finally {
         client.release();

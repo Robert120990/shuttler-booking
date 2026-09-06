@@ -26,6 +26,7 @@ import { AdminSettings } from './components/admin/AdminSettings';
 import { AdminHostels } from './components/admin/AdminHostels';
 import { AdminContact } from './components/admin/AdminContact';
 import { AdminReviews } from './components/admin/AdminReviews';
+import { AdminManifest } from './components/admin/AdminManifest';
 
 const queryClient = new QueryClient();
 
@@ -57,6 +58,7 @@ function App() {
             <Route path="hostels" element={<AdminHostels />} />
             <Route path="shuttles" element={<AdminShuttles />} />
             <Route path="bookings" element={<AdminBookings />} />
+            <Route path="manifest" element={<AdminManifest />} />
             <Route path="reviews" element={<AdminReviews />} />
             <Route path="faqs" element={<AdminFAQs />} />
             <Route path="users" element={<AdminUsers />} />

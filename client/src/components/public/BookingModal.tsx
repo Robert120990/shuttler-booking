@@ -8,14 +8,14 @@ import { Select } from '../ui/Select';
 import { useBookingStore } from '../../stores/bookingStore';
 import { useAuthStore } from '../../stores/authStore';
 import { bookingsApi, hostelsApi } from '../../api/endpoints';
-import type { Shuttle, Hostel } from '../../types';
+import type { Shuttle, Hostel, Booking } from '../../types';
 
 interface BookingModalProps {
   shuttle: Shuttle;
   dates: { value: string; label: string }[];
   luggageOptions: { name: string; price: number }[];
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (booking: Booking) => void;
 }
 
 export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSuccess }: BookingModalProps) => {
@@ -216,7 +216,7 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
 
     try {
       setSubmitting(true);
-      await bookingsApi.create({
+      const res = await bookingsApi.create({
         user_id: user?.id,
         shuttle_id: shuttle.id,
         date: bookingData.date,
@@ -238,7 +238,7 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
         passenger_phone: '',
         pickup_person_name: '',
       });
-      onSuccess();
+      onSuccess(res.data);
     } catch (err: any) {
       console.error('Error al crear reserva:', err);
       const serverMsg = err.response?.data?.error || 'Hubo un error al procesar tu reserva. Por favor intenta de nuevo.';

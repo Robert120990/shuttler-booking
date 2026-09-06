@@ -1,5 +1,5 @@
 import api from './client';
-import type { Country, City, Shuttle, Booking, FAQ, User, Hostel, Review, ReviewStats } from '../types';
+import type { Country, City, Shuttle, Booking, FAQ, User, Hostel, Review, ReviewStats, ManifestData } from '../types';
 
 export const countriesApi = {
   getAll: () => api.get<Country[]>('/countries'),
@@ -39,9 +39,13 @@ export const shuttlesApi = {
 export const bookingsApi = {
   getAll: () => api.get<Booking[]>('/bookings'),
   getById: (id: string) => api.get<Booking>(`/bookings/${id}`),
+  getManifest: (date: string, shuttleId?: string) =>
+    api.get<ManifestData>(`/bookings/manifest?date=${encodeURIComponent(date)}${shuttleId ? `&shuttle_id=${encodeURIComponent(shuttleId)}` : ''}`),
   create: (data: Partial<Booking>) => api.post<Booking>('/bookings', data),
   update: (id: string, data: Partial<Booking>) => api.put<Booking>(`/bookings/${id}`, data),
   updateStatus: (id: string, status: string) => api.patch<Booking & { mailResult?: any }>(`/bookings/${id}/status`, { status }),
+  updateBoarding: (id: string, boarding_status: 'pending' | 'boarded' | 'no_show') =>
+    api.patch<Booking>(`/bookings/${id}/boarding`, { boarding_status }),
   resendNotification: (id: string, status?: string) => api.post<{ success: boolean; mailResult: any; booking: Booking }>(`/bookings/${id}/notify`, { status }),
 };
 

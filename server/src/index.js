@@ -136,11 +136,141 @@ app.get('/sitemap.xml', async (req, res) => {
 const clientDistPath = process.env.CLIENT_DIST || path.join(__dirname, '../../client/dist');
 app.use(express.static(clientDistPath));
 
-app.get('*', (req, res) => {
+app.get('*', async (req, res) => {
   if (req.path.startsWith('/api/') || req.path.startsWith('/images/')) {
     return res.status(404).json({ error: 'Not found' });
   }
-  res.sendFile(path.join(clientDistPath, 'index.html'));
+
+  const indexPath = path.join(clientDistPath, 'index.html');
+  if (!fs.existsSync(indexPath)) {
+    return res.status(404).send('Application client not found');
+  }
+
+  try {
+    let html = fs.readFileSync(indexPath, 'utf8');
+
+    const host = req.get('host') || 'localhost:3001';
+    const protocol = req.get('x-forwarded-proto') || req.protocol || 'https';
+    const baseUrl = process.env.PUBLIC_URL ? process.env.PUBLIC_URL.replace(/\/$/, '') : `${protocol}://${host}`;
+    const pageUrl = `${baseUrl}${req.originalUrl || req.path}`;
+
+    let metaTitle = 'Trail Explorer - Shuttles y Transporte en Centroamérica';
+    let metaDesc = 'Reserva shuttles compartidos y traslados turísticos en Costa Rica, Guatemala, El Salvador y toda Centroamérica. Reserva segura en minutos.';
+    let rawImg = '/logo.jpeg';
+
+    const cleanPath = req.path.replace(/\/$/, '');
+
+    // 1. Shuttles preview (/shuttles/:param)
+    const shuttleMatch = cleanPath.match(/^\/shuttles\/([^\/]+)$/);
+    if (shuttleMatch) {
+      const shuttleParam = shuttleMatch[1];
+      try {
+        const s = await prepare(`
+          SELECT s.*,
+                 o.name as origin_name, o.image_url as origin_image,
+                 d.name as destination_name, d.image_url as destination_image
+          FROM shuttles s
+          JOIN cities o ON s.origin_city_id = o.id
+          JOIN cities d ON s.destination_city_id = d.id
+          WHERE s.id = ? OR s.slug = ?
+        `).get(shuttleParam, shuttleParam);
+
+        if (s) {
+          metaTitle = `Shuttle ${s.origin_name} a ${s.destination_name} | Trail Explorer`;
+          metaDesc = `Viaja cómodo y seguro de ${s.origin_name} a ${s.destination_name} por solo $${s.price} USD. Salidas programadas con aire acondicionado. Reserva en línea con confirmación inmediata.`;
+          rawImg = s.image_url || s.destination_image || s.origin_image || '/logo.jpeg';
+        }
+      } catch (err) {
+        console.error('Error querying shuttle for OpenGraph:', err);
+      }
+    }
+
+    // 2. Cities preview (/cities/:slug)
+    const cityMatch = cleanPath.match(/^\/cities\/([^\/]+)$/);
+    if (cityMatch) {
+      const citySlug = cityMatch[1];
+      try {
+        const c = await prepare(`
+          SELECT c.*, co.name as country_name
+          FROM cities c
+          LEFT JOIN countries co ON c.country_id = co.id
+          WHERE c.slug = ?
+        `).get(citySlug);
+
+        if (c) {
+          metaTitle = `Shuttles y Transporte hacia ${c.name}${c.country_name ? `, ${c.country_name}` : ''} | Trail Explorer`;
+          metaDesc = c.description || `Explora todas las rutas de shuttle, horarios y precios desde o hacia ${c.name}. Reserva tu viaje seguro en Centroamérica.`;
+          rawImg = c.image_url || '/logo.jpeg';
+        }
+      } catch (err) {
+        console.error('Error querying city for OpenGraph:', err);
+      }
+    }
+
+    // 3. Countries preview (/countries/:slug)
+    const countryMatch = cleanPath.match(/^\/countries\/([^\/]+)$/);
+    if (countryMatch) {
+      const countrySlug = countryMatch[1];
+      try {
+        const co = await prepare(`SELECT * FROM countries WHERE slug = ?`).get(countrySlug);
+        if (co) {
+          metaTitle = `Shuttles y Rutas Turísticas en ${co.name} | Trail Explorer`;
+          metaDesc = co.description || `Encuentra las mejores conexiones de shuttle y transporte turístico en ${co.name}. Reserva fácil y rápido.`;
+          rawImg = co.image_url || '/logo.jpeg';
+        }
+      } catch (err) {
+        console.error('Error querying country for OpenGraph:', err);
+      }
+    }
+
+    // Ensure image is absolute URL
+    let metaImage = rawImg;
+    if (metaImage && !metaImage.startsWith('http://') && !metaImage.startsWith('https://')) {
+      metaImage = `${baseUrl}${metaImage.startsWith('/') ? '' : '/'}${metaImage}`;
+    }
+
+    // Escape special HTML chars in metadata
+    const escapeHtml = (str) => String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    const safeTitle = escapeHtml(metaTitle);
+    const safeDesc = escapeHtml(metaDesc);
+    const safeImage = escapeHtml(metaImage);
+    const safeUrl = escapeHtml(pageUrl);
+
+    // Replace <title> and description meta
+    html = html.replace(/<title>.*?<\/title>/i, `<title>${safeTitle}</title>`);
+    html = html.replace(/<meta\s+name="description"\s+content=".*?"\s*\/?>/i, `<meta name="description" content="${safeDesc}" />`);
+
+    // Build OpenGraph & Twitter tags
+    const ogTags = `
+    <!-- Dynamic OpenGraph & Social Media Meta Tags -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Trail Explorer" />
+    <meta property="og:title" content="${safeTitle}" />
+    <meta property="og:description" content="${safeDesc}" />
+    <meta property="og:image" content="${safeImage}" />
+    <meta property="og:url" content="${safeUrl}" />
+    <meta property="og:locale" content="es_ES" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${safeTitle}" />
+    <meta name="twitter:description" content="${safeDesc}" />
+    <meta name="twitter:image" content="${safeImage}" />
+`;
+
+    // Inject before </head>
+    html = html.replace('</head>', `${ogTags}\n  </head>`);
+
+    res.header('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+  } catch (error) {
+    console.error('Error serving dynamic HTML:', error);
+    res.sendFile(indexPath);
+  }
 });
 
 // Start listening immediately so Railway health checks pass instantly

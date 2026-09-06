@@ -21,6 +21,94 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET /api/bookings/manifest?date=YYYY-MM-DD[&shuttle_id=...]
+router.get('/manifest', async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const targetDate = req.query.date || today;
+    const shuttleId = req.query.shuttle_id;
+
+    let query = `
+      SELECT b.*,
+             s.name as shuttle_name, s.schedule, s.duration_hours, s.operator,
+             s.origin_city_id, s.destination_city_id,
+             o.name as origin_name, d.name as destination_name
+      FROM bookings b
+      JOIN shuttles s ON b.shuttle_id = s.id
+      JOIN cities o ON s.origin_city_id = o.id
+      JOIN cities d ON s.destination_city_id = d.id
+      WHERE b.date = ? AND b.status != 'cancelled'
+    `;
+    const params = [targetDate];
+
+    if (shuttleId) {
+      query += ` AND b.shuttle_id = ?`;
+      params.push(shuttleId);
+    }
+
+    query += ` ORDER BY s.schedule ASC, b.pickup_location ASC, b.created_at ASC`;
+
+    const rawBookings = await prepare(query).all(...params);
+
+    const routesMap = new Map();
+    let totalPassengers = 0;
+    let totalLuggage = 0;
+    let boardedCount = 0;
+    let pendingCount = 0;
+    let noShowCount = 0;
+
+    for (const b of rawBookings) {
+      const seats = Number(b.seats) || 1;
+      const luggage = Number(b.extra_luggage) || 0;
+      const bStatus = b.boarding_status || 'pending';
+
+      totalPassengers += seats;
+      totalLuggage += luggage;
+
+      if (bStatus === 'boarded') boardedCount += seats;
+      else if (bStatus === 'no_show') noShowCount += seats;
+      else pendingCount += seats;
+
+      if (!routesMap.has(b.shuttle_id)) {
+        routesMap.set(b.shuttle_id, {
+          shuttle_id: b.shuttle_id,
+          shuttle_name: b.shuttle_name,
+          schedule: b.schedule,
+          duration_hours: b.duration_hours,
+          operator: b.operator,
+          origin_name: b.origin_name,
+          destination_name: b.destination_name,
+          total_passengers: 0,
+          total_luggage: 0,
+          passengers: []
+        });
+      }
+
+      const routeGroup = routesMap.get(b.shuttle_id);
+      routeGroup.total_passengers += seats;
+      routeGroup.total_luggage += luggage;
+      routeGroup.passengers.push(b);
+    }
+
+    res.json({
+      date: targetDate,
+      summary: {
+        total_bookings: rawBookings.length,
+        total_passengers: totalPassengers,
+        total_luggage: totalLuggage,
+        boarded_count: boardedCount,
+        pending_count: pendingCount,
+        no_show_count: noShowCount,
+        routes_count: routesMap.size
+      },
+      routes: Array.from(routesMap.values())
+    });
+  } catch (error) {
+    console.error('Error fetching manifest:', error);
+    res.status(500).json({ error: 'Failed to fetch manifest' });
+  }
+});
+
 router.get('/:id', async (req, res) => {
   try {
     const booking = await prepare(`
@@ -167,6 +255,29 @@ router.patch('/:id/payment', async (req, res) => {
   } catch (error) {
     console.error('Error updating booking payment:', error);
     res.status(500).json({ error: 'Failed to update booking payment' });
+  }
+});
+
+// PATCH /api/bookings/:id/boarding - Update passenger boarding status
+router.patch('/:id/boarding', async (req, res) => {
+  try {
+    const { boarding_status } = req.body;
+    if (!['pending', 'boarded', 'no_show'].includes(boarding_status)) {
+      return res.status(400).json({ error: 'Estado de abordaje inválido' });
+    }
+
+    const booking = await prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ error: 'Reserva no encontrada' });
+    }
+
+    await prepare('UPDATE bookings SET boarding_status = ? WHERE id = ?').run(boarding_status, req.params.id);
+
+    const updated = await prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating boarding status:', error);
+    res.status(500).json({ error: 'Error al actualizar estado de abordaje' });
   }
 });
 

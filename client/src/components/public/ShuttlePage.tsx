@@ -12,6 +12,7 @@ import { useLanguageStore } from '../../i18n';
 import { shuttlesApi, reviewsApi } from '../../api/endpoints';
 import { getImageUrl } from '../../api/client';
 import { BookingModal } from './BookingModal';
+import { BookingConfirmationModal } from './BookingConfirmationModal';
 import { SEO } from '../seo/SEO';
 import {
   translateRouteName,
@@ -24,7 +25,7 @@ import {
   translateAvailability,
   generateLocalizedDates,
 } from '../../utils/shuttleTranslator';
-import type { Shuttle, Review, ReviewStats } from '../../types';
+import type { Shuttle, Review, ReviewStats, Booking } from '../../types';
 
 export const ShuttlePage = () => {
   const { id } = useParams<{ id: string }>();
@@ -37,6 +38,7 @@ export const ShuttlePage = () => {
   const { isAuthenticated, user } = useAuthStore();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [confirmedBooking, setConfirmedBooking] = useState<Booking | null>(null);
 
   // Reviews state
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -209,9 +211,9 @@ export const ShuttlePage = () => {
     setShowBookingModal(true);
   };
 
-  const handleBookingSuccess = () => {
+  const handleBookingSuccess = (createdBooking: Booking) => {
     setShowBookingModal(false);
-    alert(t('bookingModal.bookingSuccess'));
+    setConfirmedBooking(createdBooking);
     setBookingData({ extra_luggage: [] });
   };
 
@@ -879,6 +881,14 @@ export const ShuttlePage = () => {
           luggageOptions={luggageOptions}
           onClose={() => setShowBookingModal(false)}
           onSuccess={handleBookingSuccess}
+        />
+      )}
+
+      {confirmedBooking && (
+        <BookingConfirmationModal
+          shuttle={{ ...shuttle, name: routeName }}
+          booking={confirmedBooking}
+          onClose={() => setConfirmedBooking(null)}
         />
       )}
     </div>

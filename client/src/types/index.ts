@@ -91,7 +91,44 @@ export interface Booking {
   total_price: number;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   payment_status: 'pending' | 'paid' | 'refunded';
+  boarding_status?: 'pending' | 'boarded' | 'no_show';
   created_at: string;
+}
+
+export interface ManifestRoute {
+  shuttle_id: string;
+  shuttle_name: string;
+  schedule?: string;
+  duration_hours?: number;
+  operator?: string;
+  origin_name?: string;
+  destination_name?: string;
+  total_passengers: number;
+  total_luggage: number;
+  passengers: (Booking & {
+    shuttle_name?: string;
+    schedule?: string;
+    duration_hours?: number;
+    operator?: string;
+    origin_name?: string;
+    destination_name?: string;
+  })[];
+}
+
+export interface ManifestSummary {
+  total_bookings: number;
+  total_passengers: number;
+  total_luggage: number;
+  boarded_count: number;
+  pending_count: number;
+  no_show_count: number;
+  routes_count: number;
+}
+
+export interface ManifestData {
+  date: string;
+  summary: ManifestSummary;
+  routes: ManifestRoute[];
 }
 
 export interface User {

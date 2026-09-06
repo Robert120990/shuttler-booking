@@ -335,9 +335,14 @@ export const AdminBookings = () => {
 
                     {/* Payment */}
                     <td className="py-3 px-4">
-                      <Badge variant={getPaymentBadgeVariant(booking.payment_status || 'pending')}>
-                        {booking.payment_status === 'paid' ? 'Pagado' : booking.payment_status === 'refunded' ? 'Reembolsado' : 'Pendiente'}
-                      </Badge>
+                      <div className="flex flex-col items-start gap-1">
+                        <Badge variant={getPaymentBadgeVariant(booking.payment_status || 'pending')}>
+                          {booking.payment_status === 'paid' ? 'Pagado' : booking.payment_status === 'refunded' ? 'Reembolsado' : 'Pendiente'}
+                        </Badge>
+                        <span className="text-[11px] text-slate-500 font-medium">
+                          {booking.payment_method === 'wompi' ? '💳 Wompi' : booking.payment_method === 'paypal' ? '🅿️ PayPal' : '💵 Al abordar'}
+                        </span>
+                      </div>
                     </td>
 
                     {/* Actions */}
@@ -406,9 +411,14 @@ export const AdminBookings = () => {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Badge variant={getPaymentBadgeVariant(booking.payment_status || 'pending')}>
-                      {booking.payment_status === 'paid' ? 'Pagado' : booking.payment_status === 'refunded' ? 'Reembolsado' : 'Pendiente'}
-                    </Badge>
+                    <div className="flex flex-col items-end gap-0.5">
+                      <Badge variant={getPaymentBadgeVariant(booking.payment_status || 'pending')}>
+                        {booking.payment_status === 'paid' ? 'Pagado' : booking.payment_status === 'refunded' ? 'Reembolsado' : 'Pendiente'}
+                      </Badge>
+                      <span className="text-[10px] text-slate-500">
+                        {booking.payment_method === 'wompi' ? '💳 Wompi' : booking.payment_method === 'paypal' ? '🅿️ PayPal' : '💵 Al abordar'}
+                      </span>
+                    </div>
 
                     {updatingId === booking.id ? (
                       <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
@@ -564,9 +574,19 @@ export const AdminBookings = () => {
                       className="text-xs py-1 text-slate-900 bg-white min-w-[130px]"
                     />
                   </div>
-                  <Badge variant={getPaymentBadgeVariant(selectedBooking.payment_status || 'pending')}>
-                    Pago: {selectedBooking.payment_status === 'paid' ? 'Pagado' : selectedBooking.payment_status === 'refunded' ? 'Reembolsado' : 'Pendiente'}
-                  </Badge>
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
+                    <Badge variant={getPaymentBadgeVariant(selectedBooking.payment_status || 'pending')}>
+                      Pago: {selectedBooking.payment_status === 'paid' ? 'Pagado' : selectedBooking.payment_status === 'refunded' ? 'Reembolsado' : 'Pendiente'}
+                    </Badge>
+                    <span className="text-xs text-slate-300 font-medium bg-slate-800 px-2 py-0.5 rounded">
+                      {selectedBooking.payment_method === 'wompi' ? '💳 Wompi' : selectedBooking.payment_method === 'paypal' ? '🅿️ PayPal' : '💵 Pago al abordar'}
+                    </span>
+                  </div>
+                  {selectedBooking.payment_id && (
+                    <span className="text-[11px] text-slate-400 font-mono">
+                      ID Pago: {selectedBooking.payment_id}
+                    </span>
+                  )}
                 </div>
               </div>
 

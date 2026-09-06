@@ -1,5 +1,5 @@
 import api from './client';
-import type { Country, City, Shuttle, Booking, FAQ, User, Hostel, Review, ReviewStats, ManifestData } from '../types';
+import type { Country, City, Shuttle, Booking, FAQ, User, Hostel, Review, ReviewStats, ManifestData, PublicSettings } from '../types';
 
 export const countriesApi = {
   getAll: () => api.get<Country[]>('/countries'),
@@ -72,9 +72,22 @@ export const authApi = {
 
 export const settingsApi = {
   getAll: () => api.get<Record<string, string>>('/settings'),
-  getPublic: () => api.get<Record<string, string>>('/settings/public'),
+  getPublic: () => api.get<PublicSettings>('/settings/public'),
   update: (data: Record<string, any>) => api.post<{ message: string; settings: Record<string, string> }>('/settings', data),
   testSmtp: (data: Record<string, any>) => api.post<{ success: boolean; message: string }>('/settings/test-smtp', data, { timeout: 35000 }),
+};
+
+export const paymentsApi = {
+  paypalCreateOrder: (data: { bookingData: any; currency?: string }) =>
+    api.post<{ orderID: string; simulated?: boolean }>('/payments/paypal/create-order', data),
+  paypalCaptureOrder: (orderId: string, bookingData?: any) =>
+    api.post<{ success: boolean; details: any; simulated?: boolean }>('/payments/paypal/capture-order', { orderId, bookingData }),
+  wompiCreateCheckout: (data: { bookingData: any; currency?: string }) =>
+    api.post<{ reference: string; amountInCents: number; currency: string; publicKey: string; env: string; simulated?: boolean }>('/payments/wompi/create-checkout', data),
+  wompiConfirm: (data: { transactionId: string; reference: string; bookingData?: any }) =>
+    api.post<{ success: boolean; transaction: any; simulated?: boolean }>('/payments/wompi/confirm', data),
+  payOnArrival: (data: { bookingData: any }) =>
+    api.post<{ success: boolean; instructions: string }>('/payments/pay-on-arrival', data),
 };
 
 export const reviewsApi = {

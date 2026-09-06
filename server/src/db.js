@@ -121,6 +121,9 @@ async function initSqlite() {
       status TEXT DEFAULT 'pending',
       payment_status TEXT DEFAULT 'pending',
       boarding_status TEXT DEFAULT 'pending',
+      payment_method TEXT DEFAULT 'pay_on_arrival',
+      payment_id TEXT,
+      payment_details TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       pickup_person_name TEXT
     );
@@ -168,6 +171,15 @@ async function initSqlite() {
     sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_reviews_shuttle_id ON reviews (shuttle_id)');
     try {
       sqliteDb.run("ALTER TABLE bookings ADD COLUMN boarding_status TEXT DEFAULT 'pending'");
+    } catch (colErr) {}
+    try {
+      sqliteDb.run("ALTER TABLE bookings ADD COLUMN payment_method TEXT DEFAULT 'pay_on_arrival'");
+    } catch (colErr) {}
+    try {
+      sqliteDb.run("ALTER TABLE bookings ADD COLUMN payment_id TEXT");
+    } catch (colErr) {}
+    try {
+      sqliteDb.run("ALTER TABLE bookings ADD COLUMN payment_details TEXT");
     } catch (colErr) {}
   } catch (e) {}
 
@@ -272,6 +284,9 @@ export async function initDb() {
             status TEXT DEFAULT 'pending',
             payment_status TEXT DEFAULT 'pending',
             boarding_status TEXT DEFAULT 'pending',
+            payment_method TEXT DEFAULT 'pay_on_arrival',
+            payment_id TEXT,
+            payment_details TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             pickup_person_name TEXT
           );
@@ -316,6 +331,9 @@ export async function initDb() {
           CREATE UNIQUE INDEX IF NOT EXISTS idx_settings_key ON settings (key);
           CREATE INDEX IF NOT EXISTS idx_reviews_shuttle_id ON reviews (shuttle_id);
           ALTER TABLE bookings ADD COLUMN IF NOT EXISTS boarding_status TEXT DEFAULT 'pending';
+          ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_method TEXT DEFAULT 'pay_on_arrival';
+          ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_id TEXT;
+          ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_details TEXT;
         `);
       } finally {
         client.release();

@@ -18,6 +18,15 @@ router.get('/public', async (req, res) => {
       social_facebook: settings.social_facebook || '',
       social_instagram: settings.social_instagram || '',
       social_tiktok: settings.social_tiktok || '',
+      // Payment Gateways public configuration
+      paypal_enabled: settings.paypal_enabled === 'true',
+      paypal_client_id: settings.paypal_client_id || '',
+      paypal_env: settings.paypal_env || 'sandbox',
+      wompi_enabled: settings.wompi_enabled === 'true',
+      wompi_public_key: settings.wompi_public_key || '',
+      wompi_env: settings.wompi_env || 'sandbox',
+      pay_on_arrival_enabled: settings.pay_on_arrival_enabled !== 'false',
+      pay_on_arrival_instructions: settings.pay_on_arrival_instructions || 'Paga en efectivo en USD o mediante transferencia local al momento de abordar la unidad.',
     };
     res.json(publicSettings);
   } catch (error) {
@@ -64,8 +73,8 @@ router.post('/', async (req, res) => {
         const cleanKey = key.trim();
         const strVal = value === undefined || value === null ? '' : String(value).trim();
 
-        // Do not wipe out existing password or user credentials with empty string
-        if ((cleanKey === 'smtp_pass' || cleanKey === 'smtp_user') && !strVal) {
+        // Do not wipe out existing password or secret credentials with empty string
+        if ((cleanKey === 'smtp_pass' || cleanKey === 'smtp_user' || cleanKey === 'paypal_secret_key' || cleanKey === 'wompi_private_key') && !strVal) {
           continue;
         }
 

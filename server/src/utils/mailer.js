@@ -27,6 +27,17 @@ export const DEFAULT_SETTINGS = {
   social_facebook: '',
   social_instagram: '',
   social_tiktok: '',
+  // Payment Gateways defaults
+  paypal_enabled: 'false',
+  paypal_client_id: '',
+  paypal_secret_key: '',
+  paypal_env: 'sandbox',
+  wompi_enabled: 'false',
+  wompi_public_key: '',
+  wompi_private_key: '',
+  wompi_env: 'sandbox',
+  pay_on_arrival_enabled: 'true',
+  pay_on_arrival_instructions: 'Paga en efectivo en USD o mediante transferencia local al momento de abordar la unidad.',
 };
 
 /**

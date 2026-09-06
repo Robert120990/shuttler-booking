@@ -133,7 +133,15 @@ export const AdminManifest = () => {
       text += `\n   📞 Tel: ${p.passenger_phone || 'N/A'}`;
       text += `\n   🏁 Destino: ${p.dropoff_location}`;
       text += `\n   🎫 Localizador: #${bCode}`;
-      text += `\n   💰 Pago: ${p.payment_status === 'paid' ? 'PAGADO ✅' : 'PENDIENTE ⚠️'}\n\n`;
+      const methodLabel = p.payment_method === 'wompi'
+        ? 'Wompi (En línea)'
+        : p.payment_method === 'paypal'
+        ? 'PayPal (En línea)'
+        : 'Al abordar';
+      const paymentInfo = p.payment_status === 'paid'
+        ? `PAGADO EN LÍNEA ✅ (${methodLabel})`
+        : `COBRAR EN EFECTIVO AL SUBIR 💵 ($${p.total_price} USD)`;
+      text += `\n   💰 Pago: ${paymentInfo}\n\n`;
     });
 
     return text;
@@ -572,15 +580,20 @@ export const AdminManifest = () => {
 
                           {/* Payment */}
                           <td className="py-3.5 px-3 text-center">
-                            <span
-                              className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                                p.payment_status === 'paid'
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : 'bg-amber-100 text-amber-800'
-                              }`}
-                            >
-                              {p.payment_status === 'paid' ? 'Pagado' : `$${p.total_price}`}
-                            </span>
+                            <div className="flex flex-col items-center gap-0.5">
+                              <span
+                                className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                  p.payment_status === 'paid'
+                                    ? 'bg-emerald-100 text-emerald-800'
+                                    : 'bg-amber-100 text-amber-800 font-bold'
+                                }`}
+                              >
+                                {p.payment_status === 'paid' ? 'Pagado ✓' : `Cobrar: $${p.total_price}`}
+                              </span>
+                              <span className="text-[10px] text-slate-500">
+                                {p.payment_method === 'wompi' ? '💳 Wompi' : p.payment_method === 'paypal' ? '🅿️ PayPal' : '💵 Al abordar'}
+                              </span>
+                            </div>
                           </td>
 
                           {/* Boarding Status Toggle (Screen only) */}

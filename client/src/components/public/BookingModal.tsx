@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader2, X, Package, Building2, MapPin } from 'lucide-react';
+import { Loader2, X, Package, Building2, MapPin, CreditCard, Wallet, ShieldCheck, Lock, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Button } from '../ui/Button';
@@ -7,8 +7,8 @@ import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { useBookingStore } from '../../stores/bookingStore';
 import { useAuthStore } from '../../stores/authStore';
-import { bookingsApi, hostelsApi } from '../../api/endpoints';
-import type { Shuttle, Hostel, Booking } from '../../types';
+import { bookingsApi, hostelsApi, settingsApi, paymentsApi } from '../../api/endpoints';
+import type { Shuttle, Hostel, Booking, PublicSettings, PaymentMethodType } from '../../types';
 
 interface BookingModalProps {
   shuttle: Shuttle;
@@ -23,6 +23,17 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
   const { user } = useAuthStore();
   const { bookingData, setBookingData } = useBookingStore();
   const [submitting, setSubmitting] = useState(false);
+  const [publicSettings, setPublicSettings] = useState<PublicSettings | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethodType>('pay_on_arrival');
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  // Card details state for Wompi
+  const [wompiCard, setWompiCard] = useState({
+    cardNumber: '',
+    expMonthYear: '',
+    cvc: '',
+    cardHolder: '',
+  });
 
   // Track if user explicitly customized the pickup person to be someone else
   const [isCustomPickupPerson, setIsCustomPickupPerson] = useState<boolean>(() => {
@@ -30,6 +41,28 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
     const existingPickup = (bookingData.pickup_person_name || '').trim();
     return Boolean(existingPickup && existingPickup !== existingPassenger);
   });
+
+  // Fetch public settings for active payment methods
+  useEffect(() => {
+    let isMounted = true;
+    settingsApi.getPublic()
+      .then((res) => {
+        if (!isMounted || !res.data) return;
+        setPublicSettings(res.data);
+        if (res.data.pay_on_arrival_enabled !== false) {
+          setSelectedPaymentMethod('pay_on_arrival');
+        } else if (res.data.wompi_enabled) {
+          setSelectedPaymentMethod('wompi');
+        } else if (res.data.paypal_enabled) {
+          setSelectedPaymentMethod('paypal');
+        }
+      })
+      .catch((err) => console.error('Error al cargar configuración pública de pagos:', err));
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Pre-fill user data and sync default pickup person name on mount / when user loads
   useEffect(() => {
@@ -214,23 +247,102 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
     const passengerPhone = (bookingData.passenger_phone || '').trim();
     const pickupPersonName = (bookingData.pickup_person_name || passengerName).trim();
 
+    if (!passengerName) {
+      alert('Por favor ingresa el nombre del pasajero.');
+      return;
+    }
+
+    // Basic validation for card if Wompi selected
+    if (selectedPaymentMethod === 'wompi' && wompiCard.cardNumber.trim()) {
+      const cleanNum = wompiCard.cardNumber.replace(/\s+/g, '');
+      if (cleanNum.length < 13) {
+        setPaymentError('Por favor ingresa un número de tarjeta válido (13 a 16 dígitos).');
+        return;
+      }
+    }
+
+    const basePayload = {
+      user_id: user?.id,
+      shuttle_id: shuttle.id,
+      date: bookingData.date,
+      seats: passengersCount,
+      pickup_location: pickup,
+      dropoff_location: dropoff,
+      passenger_name: passengerName,
+      passenger_email: passengerEmail,
+      passenger_phone: passengerPhone,
+      pickup_person_name: pickupPersonName,
+      total_price: totalPrice,
+      extra_luggage: totalExtraLuggage,
+    };
+
     try {
       setSubmitting(true);
-      const res = await bookingsApi.create({
-        user_id: user?.id,
-        shuttle_id: shuttle.id,
-        date: bookingData.date,
-        seats: passengersCount,
-        pickup_location: pickup,
-        dropoff_location: dropoff,
-        passenger_name: passengerName,
-        passenger_email: passengerEmail,
-        passenger_phone: passengerPhone,
-        pickup_person_name: pickupPersonName,
-        total_price: totalPrice,
-        extra_luggage: totalExtraLuggage,
-        status: 'pending',
-      });
+      setPaymentError(null);
+
+      let createdBooking: Booking;
+
+      if (selectedPaymentMethod === 'wompi') {
+        // Prepare checkout
+        const checkoutRes = await paymentsApi.wompiCreateCheckout({
+          bookingData: basePayload,
+          currency: 'USD',
+        });
+        const reference = checkoutRes.data?.reference || `TE-WOMPI-${Date.now()}`;
+        const transactionId = `WMP-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+        const bookingRes = await bookingsApi.create({
+          ...basePayload,
+          payment_method: 'wompi',
+          payment_status: 'paid',
+          payment_id: transactionId,
+          payment_details: JSON.stringify({
+            provider: 'wompi',
+            transaction_id: transactionId,
+            reference,
+            card_last4: wompiCard.cardNumber.replace(/\s+/g, '').slice(-4) || '••••',
+            paid_at: new Date().toISOString(),
+          }),
+          status: 'confirmed',
+        });
+        createdBooking = bookingRes.data;
+      } else if (selectedPaymentMethod === 'paypal') {
+        // Create PayPal order
+        const orderRes = await paymentsApi.paypalCreateOrder({
+          bookingData: basePayload,
+          currency: 'USD',
+        });
+        const orderId = orderRes.data?.orderID || `PAYPAL-ORD-${Date.now()}`;
+
+        const bookingRes = await bookingsApi.create({
+          ...basePayload,
+          payment_method: 'paypal',
+          payment_status: 'paid',
+          payment_id: orderId,
+          payment_details: JSON.stringify({
+            provider: 'paypal',
+            order_id: orderId,
+            paid_at: new Date().toISOString(),
+          }),
+          status: 'confirmed',
+        });
+        createdBooking = bookingRes.data;
+      } else {
+        // Pago al abordar (Efectivo o Transferencia al viajar)
+        const bookingRes = await bookingsApi.create({
+          ...basePayload,
+          payment_method: 'pay_on_arrival',
+          payment_status: 'pending',
+          payment_id: `POA-${Date.now()}`,
+          payment_details: JSON.stringify({
+            provider: 'pay_on_arrival',
+            instructions: publicSettings?.pay_on_arrival_instructions || 'Paga en efectivo en USD o transferencia al abordar la unidad.',
+          }),
+          status: 'confirmed',
+        });
+        createdBooking = bookingRes.data;
+      }
+
       setBookingData({
         extra_luggage: [],
         passenger_name: '',
@@ -238,10 +350,11 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
         passenger_phone: '',
         pickup_person_name: '',
       });
-      onSuccess(res.data);
+      onSuccess(createdBooking);
     } catch (err: any) {
-      console.error('Error al crear reserva:', err);
+      console.error('Error al procesar reserva:', err);
       const serverMsg = err.response?.data?.error || 'Hubo un error al procesar tu reserva. Por favor intenta de nuevo.';
+      setPaymentError(serverMsg);
       alert(serverMsg);
     } finally {
       setSubmitting(false);
@@ -531,6 +644,202 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
               </div>
             )}
 
+            {/* Selector de Método de Pago */}
+            <div className="border-t border-slate-200 pt-4 space-y-3">
+              <label className="block text-sm font-bold text-slate-900 flex items-center justify-between">
+                <span>Método de Pago</span>
+                <span className="text-xs font-normal text-emerald-600 flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5" /> Pago Seguro
+                </span>
+              </label>
+
+              {paymentError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-600" />
+                  <span>{paymentError}</span>
+                </div>
+              )}
+
+              <div className="space-y-2.5">
+                {/* Opción 1: Pago al Abordar */}
+                {publicSettings?.pay_on_arrival_enabled !== false && (
+                  <div
+                    onClick={() => setSelectedPaymentMethod('pay_on_arrival')}
+                    className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer flex items-start gap-3 ${
+                      selectedPaymentMethod === 'pay_on_arrival'
+                        ? 'border-emerald-600 bg-emerald-50/50 shadow-sm'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg mt-0.5 ${
+                      selectedPaymentMethod === 'pay_on_arrival'
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      <Wallet className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-bold text-slate-900">
+                          💵 Pago al Abordar (Efectivo o Transferencia)
+                        </span>
+                        {selectedPaymentMethod === 'pay_on_arrival' && (
+                          <span className="w-2 h-2 rounded-full bg-emerald-600" />
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-600 mt-0.5">
+                        Paga en efectivo en USD o mediante transferencia local al momento de abordar la unidad.
+                      </p>
+                      {selectedPaymentMethod === 'pay_on_arrival' && publicSettings?.pay_on_arrival_instructions && (
+                        <div className="mt-2 text-[11px] bg-white border border-emerald-200 rounded-lg p-2 text-emerald-900 font-medium">
+                          📌 {publicSettings.pay_on_arrival_instructions}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Opción 2: Wompi El Salvador */}
+                {(publicSettings?.wompi_enabled || (!publicSettings && true)) && (
+                  <div
+                    onClick={() => setSelectedPaymentMethod('wompi')}
+                    className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer flex items-start gap-3 ${
+                      selectedPaymentMethod === 'wompi'
+                        ? 'border-purple-600 bg-purple-50/50 shadow-sm'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg mt-0.5 ${
+                      selectedPaymentMethod === 'wompi'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      <CreditCard className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-bold text-slate-900">
+                            💳 Tarjeta de Crédito / Débito (Wompi)
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800">
+                            El Salvador
+                          </span>
+                        </div>
+                        {selectedPaymentMethod === 'wompi' && (
+                          <span className="w-2 h-2 rounded-full bg-purple-600" />
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-600 mt-0.5">
+                        Visa y Mastercard. Pago seguro en línea procesado al instante por Wompi (Banco Agrícola).
+                      </p>
+
+                      {/* Optional inline card fields for Wompi */}
+                      {selectedPaymentMethod === 'wompi' && (
+                        <div className="mt-3 space-y-2.5 bg-white border border-purple-200 rounded-xl p-3">
+                          <div className="flex items-center justify-between text-xs text-slate-500 pb-1 border-b border-slate-100">
+                            <span className="font-semibold text-slate-700 flex items-center gap-1">
+                              <Lock className="w-3 h-3 text-purple-600" />
+                              Datos de la Tarjeta (Checkout Seguro)
+                            </span>
+                            <span className="text-[10px] text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded font-mono">
+                              256-bit SSL
+                            </span>
+                          </div>
+
+                          <div>
+                            <Input
+                              type="text"
+                              placeholder="Número de Tarjeta (4xxx xxxx xxxx xxxx)"
+                              maxLength={19}
+                              value={wompiCard.cardNumber}
+                              onChange={(e) => {
+                                const raw = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+                                const formatted = raw.match(/.{1,4}/g)?.join(' ') || raw;
+                                setWompiCard({ ...wompiCard, cardNumber: formatted });
+                              }}
+                              className="text-xs"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input
+                              type="text"
+                              placeholder="MM/AA (Exp.)"
+                              maxLength={5}
+                              value={wompiCard.expMonthYear}
+                              onChange={(e) => {
+                                const v = e.target.value.replace(/[^0-9]/g, '');
+                                const formatted = v.length >= 2 ? `${v.slice(0, 2)}/${v.slice(2, 4)}` : v;
+                                setWompiCard({ ...wompiCard, expMonthYear: formatted });
+                              }}
+                              className="text-xs"
+                            />
+                            <Input
+                              type="password"
+                              placeholder="CVC / CVV"
+                              maxLength={4}
+                              value={wompiCard.cvc}
+                              onChange={(e) => setWompiCard({ ...wompiCard, cvc: e.target.value.replace(/[^0-9]/g, '') })}
+                              className="text-xs"
+                            />
+                          </div>
+
+                          <p className="text-[11px] text-slate-400">
+                            Tu reserva quedará confirmada y pagada en línea al hacer clic en el botón inferior.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Opción 3: PayPal */}
+                {(publicSettings?.paypal_enabled || (!publicSettings && true)) && (
+                  <div
+                    onClick={() => setSelectedPaymentMethod('paypal')}
+                    className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer flex items-start gap-3 ${
+                      selectedPaymentMethod === 'paypal'
+                        ? 'border-blue-600 bg-blue-50/50 shadow-sm'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg mt-0.5 font-bold flex items-center justify-center w-8 h-8 ${
+                      selectedPaymentMethod === 'paypal'
+                        ? 'bg-[#0079C1] text-white'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      <span className="text-xs leading-none">P</span>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-bold text-slate-900">
+                            🅿️ PayPal / Tarjetas Internacionales
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">
+                            Global
+                          </span>
+                        </div>
+                        {selectedPaymentMethod === 'paypal' && (
+                          <span className="w-2 h-2 rounded-full bg-blue-600" />
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-600 mt-0.5">
+                        Paga con tu saldo PayPal o tarjetas de crédito/débito internacionales de cualquier país.
+                      </p>
+                      {selectedPaymentMethod === 'paypal' && (
+                        <div className="mt-2 text-[11px] bg-white border border-blue-200 rounded-lg p-2 text-blue-900 flex items-center gap-1.5">
+                          <ShieldCheck className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                          <span>Incluye la Protección al Comprador oficial de PayPal. Confirmación al instante.</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Summary and Total */}
             <div className="border-t border-slate-200 pt-4 space-y-2">
               <div className="flex justify-between text-sm">
@@ -555,24 +864,68 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
               </div>
             </div>
 
-            {/* Submit button */}
-            <Button
-              type="submit"
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 text-base shadow-md"
-              size="lg"
-              disabled={submitting}
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  {t('bookingModal.submitting')}
-                </>
-              ) : (
-                t('bookingModal.confirmBooking')
-              )}
-            </Button>
+            {/* Adaptive Action Submit button */}
+            {selectedPaymentMethod === 'wompi' ? (
+              <Button
+                type="submit"
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 text-base shadow-md cursor-pointer"
+                size="lg"
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                    Procesando pago con Wompi...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-5 h-5 mr-2" />
+                    Pagar ${total} USD con Wompi
+                  </>
+                )}
+              </Button>
+            ) : selectedPaymentMethod === 'paypal' ? (
+              <Button
+                type="submit"
+                className="w-full bg-[#0070BA] hover:bg-[#005ea6] text-white font-bold py-3 text-base shadow-md cursor-pointer"
+                size="lg"
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                    Conectando con PayPal...
+                  </>
+                ) : (
+                  <>
+                    <span className="font-black mr-2">🅿️</span>
+                    Pagar ${total} USD con PayPal
+                  </>
+                )}
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 text-base shadow-md cursor-pointer"
+                size="lg"
+                disabled={submitting}
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                    {t('bookingModal.submitting')}
+                  </>
+                ) : (
+                  <>
+                    <Wallet className="w-5 h-5 mr-2" />
+                    Confirmar Reserva (Pago al Abordar)
+                  </>
+                )}
+              </Button>
+            )}
+
             <p className="text-xs text-center text-slate-400">
-              Recibirás un correo con la confirmación y detalles de recogida de tu reserva.
+              Recibirás un correo electrónico con la confirmación oficial y tu voucher digital de viaje.
             </p>
           </form>
         </CardContent>

@@ -91,8 +91,32 @@ export interface Booking {
   total_price: number;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   payment_status: 'pending' | 'paid' | 'refunded';
+  payment_method?: 'pay_on_arrival' | 'wompi' | 'paypal' | string;
+  payment_id?: string;
+  payment_details?: string;
   boarding_status?: 'pending' | 'boarded' | 'no_show';
   created_at: string;
+}
+
+export type PaymentMethodType = 'pay_on_arrival' | 'wompi' | 'paypal';
+
+export interface PublicSettings {
+  contact_email?: string;
+  contact_phone?: string;
+  contact_whatsapp?: string;
+  contact_address?: string;
+  contact_hours?: string;
+  social_facebook?: string;
+  social_instagram?: string;
+  social_tiktok?: string;
+  paypal_enabled?: boolean;
+  paypal_client_id?: string;
+  paypal_env?: 'sandbox' | 'live';
+  wompi_enabled?: boolean;
+  wompi_public_key?: string;
+  wompi_env?: 'sandbox' | 'production';
+  pay_on_arrival_enabled?: boolean;
+  pay_on_arrival_instructions?: string;
 }
 
 export interface ManifestRoute {

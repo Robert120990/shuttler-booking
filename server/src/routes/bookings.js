@@ -143,7 +143,12 @@ router.post('/', async (req, res) => {
       seats,
       extra_luggage,
       total_price,
-      pickup_person_name
+      pickup_person_name,
+      payment_method,
+      payment_id,
+      payment_details,
+      payment_status,
+      status
     } = req.body;
 
     if (!shuttle_id || !date || !pickup_location || !dropoff_location) {
@@ -151,14 +156,18 @@ router.post('/', async (req, res) => {
     }
 
     const id = uuidv4();
+    const resolvedPaymentMethod = payment_method || 'pay_on_arrival';
+    const resolvedPaymentStatus = payment_status || 'pending';
+    const resolvedStatus = status || (resolvedPaymentStatus === 'paid' ? 'confirmed' : 'pending');
 
     await prepare(`
       INSERT INTO bookings (
         id, user_id, shuttle_id, date, pickup_location, dropoff_location,
         passenger_name, passenger_email, passenger_phone, seats,
-        extra_luggage, total_price, status, payment_status, pickup_person_name
+        extra_luggage, total_price, status, payment_status, pickup_person_name,
+        payment_method, payment_id, payment_details
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending', ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       user_id || null,
@@ -172,7 +181,12 @@ router.post('/', async (req, res) => {
       seats || 1,
       extra_luggage || 0,
       total_price || 0,
-      (pickup_person_name && pickup_person_name.trim()) || (passenger_name && passenger_name.trim()) || null
+      resolvedStatus,
+      resolvedPaymentStatus,
+      (pickup_person_name && pickup_person_name.trim()) || (passenger_name && passenger_name.trim()) || null,
+      resolvedPaymentMethod,
+      payment_id || null,
+      payment_details || null
     );
 
     const booking = await prepare('SELECT * FROM bookings WHERE id = ?').get(id);

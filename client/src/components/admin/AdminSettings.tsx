@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, Server, Shield, Send, CheckCircle2, AlertCircle, Loader2, Save, Eye, EyeOff, Info, ExternalLink, Zap, PhoneCall, ArrowRight, Database } from 'lucide-react';
+import { Mail, Server, Shield, Send, CheckCircle2, AlertCircle, Loader2, Save, Eye, EyeOff, Info, ExternalLink, Zap, PhoneCall, ArrowRight, Database, CreditCard, Wallet } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -14,17 +14,21 @@ interface DbStatus {
 }
 
 export const AdminSettings = () => {
+  const [activeTab, setActiveTab] = useState<'payments' | 'email' | 'database'>('payments');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showResendKey, setShowResendKey] = useState(false);
   const [showBrevoKey, setShowBrevoKey] = useState(false);
+  const [showPaypalSecret, setShowPaypalSecret] = useState(false);
+  const [showWompiSecret, setShowWompiSecret] = useState(false);
   const [testEmail, setTestEmail] = useState('');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [dbStatus, setDbStatus] = useState<DbStatus | null>(null);
 
   const [formData, setFormData] = useState({
+    // Email settings
     email_provider: 'smtp',
     resend_api_key: '',
     brevo_api_key: '',
@@ -37,6 +41,17 @@ export const AdminSettings = () => {
     notification_email: 'trailexplorersv@gmail.com',
     test_email: 'trailexplorersv@gmail.com',
     send_customer_email: 'true',
+    // Payment Gateways
+    paypal_enabled: 'false',
+    paypal_client_id: '',
+    paypal_secret_key: '',
+    paypal_env: 'sandbox',
+    wompi_enabled: 'false',
+    wompi_public_key: '',
+    wompi_private_key: '',
+    wompi_env: 'sandbox',
+    pay_on_arrival_enabled: 'true',
+    pay_on_arrival_instructions: 'Paga en efectivo en USD o mediante transferencia local al momento de abordar la unidad.',
   });
 
   useEffect(() => {
@@ -70,6 +85,16 @@ export const AdminSettings = () => {
           notification_email: notifEmail,
           test_email: testMail,
           send_customer_email: raw.send_customer_email !== undefined ? raw.send_customer_email : 'true',
+          paypal_enabled: raw.paypal_enabled || 'false',
+          paypal_client_id: raw.paypal_client_id || '',
+          paypal_secret_key: raw.paypal_secret_key || '',
+          paypal_env: raw.paypal_env || 'sandbox',
+          wompi_enabled: raw.wompi_enabled || 'false',
+          wompi_public_key: raw.wompi_public_key || '',
+          wompi_private_key: raw.wompi_private_key || '',
+          wompi_env: raw.wompi_env || 'sandbox',
+          pay_on_arrival_enabled: raw.pay_on_arrival_enabled !== undefined ? raw.pay_on_arrival_enabled : 'true',
+          pay_on_arrival_instructions: raw.pay_on_arrival_instructions || 'Paga en efectivo en USD o mediante transferencia local al momento de abordar la unidad.',
         });
         setTestEmail(testMail);
       }
@@ -110,6 +135,16 @@ export const AdminSettings = () => {
           notification_email: notifEmail,
           test_email: testMail,
           send_customer_email: s.send_customer_email !== undefined ? s.send_customer_email : 'true',
+          paypal_enabled: s.paypal_enabled || formData.paypal_enabled || 'false',
+          paypal_client_id: s.paypal_client_id || formData.paypal_client_id || '',
+          paypal_secret_key: s.paypal_secret_key || formData.paypal_secret_key || '',
+          paypal_env: s.paypal_env || formData.paypal_env || 'sandbox',
+          wompi_enabled: s.wompi_enabled || formData.wompi_enabled || 'false',
+          wompi_public_key: s.wompi_public_key || formData.wompi_public_key || '',
+          wompi_private_key: s.wompi_private_key || formData.wompi_private_key || '',
+          wompi_env: s.wompi_env || formData.wompi_env || 'sandbox',
+          pay_on_arrival_enabled: s.pay_on_arrival_enabled !== undefined ? s.pay_on_arrival_enabled : 'true',
+          pay_on_arrival_instructions: s.pay_on_arrival_instructions || formData.pay_on_arrival_instructions || 'Paga en efectivo en USD o mediante transferencia local al momento de abordar la unidad.',
         });
         setTestEmail(testMail);
       }
@@ -276,79 +311,50 @@ export const AdminSettings = () => {
         </Link>
       </div>
 
-      {/* Database Persistence Status Card */}
-      {dbStatus && (
-        dbStatus.isPg ? (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3 text-emerald-900 shadow-sm">
-            <div className="p-2 bg-emerald-600 text-white rounded-lg mt-0.5">
-              <Database className="w-5 h-5" />
-            </div>
-            <div className="text-xs space-y-1 flex-1">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm text-emerald-950">Base de Datos Persistente: Supabase (PostgreSQL)</span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-800 text-[10px] font-bold uppercase tracking-wider">
-                  En Línea
-                </span>
-              </div>
-              <p className="text-emerald-800/90 text-xs">
-                Tu sistema está conectado correctamente a Supabase en la nube. Todas las reservas, rutas y configuraciones de correo se guardan de forma permanente y <strong>no se perderán cuando Railway haga nuevos deploys</strong>.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-amber-50/90 border border-amber-300 rounded-xl p-4 flex items-start gap-3.5 text-amber-950 shadow-sm">
-            <div className="p-2 bg-amber-500 text-white rounded-lg mt-0.5 flex-shrink-0">
-              <AlertCircle className="w-5 h-5" />
-            </div>
-            <div className="text-xs space-y-2.5 flex-1">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-sm text-amber-950">
-                    Alerta: Base de Datos Temporal SQLite (No conectada a Supabase)
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 text-[10px] font-bold uppercase tracking-wider">
-                    Temporal
-                  </span>
-                </div>
-              </div>
-              <p className="text-amber-900 leading-relaxed">
-                El servidor actualmente está guardando los datos en la memoria local temporal del contenedor de Railway. <strong>Por este motivo, cada vez que Railway compila o hace un deploy nuevo, los datos guardados se reinician a los valores por defecto</strong>.
-              </p>
+      {/* Tabs Navigation */}
+      <div className="flex border-b border-slate-200 gap-2 sm:gap-4 overflow-x-auto">
+        <button
+          type="button"
+          onClick={() => setActiveTab('payments')}
+          className={`flex items-center gap-2 py-3 px-4 text-sm font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === 'payments'
+              ? 'border-emerald-600 text-emerald-600'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <CreditCard className="w-4 h-4" />
+          <span>Pasarelas de Pago</span>
+        </button>
 
-              {dbStatus.error && (
-                <div className="p-3 bg-amber-100/80 rounded-lg font-mono text-[11px] text-amber-950 border border-amber-300">
-                  <span className="font-bold text-amber-900 font-sans block mb-1">Diagnóstico del error al conectar con Supabase:</span>
-                  {dbStatus.error}
-                </div>
-              )}
+        <button
+          type="button"
+          onClick={() => setActiveTab('email')}
+          className={`flex items-center gap-2 py-3 px-4 text-sm font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === 'email'
+              ? 'border-emerald-600 text-emerald-600'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Mail className="w-4 h-4" />
+          <span>Servidor de Correo (SMTP / APIs)</span>
+        </button>
 
-              <div className="bg-white/95 border border-amber-200 rounded-lg p-3.5 text-slate-800 space-y-2">
-                <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
-                  <Database className="w-4 h-4 text-emerald-600" />
-                  <span>¿Cómo conectar Supabase a Railway para que los datos nunca se pierdan?</span>
-                </div>
-                <ol className="list-decimal list-inside space-y-1.5 text-slate-700 text-xs leading-relaxed">
-                  <li>
-                    Entra a tu proyecto en <strong>Supabase</strong> &gt; icono de engranaje (<strong>Project Settings</strong>) &gt; <strong>Database</strong>.
-                  </li>
-                  <li>
-                    Baja hasta la sección <strong>Connection Pooling (Supavisor)</strong>.
-                    <p className="ml-4 text-[11px] text-slate-600 font-sans mt-0.5">
-                      ⚠️ <em>Importante: No utilices la "Direct connection" (db.xxxx.supabase.co) porque Railway no tiene soporte para IPv6 y fallará. Debes usar el Connection Pooler (host aws-0-...pooler.supabase.com) que sí soporta IPv4.</em>
-                    </p>
-                  </li>
-                  <li>
-                    Copia la URL de conexión en modo <strong>Session</strong> o <strong>Transaction</strong> (puerto <strong>6543</strong> o <strong>5432</strong>).
-                  </li>
-                  <li>
-                    En tu panel de <strong>Railway</strong> &gt; tu Servicio &gt; pestaña <strong>Variables</strong>, crea o edita la variable <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-emerald-700 font-semibold">DATABASE_URL</code> y pega la URL reemplazando <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-red-600">[YOUR-PASSWORD]</code> por la contraseña real de tu base de datos de Supabase.
-                  </li>
-                </ol>
-              </div>
-            </div>
-          </div>
-        )
-      )}
+        <button
+          type="button"
+          onClick={() => setActiveTab('database')}
+          className={`flex items-center gap-2 py-3 px-4 text-sm font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === 'database'
+              ? 'border-emerald-600 text-emerald-600'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Database className="w-4 h-4" />
+          <span>Base de Datos & Supabase</span>
+          {dbStatus?.isPg && (
+            <span className="w-2 h-2 rounded-full bg-emerald-500 ml-1" />
+          )}
+        </button>
+      </div>
 
       {/* In-page Feedback Banner */}
       {feedback && (
@@ -368,7 +374,373 @@ export const AdminSettings = () => {
         </div>
       )}
 
+      {/* Database Persistence Tab Panel */}
+      {activeTab === 'database' && (
+        <div className="space-y-6">
+          {dbStatus && (
+            dbStatus.isPg ? (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 flex items-start gap-3.5 text-emerald-900 shadow-sm">
+                <div className="p-2.5 bg-emerald-600 text-white rounded-xl shadow-sm mt-0.5">
+                  <Database className="w-5 h-5" />
+                </div>
+                <div className="text-xs space-y-1.5 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm text-emerald-950">Base de Datos Persistente: Supabase (PostgreSQL)</span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-200 text-emerald-800 text-[10px] font-bold uppercase tracking-wider">
+                      En Línea
+                    </span>
+                  </div>
+                  <p className="text-emerald-800/90 text-xs leading-relaxed">
+                    Tu sistema está conectado correctamente a Supabase en la nube. Todas las reservas, rutas y configuraciones de correo se guardan de forma permanente y <strong>no se perderán cuando Railway haga nuevos deploys</strong>.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-amber-50/90 border border-amber-300 rounded-xl p-5 flex items-start gap-3.5 text-amber-950 shadow-sm">
+                <div className="p-2.5 bg-amber-500 text-white rounded-xl mt-0.5 flex-shrink-0">
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+                <div className="text-xs space-y-3 flex-1">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm text-amber-950">
+                        Alerta: Base de Datos Temporal SQLite (No conectada a Supabase)
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 text-[10px] font-bold uppercase tracking-wider">
+                        Temporal
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-amber-900 leading-relaxed">
+                    El servidor actualmente está guardando los datos en la memoria local temporal del contenedor de Railway. <strong>Por este motivo, cada vez que Railway compila o hace un deploy nuevo, los datos guardados se reinician a los valores por defecto</strong>.
+                  </p>
+
+                  {dbStatus.error && (
+                    <div className="p-3 bg-amber-100/80 rounded-lg font-mono text-[11px] text-amber-950 border border-amber-300">
+                      <span className="font-bold text-amber-900 font-sans block mb-1">Diagnóstico del error al conectar con Supabase:</span>
+                      {dbStatus.error}
+                    </div>
+                  )}
+
+                  <div className="bg-white/95 border border-amber-200 rounded-lg p-4 text-slate-800 space-y-2.5 shadow-sm">
+                    <div className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                      <Database className="w-4 h-4 text-emerald-600" />
+                      <span>¿Cómo conectar Supabase a Railway para que los datos nunca se pierdan?</span>
+                    </div>
+                    <ol className="list-decimal list-inside space-y-2 text-slate-700 text-xs leading-relaxed">
+                      <li>
+                        Entra a tu proyecto en <strong>Supabase</strong> &gt; icono de engranaje (<strong>Project Settings</strong>) &gt; <strong>Database</strong>.
+                      </li>
+                      <li>
+                        Baja hasta la sección <strong>Connection Pooling (Supavisor)</strong>.
+                        <p className="ml-4 text-[11px] text-slate-600 font-sans mt-0.5">
+                          ⚠️ <em>Importante: No utilices la "Direct connection" (db.xxxx.supabase.co) porque Railway no tiene soporte para IPv6 y fallará. Debes usar el Connection Pooler (host aws-0-...pooler.supabase.com) que sí soporta IPv4.</em>
+                        </p>
+                      </li>
+                      <li>
+                        Copia la URL de conexión en modo <strong>Session</strong> o <strong>Transaction</strong> (puerto <strong>6543</strong> o <strong>5432</strong>).
+                      </li>
+                      <li>
+                        En tu panel de <strong>Railway</strong> &gt; tu Servicio &gt; pestaña <strong>Variables</strong>, crea o edita la variable <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-emerald-700 font-semibold">DATABASE_URL</code> y pega la URL reemplazando <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-red-600">[YOUR-PASSWORD]</code> por la contraseña real de tu base de datos de Supabase.
+                      </li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+            )
+          )}
+        </div>
+      )}
+
       <form onSubmit={handleSave} className="space-y-6">
+        {/* Payment Gateways Tab Panel */}
+        {activeTab === 'payments' && (
+          <div className="space-y-6">
+            {/* Pago al Abordar */}
+            <Card className="border-emerald-200/80 shadow-sm">
+              <CardHeader className="bg-gradient-to-r from-emerald-50/70 to-teal-50/40 border-b border-slate-100">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-emerald-600 text-white rounded-xl shadow-sm">
+                      <Wallet className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-lg text-slate-900">Pago al Abordar</CardTitle>
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                          Efectivo / Transferencia
+                        </span>
+                      </div>
+                      <CardDescription>
+                        Permite a los viajeros reservar de inmediato y pagar al momento del viaje directamente al chofer
+                      </CardDescription>
+                    </div>
+                  </div>
+
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.pay_on_arrival_enabled === 'true'}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, pay_on_arrival_enabled: e.target.checked ? 'true' : 'false' }))}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                    <span className="ml-2 text-xs font-semibold text-slate-700">
+                      {formData.pay_on_arrival_enabled === 'true' ? 'Habilitado' : 'Deshabilitado'}
+                    </span>
+                  </label>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Instrucciones y condiciones para el pasajero
+                  </label>
+                  <textarea
+                    rows={2}
+                    className="w-full rounded-lg border border-slate-200 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    placeholder="Paga en efectivo en USD o mediante transferencia local al momento de abordar la unidad."
+                    value={formData.pay_on_arrival_instructions}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, pay_on_arrival_instructions: e.target.value }))}
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Este mensaje se mostrará al cliente en el selector de pago, en el correo de confirmación y en el voucher digital.
+                  </p>
+                </div>
+
+                <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3 flex items-start gap-2.5 text-xs text-emerald-900">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold block">Control en el Manifiesto del Chofer:</span>
+                    Las reservas con pago al abordar se marcarán automáticamente con el distintivo <strong>"Cobrar al abordar: $XX.XX USD"</strong> en la hoja de ruta del conductor para un cobro seguro y organizado.
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Wompi El Salvador */}
+            <Card className="border-purple-200/80 shadow-sm">
+              <CardHeader className="bg-gradient-to-r from-purple-50/70 to-indigo-50/40 border-b border-slate-100">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-purple-600 text-white rounded-xl shadow-sm">
+                      <CreditCard className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-lg text-slate-900">Wompi El Salvador</CardTitle>
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                          Tarjetas de Crédito / Débito
+                        </span>
+                      </div>
+                      <CardDescription>
+                        Acepta pagos con Visa y Mastercard emitidas en El Salvador y el extranjero a través de Wompi (Banco Agrícola)
+                      </CardDescription>
+                    </div>
+                  </div>
+
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.wompi_enabled === 'true'}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, wompi_enabled: e.target.checked ? 'true' : 'false' }))}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                    <span className="ml-2 text-xs font-semibold text-slate-700">
+                      {formData.wompi_enabled === 'true' ? 'Habilitado' : 'Deshabilitado'}
+                    </span>
+                  </label>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Ambiente de Ejecución
+                    </label>
+                    <select
+                      className="w-full rounded-lg border border-slate-200 p-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      value={formData.wompi_env}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, wompi_env: e.target.value }))}
+                    >
+                      <option value="sandbox">Sandbox (Pruebas / Test)</option>
+                      <option value="production">Producción (Pagos Reales en Vivo)</option>
+                    </select>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Usa Sandbox para hacer compras de prueba sin cobros reales.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Llave Pública de Wompi (Public Key)
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="pub_test_... o pub_prod_..."
+                      value={formData.wompi_public_key}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, wompi_public_key: e.target.value }))}
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Identificador público utilizado para inicializar el checkout seguro de Wompi.
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Llave Privada de Wompi (Private Secret Key)
+                  </label>
+                  <div className="relative">
+                    <Input
+                      type={showWompiSecret ? 'text' : 'password'}
+                      placeholder="prv_test_... o prv_prod_..."
+                      value={formData.wompi_private_key}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, wompi_private_key: e.target.value }))}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowWompiSecret(!showWompiSecret)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showWompiSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Se almacena cifrada en el servidor para verificar y capturar transacciones. Nunca se expone a los clientes.
+                  </p>
+                </div>
+
+                <div className="bg-purple-50/70 border border-purple-200 rounded-xl p-3.5 text-xs text-purple-950 space-y-1.5">
+                  <div className="font-semibold flex items-center gap-1.5">
+                    <Info className="w-4 h-4 text-purple-600" />
+                    <span>¿Cómo obtener tus llaves en Wompi El Salvador?</span>
+                  </div>
+                  <p className="text-purple-900 leading-relaxed">
+                    1. Regístrate o inicia sesión en el portal de comercios de <strong><a href="https://wompi.sv" target="_blank" rel="noreferrer" className="underline font-semibold hover:text-purple-700 inline-flex items-center gap-0.5">wompi.sv <ExternalLink className="w-3 h-3" /></a></strong>.<br />
+                    2. Ingresa a la sección <strong>Desarrolladores &gt; Llaves de API</strong>.<br />
+                    3. Copia tu <strong>Llave Pública</strong> y tu <strong>Llave Privada</strong> y pégalas arriba.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* PayPal */}
+            <Card className="border-blue-200/80 shadow-sm">
+              <CardHeader className="bg-gradient-to-r from-blue-50/70 to-sky-50/40 border-b border-slate-100">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-[#0079C1] text-white rounded-xl shadow-sm font-bold flex items-center justify-center w-10 h-10">
+                      <span className="text-lg leading-none">P</span>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-lg text-slate-900">PayPal</CardTitle>
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                          Tarjetas Internacionales / Saldo
+                        </span>
+                      </div>
+                      <CardDescription>
+                        Permite a viajeros internacionales pagar con saldo PayPal o tarjetas de crédito/débito de todo el mundo
+                      </CardDescription>
+                    </div>
+                  </div>
+
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.paypal_enabled === 'true'}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, paypal_enabled: e.target.checked ? 'true' : 'false' }))}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0079C1]"></div>
+                    <span className="ml-2 text-xs font-semibold text-slate-700">
+                      {formData.paypal_enabled === 'true' ? 'Habilitado' : 'Deshabilitado'}
+                    </span>
+                  </label>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Ambiente de Ejecución
+                    </label>
+                    <select
+                      className="w-full rounded-lg border border-slate-200 p-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={formData.paypal_env}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, paypal_env: e.target.value }))}
+                    >
+                      <option value="sandbox">Sandbox (Pruebas / Test)</option>
+                      <option value="live">Live (Pagos Reales en Vivo)</option>
+                    </select>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Selecciona Live para procesar cobros reales en USD en tu cuenta PayPal Business.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      PayPal Client ID
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="Client ID generado en developer.paypal.com"
+                      value={formData.paypal_client_id}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, paypal_client_id: e.target.value }))}
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Identificador público para cargar los botones oficiales de PayPal Smart Buttons.
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    PayPal Secret Key
+                  </label>
+                  <div className="relative">
+                    <Input
+                      type={showPaypalSecret ? 'text' : 'password'}
+                      placeholder="Secret Key generado en developer.paypal.com"
+                      value={formData.paypal_secret_key}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, paypal_secret_key: e.target.value }))}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPaypalSecret(!showPaypalSecret)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showPaypalSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Clave privada requerida en el servidor para verificar y liquidar los pedidos de PayPal.
+                  </p>
+                </div>
+
+                <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-3.5 text-xs text-blue-950 space-y-1.5">
+                  <div className="font-semibold flex items-center gap-1.5">
+                    <Info className="w-4 h-4 text-blue-600" />
+                    <span>¿Cómo obtener tu Client ID y Secret en PayPal?</span>
+                  </div>
+                  <p className="text-blue-900 leading-relaxed">
+                    1. Entra a tu cuenta en <strong><a href="https://developer.paypal.com/dashboard/applications" target="_blank" rel="noreferrer" className="underline font-semibold hover:text-blue-700 inline-flex items-center gap-0.5">developer.paypal.com <ExternalLink className="w-3 h-3" /></a></strong>.<br />
+                    2. Ve a <strong>Apps & Credentials</strong> &gt; Crea una nueva aplicación (tipo Merchant).<br />
+                    3. Copia el <strong>Client ID</strong> y el <strong>Secret</strong> y pégalos arriba.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Email Settings Tab Panel */}
+        {activeTab === 'email' && (
+          <div className="space-y-6">
         {/* Notificaciones de Reserva */}
         <Card>
           <CardHeader>
@@ -850,29 +1222,33 @@ export const AdminSettings = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+    )}
 
-        {/* Action Buttons */}
-        <div className="flex justify-end gap-3 pt-2">
-          <Button
-            type="submit"
-            size="lg"
-            disabled={saving}
-            className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-8 shadow-md hover:shadow-lg transition-all cursor-pointer"
-          >
-            {saving ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Guardando cambios...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4 mr-2" />
-                Guardar Configuración
-              </>
-            )}
-          </Button>
-        </div>
-      </form>
+    {/* Action Buttons (visible on payments and email tabs) */}
+    {activeTab !== 'database' && (
+      <div className="flex justify-end gap-3 pt-2">
+        <Button
+          type="submit"
+          size="lg"
+          disabled={saving}
+          className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-8 shadow-md hover:shadow-lg transition-all cursor-pointer"
+        >
+          {saving ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Guardando cambios...
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4 mr-2" />
+              Guardar Configuración
+            </>
+          )}
+        </Button>
+      </div>
+    )}
+  </form>
     </div>
   );
 };

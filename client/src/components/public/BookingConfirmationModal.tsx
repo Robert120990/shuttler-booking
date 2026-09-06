@@ -58,6 +58,10 @@ export const BookingConfirmationModal = ({
 
   // Build clean WhatsApp message URL
   const cleanPhone = whatsappNumber.replace(/[^0-9]/g, '');
+  const paymentText = booking.payment_status === 'paid'
+    ? `✅ Pagado en línea (${booking.payment_method === 'wompi' ? 'Wompi - Tarjeta' : booking.payment_method === 'paypal' ? 'PayPal' : 'En línea'})`
+    : `⏳ Pago al abordar en efectivo: $${booking.total_price} USD`;
+
   const waMessage = `¡Hola Trail Explorer! Acabo de hacer una reserva en su página web:
 📌 *Localizador:* #${bookingCode}
 🚐 *Ruta:* ${originName} → ${destName}
@@ -69,6 +73,7 @@ export const BookingConfirmationModal = ({
 🏁 *Destino en llegada:* ${booking.dropoff_location}
 👥 *Asientos:* ${booking.seats} | 🧳 *Equipaje extra:* ${booking.extra_luggage || 0}
 💵 *Total:* $${booking.total_price} USD
+💳 *Método de Pago:* ${paymentText}
 
 ¿Podrían confirmarme los detalles de la recogida, por favor?`;
 
@@ -281,33 +286,52 @@ export const BookingConfirmationModal = ({
                 </div>
               </div>
 
-              {/* Price Row */}
-              <div className="bg-slate-50 rounded-xl p-3 flex items-center justify-between border border-slate-100">
+              {/* Price & Payment Row */}
+              <div className="bg-slate-50 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between border border-slate-200 gap-3">
                 <div>
-                  <span className="text-xs text-slate-500 block">Total a Pagar</span>
-                  <span className="text-lg sm:text-xl font-bold text-emerald-600 font-mono">
+                  <span className="text-xs text-slate-500 block">Total del Pasaje</span>
+                  <span className="text-xl sm:text-2xl font-black text-emerald-600 font-mono">
                     ${booking.total_price} USD
                   </span>
                 </div>
-                <div className="text-right">
-                  <span className="text-xs text-slate-500 block">Estado del Pago</span>
-                  <span className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full inline-block">
-                    {booking.payment_status === 'paid' ? 'Pagado' : 'Pago al abordar / Coordinar'}
-                  </span>
+                <div className="sm:text-right">
+                  <span className="text-xs text-slate-500 block mb-1">Método y Estado de Pago</span>
+                  <div className="flex flex-col sm:items-end gap-1">
+                    {booking.payment_status === 'paid' ? (
+                      <span className="text-xs font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 shadow-sm">
+                        <Check className="w-3.5 h-3.5 text-emerald-700" />
+                        PAGADO EN LÍNEA ({booking.payment_method === 'wompi' ? 'Wompi' : booking.payment_method === 'paypal' ? 'PayPal' : 'Confirmado'})
+                      </span>
+                    ) : (
+                      <span className="text-xs font-bold text-amber-800 bg-amber-100 border border-amber-300 px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 shadow-sm">
+                        💵 PAGO PENDIENTE AL ABORDAR
+                      </span>
+                    )}
+                    {booking.payment_id && (
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        Ref. Transacción: #{booking.payment_id}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Passenger Notice & Instructions */}
-          <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-3.5 text-xs text-amber-900 space-y-1">
+          <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-3.5 text-xs text-amber-900 space-y-1.5">
             <p className="font-semibold flex items-center gap-1.5 text-amber-950">
               <ShieldCheck className="w-4 h-4 text-amber-600" />
               Instrucciones Importantes para el Día de tu Viaje:
             </p>
-            <ul className="list-disc list-inside space-y-0.5 text-amber-800 pl-1">
+            <ul className="list-disc list-inside space-y-1 text-amber-800 pl-1">
               <li>Por favor, mantente listo en la recepción de tu hotel <strong>15 minutos antes</strong> de la hora acordada.</li>
               <li>Presenta este voucher digital desde tu teléfono móvil o impreso al chofer de la unidad.</li>
+              {booking.payment_status === 'paid' ? (
+                <li className="font-semibold text-emerald-800">Tu viaje está <strong>100% pagado en línea</strong>. No requieres abonar ningún saldo extra al chofer.</li>
+              ) : (
+                <li className="font-semibold text-amber-950">Recuerda llevar <strong>${booking.total_price} USD en efectivo exacto</strong> o realizar tu transferencia al momento de abordar la unidad.</li>
+              )}
               <li>Si necesitas ajustar tu equipaje o dirección de recogida, comunícate con nosotros por WhatsApp.</li>
             </ul>
           </div>

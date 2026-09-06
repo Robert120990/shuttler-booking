@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Eye, Loader2, X, MapPin, Package, Building2, Calendar } from 'lucide-react';
+import { Search, Eye, Loader2, X, MapPin, Package, Building2, Calendar, Send, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -16,6 +16,8 @@ export const AdminBookings = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'warning' | 'error'; message: string } | null>(null);
+  const [resendingMail, setResendingMail] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -46,13 +48,61 @@ export const AdminBookings = () => {
   const handleStatusChange = async (bookingId: string, newStatus: string) => {
     try {
       setUpdatingId(bookingId);
-      await bookingsApi.updateStatus(bookingId, newStatus);
+      setFeedback(null);
+      const res = await bookingsApi.updateStatus(bookingId, newStatus);
       await fetchData();
+      
+      const mailResult = res.data?.mailResult;
+      if (mailResult) {
+        if (mailResult.success) {
+          setFeedback({
+            type: 'success',
+            message: `¡Estado cambiado a ${translateStatus(newStatus)} y notificación enviada a ${mailResult.email}!`,
+          });
+        } else {
+          setFeedback({
+            type: 'warning',
+            message: `Estado cambiado a ${translateStatus(newStatus)}, pero no se pudo enviar el correo: ${mailResult.error || 'Revisa la configuración de correo'}`,
+          });
+        }
+      } else {
+        setFeedback({
+          type: 'success',
+          message: `¡Estado actualizado a ${translateStatus(newStatus)} con éxito!`,
+        });
+      }
     } catch (error) {
       console.error('Error updating status:', error);
-      alert('Error al actualizar el estado. Por favor intenta de nuevo.');
+      setFeedback({ type: 'error', message: 'Error al actualizar el estado de la reserva.' });
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const handleResendMail = async () => {
+    if (!selectedBooking) return;
+    try {
+      setResendingMail(true);
+      setFeedback(null);
+      const res = await bookingsApi.resendNotification(selectedBooking.id, selectedBooking.status);
+      const mailResult = res.data?.mailResult;
+      if (res.data?.success) {
+        setFeedback({
+          type: 'success',
+          message: `¡Notificación enviada exitosamente a ${selectedBooking.passenger_email}!`,
+        });
+      } else {
+        setFeedback({
+          type: 'warning',
+          message: `No se pudo entregar el correo a ${selectedBooking.passenger_email}: ${mailResult?.error || 'Verifica la configuración de correo'}`,
+        });
+      }
+    } catch (err: any) {
+      console.error('Error reenviando correo:', err);
+      const msg = err.response?.data?.error || 'Error al conectar con el servicio de correo.';
+      setFeedback({ type: 'error', message: msg });
+    } finally {
+      setResendingMail(false);
     }
   };
 
@@ -113,7 +163,36 @@ export const AdminBookings = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {/* Floating Toast Notification */}
+      {feedback && (
+        <div className="fixed top-6 right-6 z-50 max-w-md w-full animate-in fade-in slide-in-from-top-4 duration-300">
+          <div
+            className={`p-4 rounded-xl shadow-xl flex items-start gap-3 border ${
+              feedback.type === 'success'
+                ? 'bg-emerald-600 text-white border-emerald-700 shadow-emerald-900/20'
+                : feedback.type === 'warning'
+                ? 'bg-amber-600 text-white border-amber-700 shadow-amber-900/20'
+                : 'bg-red-600 text-white border-red-700 shadow-red-900/20'
+            }`}
+          >
+            {feedback.type === 'success' ? (
+              <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5 text-white" />
+            ) : (
+              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-white" />
+            )}
+            <div className="flex-1 text-sm font-medium">{feedback.message}</div>
+            <button
+              type="button"
+              onClick={() => setFeedback(null)}
+              className="text-white/80 hover:text-white text-xs px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       <div>
         <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Reservas de Shuttles</h1>
         <p className="text-slate-500 text-sm sm:text-base">
@@ -474,7 +553,39 @@ export const AdminBookings = () => {
                 </div>
               </div>
 
-              <p className="text-xs text-slate-400 text-center pt-2">
+              {/* Resend Email Notification Action */}
+              <div className="bg-emerald-50/60 border border-emerald-200/80 p-3.5 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Send className="w-3.5 h-3.5 text-emerald-600" />
+                    Notificación por Correo al Cliente
+                  </span>
+                  <span className="text-[11px] text-slate-600 block">
+                    Enviar o reenviar correo a: <strong className="text-slate-800">{selectedBooking.passenger_email || 'Sin correo'}</strong>
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResendMail}
+                  disabled={resendingMail || !selectedBooking.passenger_email}
+                  className="bg-white hover:bg-emerald-600 hover:text-white border-emerald-300 text-emerald-800 text-xs font-semibold py-1.5 px-3 shrink-0 transition-colors shadow-sm"
+                >
+                  {resendingMail ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin text-emerald-600" />
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5 mr-1.5" />
+                      Reenviar Correo
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <p className="text-xs text-slate-400 text-center pt-1">
                 Fecha de creación: {new Date(selectedBooking.created_at).toLocaleString('es-ES')}
               </p>
             </CardContent>

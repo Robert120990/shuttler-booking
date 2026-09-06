@@ -706,7 +706,7 @@ export async function sendBookingStatusNotification(booking, newStatus, shuttle 
   try {
     if (!booking || !booking.passenger_email) {
       console.log('No se puede enviar notificación de estado: No hay correo de pasajero registrado.');
-      return;
+      return { success: false, error: 'No hay correo de pasajero registrado en la reserva.' };
     }
 
     const settings = await getSettings();
@@ -747,7 +747,7 @@ export async function sendBookingStatusNotification(booking, newStatus, shuttle 
       emailHtml = buildCustomerBookingCancelledHtml(booking, resolvedShuttle, shuttleName, bookingDate);
     } else {
       console.log(`No hay plantilla de notificación configurada para el estado: ${newStatus}`);
-      return;
+      return { success: false, error: `No hay plantilla para el estado ${newStatus}` };
     }
 
     if (isResend) {
@@ -762,14 +762,14 @@ export async function sendBookingStatusNotification(booking, newStatus, shuttle 
         replyTo: settings.notification_email || settings.smtp_user || undefined,
       });
       console.log(`✅ [Resend] Notificación de estado (${newStatus}) enviada al cliente: ${booking.passenger_email}`);
-      return;
+      return { success: true, method: 'resend', email: booking.passenger_email };
     }
 
     // SMTP path:
     const transporter = createTransporter(settings);
     if (!transporter) {
       console.log('SMTP no configurado: Omitiendo envío de notificación de cambio de estado.');
-      return;
+      return { success: false, error: 'Servicio SMTP no configurado en el sistema.' };
     }
 
     const senderOptions = getMailSenderOptions(settings);
@@ -780,8 +780,16 @@ export async function sendBookingStatusNotification(booking, newStatus, shuttle 
       html: emailHtml,
     });
     console.log(`✅ [SMTP] Notificación de estado (${newStatus}) enviada al cliente: ${booking.passenger_email}`);
+    return { success: true, method: 'smtp', email: booking.passenger_email };
   } catch (error) {
     console.error(`Error enviando notificación de estado (${newStatus}) al cliente:`, error);
+    let errMsg = error.message || 'Error al enviar correo';
+    if (errMsg.includes('ETIMEDOUT') || errMsg.includes('timeout') || error.code === 'ETIMEDOUT') {
+      errMsg = 'Tiempo de espera agotado (ETIMEDOUT): Railway bloquea los puertos SMTP salientes (587, 465). Ve a Configuración y selecciona Resend API (HTTPS) para enviar correos sin bloqueos.';
+    } else if (errMsg.includes('testing emails to your own email address') || errMsg.includes('only send testing')) {
+      errMsg = `Resend en modo de prueba gratuito solo permite enviar correos a la dirección con la que te registraste en resend.com. Para enviar a clientes (${booking.passenger_email}), debes verificar un dominio propio en resend.com/domains.`;
+    }
+    return { success: false, error: errMsg, email: booking.passenger_email };
   }
 }
 

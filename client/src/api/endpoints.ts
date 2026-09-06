@@ -41,7 +41,8 @@ export const bookingsApi = {
   getById: (id: string) => api.get<Booking>(`/bookings/${id}`),
   create: (data: Partial<Booking>) => api.post<Booking>('/bookings', data),
   update: (id: string, data: Partial<Booking>) => api.put<Booking>(`/bookings/${id}`, data),
-  updateStatus: (id: string, status: string) => api.patch<Booking>(`/bookings/${id}/status`, { status }),
+  updateStatus: (id: string, status: string) => api.patch<Booking & { mailResult?: any }>(`/bookings/${id}/status`, { status }),
+  resendNotification: (id: string, status?: string) => api.post<{ success: boolean; mailResult: any; booking: Booking }>(`/bookings/${id}/notify`, { status }),
 };
 
 export const faqsApi = {

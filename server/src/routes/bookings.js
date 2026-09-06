@@ -114,17 +114,33 @@ router.patch('/:id/status', async (req, res) => {
     
     const updatedBooking = await prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
     
+    let mailResult = null;
     // Notify customer when status transitions to confirmed or cancelled
     if (oldBooking.status !== status && (status === 'confirmed' || status === 'cancelled')) {
-      sendBookingStatusNotification(updatedBooking, status).catch((mailErr) => {
-        console.error(`Error enviando notificación de estado (${status}) al cliente:`, mailErr);
-      });
+      mailResult = await sendBookingStatusNotification(updatedBooking, status);
     }
 
-    res.json(updatedBooking);
+    res.json({ ...updatedBooking, mailResult });
   } catch (error) {
     console.error('Error updating booking status:', error);
     res.status(500).json({ error: 'Failed to update booking status' });
+  }
+});
+
+// POST /api/bookings/:id/notify - Manually resend notification email to customer
+router.post('/:id/notify', async (req, res) => {
+  try {
+    const booking = await prepare('SELECT * FROM bookings WHERE id = ?').get(req.params.id);
+    if (!booking) {
+      return res.status(404).json({ error: 'Reserva no encontrada' });
+    }
+
+    const targetStatus = req.body.status || booking.status || 'confirmed';
+    const mailResult = await sendBookingStatusNotification(booking, targetStatus);
+    res.json({ success: mailResult.success, mailResult, booking });
+  } catch (error) {
+    console.error('Error enviando notificación manual:', error);
+    res.status(500).json({ error: error.message || 'Error al enviar notificación' });
   }
 });
 

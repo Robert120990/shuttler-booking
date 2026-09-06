@@ -143,8 +143,8 @@ export const CityPage = () => {
   return (
     <div className="bg-slate-50">
       <SEO
-        title={`Shuttles from ${city.name}`}
-        description={localizedCityDesc || `Book shuttles to and from ${city.name}, ${localizedCountryName}. Compare prices and times for shuttles, transfers and transport.`}
+        title={language === 'es' ? `Shuttles y Transporte hacia ${city.name}` : `Shuttles to and from ${city.name}`}
+        description={localizedCityDesc || `Reserva shuttles y traslados hacia o desde ${city.name}, ${localizedCountryName}. Precios accesibles, horarios y confirmación en línea.`}
         path={`/cities/${city.slug}`}
         image={getImageUrl(city.image_url)}
         jsonLd={[
@@ -152,9 +152,9 @@ export const CityPage = () => {
             '@context': 'https://schema.org',
             '@type': 'BreadcrumbList',
             itemListElement: [
-              { '@type': 'ListItem', position: 1, name: t('nav.home'), item: 'https://trailexplorer.com/' },
-              { '@type': 'ListItem', position: 2, name: localizedCountryName, item: `https://trailexplorer.com/countries/${(city as any).country_slug || ''}` },
-              { '@type': 'ListItem', position: 3, name: city.name, item: `https://trailexplorer.com/cities/${city.slug}` },
+              { '@type': 'ListItem', position: 1, name: t('nav.home'), item: '/' },
+              { '@type': 'ListItem', position: 2, name: localizedCountryName, item: `/countries/${(city as any).country_slug || ''}` },
+              { '@type': 'ListItem', position: 3, name: city.name, item: `/cities/${city.slug}` },
             ],
           },
         ]}

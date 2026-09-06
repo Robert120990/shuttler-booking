@@ -301,10 +301,10 @@ export const ShuttlePage = () => {
   return (
     <div className="bg-slate-50">
       <SEO
-        title={`${routeName} Shuttle - From $${shuttle.price}/person`}
-        description={shuttle.description || `Book a ${routeName} shuttle. ${shuttle.duration_hours} hours, $${shuttle.price} per person. ${shuttle.luggage_policy || 'Check luggage policy and included amenities.'}`}
+        title={language === 'es' ? `Shuttle ${routeName} - Desde $${shuttle.price} USD` : `${routeName} Shuttle - From $${shuttle.price}/person`}
+        description={description || `Shuttle ${routeName}. ${duration} horas, $${shuttle.price} USD por persona. Reserva en línea con confirmación inmediata.`}
         path={`/shuttles/${shuttle.slug}`}
-        image={getImageUrl(shuttle.image_url)}
+        image={getImageUrl(shuttle.image_url || (shuttle as any).destination_image || (shuttle as any).origin_image)}
         type="product"
         jsonLd={[tripSchema, breadcrumbSchema, transferSchema]}
       />

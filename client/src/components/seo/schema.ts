@@ -1,4 +1,4 @@
-const SITE_URL = (import.meta.env.VITE_SITE_URL as string) || 'https://trailexplorer.com';
+const SITE_URL = (import.meta.env.VITE_SITE_URL as string) || (typeof window !== 'undefined' ? window.location.origin : 'https://trailexplorer.com');
 export const SITE_NAME = 'Trail Explorer';
 export const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1506197603052-3cc9c3a201bd?w=1200&q=80';
 export { SITE_URL };

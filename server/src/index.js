@@ -96,13 +96,34 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+app.get('/robots.txt', (req, res) => {
+  const host = req.get('host') || 'localhost:3001';
+  const protocol = req.get('x-forwarded-proto') || req.protocol || 'https';
+  const baseUrl = process.env.PUBLIC_URL ? process.env.PUBLIC_URL.replace(/\/$/, '') : `${protocol}://${host}`;
+
+  const robots = `User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /login
+Disallow: /register
+Disallow: /api/
+Disallow: /images/
+
+Sitemap: ${baseUrl}/sitemap.xml
+`;
+  res.header('Content-Type', 'text/plain; charset=utf-8');
+  res.send(robots);
+});
+
 app.get('/sitemap.xml', async (req, res) => {
   try {
     const countries = await prepare('SELECT slug, name FROM countries ORDER BY name').all();
     const cities = await prepare('SELECT slug, name FROM cities ORDER BY name').all();
     const shuttles = await prepare('SELECT slug, name FROM shuttles ORDER BY name').all();
 
-    const baseUrl = PUBLIC_URL.replace(/\/$/, '');
+    const host = req.get('host') || 'localhost:3001';
+    const protocol = req.get('x-forwarded-proto') || req.protocol || 'https';
+    const baseUrl = process.env.PUBLIC_URL ? process.env.PUBLIC_URL.replace(/\/$/, '') : `${protocol}://${host}`;
 
     let xml = '<?xml version="1.0" encoding="UTF-8"?>';
     xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
@@ -110,6 +131,7 @@ app.get('/sitemap.xml', async (req, res) => {
     xml += `<url><loc>${baseUrl}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>`;
     xml += `<url><loc>${baseUrl}/about</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>`;
     xml += `<url><loc>${baseUrl}/faqs</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>`;
+    xml += `<url><loc>${baseUrl}/contact</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>`;
 
     for (const country of countries) {
       xml += `<url><loc>${baseUrl}/countries/${country.slug}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>`;
@@ -125,7 +147,7 @@ app.get('/sitemap.xml', async (req, res) => {
 
     xml += '</urlset>';
 
-    res.header('Content-Type', 'application/xml');
+    res.header('Content-Type', 'application/xml; charset=utf-8');
     res.send(xml);
   } catch (error) {
     console.error('Error generating sitemap:', error);

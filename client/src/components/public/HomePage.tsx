@@ -119,15 +119,15 @@ export const HomePage = () => {
   return (
     <div>
       <SEO
-        title="Book Shuttles Across Central America"
-        description="Reserva shuttles, traslados y transporte en Centroamérica. Book the best shuttle transfers across Mexico, Guatemala, Costa Rica and more. Secure booking in minutes."
+        title={language === 'es' ? 'Shuttles y Transporte en Centroamérica' : 'Book Shuttles Across Central America'}
+        description="Reserva shuttles compartidos y traslados turísticos en Costa Rica, Guatemala, El Salvador y toda Centroamérica. Reserva segura en minutos."
         path={isSearch ? '/search' : '/'}
         jsonLd={[
           {
             '@context': 'https://schema.org',
             '@type': 'BreadcrumbList',
             itemListElement: [
-              { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://trailexplorer.com/' },
+              { '@type': 'ListItem', position: 1, name: language === 'es' ? 'Inicio' : 'Home', item: '/' },
             ],
           },
         ]}

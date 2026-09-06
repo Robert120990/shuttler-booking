@@ -173,7 +173,7 @@ export const CountryPage = () => {
   return (
     <div className="bg-slate-50 min-h-screen pb-16">
       <SEO
-        title={`Shuttles & ${localizedCountryName} | Trail Explorer`}
+        title={language === 'es' ? `Shuttles y Rutas en ${localizedCountryName}` : `Shuttles & Transfers in ${localizedCountryName}`}
         description={localizedCountryDesc}
         path={`/countries/${country.slug}`}
         image={getImageUrl(country.image_url)}

@@ -104,8 +104,8 @@ router.get('/:slug', async (req, res) => {
       FROM shuttles s
       JOIN cities o ON s.origin_city_id = o.id
       JOIN cities d ON s.destination_city_id = d.id
-      WHERE s.slug = ?
-    `).get(req.params.slug);
+      WHERE s.slug = ? OR s.id = ?
+    `).get(req.params.slug, req.params.slug);
     
     if (!shuttle) return res.status(404).json({ error: 'Shuttle not found' });
     res.json(formatShuttle(shuttle));

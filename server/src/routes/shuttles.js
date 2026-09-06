@@ -107,7 +107,7 @@ router.post('/', async (req, res) => {
     const id = uuidv4();
 
     let shuttleImageUrl = image_url;
-    if (!shuttleImageUrl && origin_city_id && destination_city_id) {
+    if ((!shuttleImageUrl || shuttleImageUrl.trim() === '' || shuttleImageUrl.includes('placeholder')) && origin_city_id && destination_city_id) {
       const originCity = await prepare('SELECT image_url FROM cities WHERE id = ?').get(origin_city_id);
       const destCity = await prepare('SELECT image_url FROM cities WHERE id = ?').get(destination_city_id);
       
@@ -158,7 +158,7 @@ router.put('/:id', async (req, res) => {
     
     let newImageUrl = image_url || existingShuttle.image_url;
     
-    if (origin_city_id && destination_city_id && (!existingShuttle.image_url || existingShuttle.origin_city_id !== origin_city_id || existingShuttle.destination_city_id !== destination_city_id)) {
+    if (origin_city_id && destination_city_id && (!newImageUrl || newImageUrl.trim() === '' || newImageUrl.includes('placeholder') || existingShuttle.origin_city_id !== origin_city_id || existingShuttle.destination_city_id !== destination_city_id)) {
       const originCity = await prepare('SELECT image_url FROM cities WHERE id = ?').get(origin_city_id);
       const destCity = await prepare('SELECT image_url FROM cities WHERE id = ?').get(destination_city_id);
       

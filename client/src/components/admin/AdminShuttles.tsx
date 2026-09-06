@@ -527,6 +527,45 @@ export const AdminShuttles = () => {
                 />
               </div>
 
+              {/* Vista Previa de Fusión Inteligente de Portada */}
+              {(() => {
+                const origin = cities.find(c => c.id === formData.origin_city_id);
+                const dest = cities.find(c => c.id === formData.destination_city_id);
+                if (!origin || !dest) return null;
+                return (
+                  <div className="bg-slate-900 rounded-xl p-3 border border-slate-800 text-white space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-emerald-400 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5" /> Fusión Inteligente de Portada (800×400 WebP)
+                      </span>
+                      <span className="text-slate-400 text-[11px]">Se optimizará y creará automáticamente al guardar</span>
+                    </div>
+                    <div className="relative h-28 rounded-lg overflow-hidden flex border border-slate-700/80 bg-slate-950">
+                      <div className="w-1/2 h-full relative">
+                        <img src={getImageUrl(origin.image_url)} alt={origin.name} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end p-2">
+                          <span className="text-white text-xs font-bold truncate">{origin.name}</span>
+                        </div>
+                      </div>
+                      <div className="w-1/2 h-full relative">
+                        <img src={getImageUrl(dest.image_url)} alt={dest.name} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex items-end p-2">
+                          <span className="text-white text-xs font-bold truncate">{dest.name}</span>
+                        </div>
+                      </div>
+                      {/* Divisor e insignia central */}
+                      <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-0.5 bg-white/75 flex items-center justify-center pointer-events-none">
+                        <div className="w-7 h-7 bg-white rounded-full p-0.5 shadow-lg flex items-center justify-center">
+                          <div className="w-full h-full bg-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-black">
+                            ➔
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               <Input
                 label="Nombre del Shuttle / Viaje"
                 placeholder="ej., La Fortuna a Monteverde"

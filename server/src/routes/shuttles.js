@@ -7,8 +7,15 @@ const router = express.Router();
 
 function formatShuttle(s) {
   if (!s) return s;
+  const rawImg = s.image_url;
+  const isInvalidImg = !rawImg || rawImg.trim() === '' || rawImg.includes('placeholder');
+  const fallbackImg = s.destination_image || s.origin_image || '/placeholder.jpg';
+
   return {
     ...s,
+    image_url: isInvalidImg ? fallbackImg : rawImg,
+    origin_image: s.origin_image || null,
+    destination_image: s.destination_image || null,
     price: Number(s.price),
     duration_hours: Number(s.duration_hours),
     rating: s.rating !== null && s.rating !== undefined ? Number(s.rating) : 5.0,
@@ -21,8 +28,8 @@ router.get('/', async (req, res) => {
   try {
     const shuttles = await prepare(`
       SELECT s.*, 
-        o.name as origin_name, o.slug as origin_slug,
-        d.name as destination_name, d.slug as destination_slug
+        o.name as origin_name, o.slug as origin_slug, o.image_url as origin_image,
+        d.name as destination_name, d.slug as destination_slug, d.image_url as destination_image
       FROM shuttles s
       JOIN cities o ON s.origin_city_id = o.id
       JOIN cities d ON s.destination_city_id = d.id
@@ -39,8 +46,8 @@ router.get('/featured', async (req, res) => {
   try {
     const shuttles = await prepare(`
       SELECT s.*, 
-        o.name as origin_name, o.slug as origin_slug,
-        d.name as destination_name, d.slug as destination_slug
+        o.name as origin_name, o.slug as origin_slug, o.image_url as origin_image,
+        d.name as destination_name, d.slug as destination_slug, d.image_url as destination_image
       FROM shuttles s
       JOIN cities o ON s.origin_city_id = o.id
       JOIN cities d ON s.destination_city_id = d.id
@@ -61,8 +68,8 @@ router.get('/city/:citySlug', async (req, res) => {
     
     const departure = await prepare(`
       SELECT s.*, 
-        o.name as origin_name, o.slug as origin_slug,
-        d.name as destination_name, d.slug as destination_slug
+        o.name as origin_name, o.slug as origin_slug, o.image_url as origin_image,
+        d.name as destination_name, d.slug as destination_slug, d.image_url as destination_image
       FROM shuttles s
       JOIN cities o ON s.origin_city_id = o.id
       JOIN cities d ON s.destination_city_id = d.id
@@ -72,8 +79,8 @@ router.get('/city/:citySlug', async (req, res) => {
     
     const arrival = await prepare(`
       SELECT s.*, 
-        o.name as origin_name, o.slug as origin_slug,
-        d.name as destination_name, d.slug as destination_slug
+        o.name as origin_name, o.slug as origin_slug, o.image_url as origin_image,
+        d.name as destination_name, d.slug as destination_slug, d.image_url as destination_image
       FROM shuttles s
       JOIN cities o ON s.origin_city_id = o.id
       JOIN cities d ON s.destination_city_id = d.id

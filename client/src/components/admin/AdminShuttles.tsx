@@ -408,7 +408,14 @@ export const AdminShuttles = () => {
                 {filteredShuttles.map((shuttle) => (
                   <tr key={shuttle.id} className="border-b border-slate-100 hover:bg-slate-50">
                     <td className="py-3 px-4">
-                      <img src={getImageUrl(shuttle.image_url)} alt={shuttle.name} className="w-16 h-10 rounded-lg object-cover" />
+                      <img 
+                        src={getImageUrl(shuttle.image_url || (shuttle as any).destination_image || (shuttle as any).origin_image)} 
+                        alt={shuttle.name} 
+                        className="w-16 h-10 rounded-lg object-cover bg-slate-100" 
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/placeholder.jpg';
+                        }}
+                      />
                     </td>
                     <td className="py-3 px-4">
                       <div>
@@ -451,7 +458,14 @@ export const AdminShuttles = () => {
               <p className="text-center py-8 text-slate-500">No se encontraron shuttles</p>
             ) : filteredShuttles.map((shuttle) => (
               <div key={shuttle.id} className="border border-slate-200 rounded-lg overflow-hidden bg-white">
-                <img src={getImageUrl(shuttle.image_url)} alt={shuttle.name} className="w-full h-32 object-cover" />
+                <img 
+                  src={getImageUrl(shuttle.image_url || (shuttle as any).destination_image || (shuttle as any).origin_image)} 
+                  alt={shuttle.name} 
+                  className="w-full h-32 object-cover bg-slate-100" 
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/placeholder.jpg';
+                  }}
+                />
                 <div className="p-4 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Star, Clock, MapPin, Calendar, CheckCircle, XCircle, ChevronLeft, ChevronRight, Loader2, MessageSquare, CheckCircle2, AlertCircle, Send } from 'lucide-react';
+import { Star, Clock, MapPin, Calendar, CheckCircle, XCircle, ChevronLeft, ChevronRight, Loader2, MessageSquare, CheckCircle2, AlertCircle, Send, Home } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Badge } from '../ui/Badge';
@@ -233,11 +233,15 @@ export const ShuttlePage = () => {
   const availability = translateAvailability(shuttle.availability, language);
   const description = translateDescription(shuttle.description, routeName, language);
 
-  const images = [
+  const rawImages = [
     shuttle.image_url,
-    (shuttle as any).origin_image,
     (shuttle as any).destination_image,
-  ].filter(Boolean);
+    (shuttle as any).origin_image,
+  ].filter((img): img is string => Boolean(img) && typeof img === 'string' && !img.includes('placeholder'));
+
+  const images = rawImages.length > 0
+    ? rawImages
+    : [(shuttle as any).destination_image || (shuttle as any).origin_image || '/placeholder.jpg'];
 
   const tripSchema = {
     '@context': 'https://schema.org',
@@ -302,15 +306,60 @@ export const ShuttlePage = () => {
         type="product"
         jsonLd={[tripSchema, breadcrumbSchema, transferSchema]}
       />
+      {/* Barra de Navegación / Volver */}
+      <div className="bg-white border-b border-slate-200 sticky top-16 z-30 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between">
+          <button
+            onClick={() => {
+              if (window.history.length > 2) {
+                navigate(-1);
+              } else {
+                navigate('/');
+              }
+            }}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-700 hover:text-emerald-600 bg-slate-100 hover:bg-slate-200/80 transition-colors py-1.5 px-3 rounded-lg cursor-pointer"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span>{language === 'es' ? 'Volver' : 'Back'}</span>
+          </button>
+
+          <nav className="flex items-center gap-2 text-xs text-slate-500 overflow-x-auto whitespace-nowrap pl-4">
+            <Link to="/" className="hover:text-emerald-600 flex items-center gap-1">
+              <Home className="w-3.5 h-3.5" />
+              <span>{t('nav.home')}</span>
+            </Link>
+            <span>/</span>
+            {(shuttle as any).origin_slug ? (
+              <>
+                <Link to={`/cities/${(shuttle as any).origin_slug}`} className="hover:text-emerald-600">
+                  {originName}
+                </Link>
+                <span>/</span>
+              </>
+            ) : null}
+            <span className="font-semibold text-slate-800 truncate max-w-xs">{routeName}</span>
+          </nav>
+        </div>
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <div className="bg-white rounded-xl overflow-hidden shadow-sm mb-6">
-              <div className="relative h-64 md:h-96">
+              <div className="relative h-64 md:h-96 bg-slate-100">
                 <img
                   src={getImageUrl(images[currentImageIndex])}
                   alt={shuttle.name}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    const fallback = (shuttle as any).destination_image || (shuttle as any).origin_image;
+                    if (fallback && target.src !== fallback) {
+                      target.src = getImageUrl(fallback);
+                    } else {
+                      target.src = '/placeholder.jpg';
+                    }
+                  }}
                 />
                 {images.length > 1 && (
                   <>

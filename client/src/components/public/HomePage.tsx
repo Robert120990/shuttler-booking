@@ -331,12 +331,18 @@ export const HomePage = () => {
                 <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full group">
                   <div className="relative h-40">
                     <img
-                      src={getImageUrl(shuttle.image_url)}
+                      src={getImageUrl(shuttle.image_url || (shuttle as any).destination_image || (shuttle as any).origin_image)}
                       alt={translateRouteName(shuttle.name, language)}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       loading="lazy"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/placeholder.jpg';
+                        const target = e.target as HTMLImageElement;
+                        const fallback = (shuttle as any).destination_image || (shuttle as any).origin_image;
+                        if (fallback && target.src !== fallback) {
+                          target.src = getImageUrl(fallback);
+                        } else {
+                          target.src = '/placeholder.jpg';
+                        }
                       }}
                     />
                     <div className="absolute top-3 right-3">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Mail, Server, Shield, Send, CheckCircle2, AlertCircle, Loader2, Save, Eye, EyeOff, Info, ExternalLink } from 'lucide-react';
+import { Mail, Server, Shield, Send, CheckCircle2, AlertCircle, Loader2, Save, Eye, EyeOff, Info, ExternalLink, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -10,10 +10,13 @@ export const AdminSettings = () => {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showResendKey, setShowResendKey] = useState(false);
   const [testEmail, setTestEmail] = useState('');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const [formData, setFormData] = useState({
+    email_provider: 'smtp',
+    resend_api_key: '',
     smtp_host: 'smtp.gmail.com',
     smtp_port: '587',
     smtp_secure: 'false',
@@ -48,6 +51,8 @@ export const AdminSettings = () => {
           : notifEmail;
 
         setFormData({
+          email_provider: res.data.email_provider || 'smtp',
+          resend_api_key: res.data.resend_api_key || '',
           smtp_host: res.data.smtp_host || 'smtp.gmail.com',
           smtp_port: res.data.smtp_port || '587',
           smtp_secure: res.data.smtp_secure || 'false',
@@ -82,6 +87,8 @@ export const AdminSettings = () => {
         const notifEmail = s.notification_email ?? s.smtp_user ?? 'trailexplorersv@gmail.com';
         const testMail = s.test_email || notifEmail || s.smtp_user || 'trailexplorersv@gmail.com';
         setFormData({
+          email_provider: s.email_provider || 'smtp',
+          resend_api_key: s.resend_api_key || '',
           smtp_host: s.smtp_host || 'smtp.gmail.com',
           smtp_port: s.smtp_port || '587',
           smtp_secure: s.smtp_secure || 'false',
@@ -122,8 +129,8 @@ export const AdminSettings = () => {
         message: res.data.message || `¡Correo de prueba enviado con éxito a ${target}!`,
       });
     } catch (error: any) {
-      console.error('Error al probar SMTP:', error);
-      const msg = error.response?.data?.error || 'No se pudo conectar al servidor SMTP. Revisa las credenciales y puertos.';
+      console.error('Error al probar servicio de correo:', error);
+      const msg = error.response?.data?.error || 'No se pudo conectar al servicio de correo. Revisa las credenciales o proveedor.';
       setFeedback({ type: 'error', message: msg });
     } finally {
       setTesting(false);
@@ -171,7 +178,7 @@ export const AdminSettings = () => {
       <div>
         <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Configuración del Sistema</h1>
         <p className="text-slate-500 text-sm sm:text-base">
-          Configura el servidor de correo SMTP para el envío automático de notificaciones de reservas
+          Configura el método de envío y el servidor de correo para las notificaciones automáticas de reservas
         </p>
       </div>
 
@@ -212,7 +219,7 @@ export const AdminSettings = () => {
           <CardContent className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
-                Correo Electrónico de Destino
+                Correo Electrónico de Notificación (Admin)
               </label>
               <Input
                 type="text"
@@ -228,7 +235,7 @@ export const AdminSettings = () => {
                 }}
               />
               <p className="text-xs text-slate-500 mt-1">
-                Cada vez que se confirme o solicite una reserva en la web, se enviará un reporte completo a este correo asignado. Puedes ingresar uno o varios correos separados por comas.
+                Cada vez que se reciba una reserva en la web, se enviará el detalle completo a este correo. Puedes ingresar varios separados por coma.
               </p>
             </div>
 
@@ -247,7 +254,7 @@ export const AdminSettings = () => {
           </CardContent>
         </Card>
 
-        {/* Configuración SMTP */}
+        {/* Selector de Método de Envío */}
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -255,132 +262,257 @@ export const AdminSettings = () => {
                 <Server className="w-5 h-5" />
               </div>
               <div>
-                <CardTitle className="text-lg">Configuración de Servidor SMTP</CardTitle>
+                <CardTitle className="text-lg">Método de Envío de Correos</CardTitle>
                 <CardDescription>
-                  Ingresa las credenciales del servidor SMTP para el despacho de correos electrónicos
+                  Selecciona cómo tu aplicación enviará los correos electrónicos
                 </CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Servidor SMTP (Host)
-                </label>
-                <Input
-                  placeholder="ej. smtp.gmail.com, smtp.mailgun.org, smtp.office365.com"
-                  value={formData.smtp_host}
-                  onChange={(e) => setFormData({ ...formData, smtp_host: e.target.value })}
-                />
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Opción 1: Resend API */}
+              <div
+                onClick={() => setFormData({ ...formData, email_provider: 'resend' })}
+                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                  formData.email_provider === 'resend'
+                    ? 'border-emerald-600 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-600'
+                    : 'border-slate-200 hover:border-slate-300 bg-white'
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg">
+                      <Zap className="w-4 h-4" />
+                    </span>
+                    <span className="font-semibold text-slate-900">Resend API (HTTPS)</span>
+                  </div>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                    Recomendado Railway
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                  Envía correos mediante API Web por puerto 443 (HTTPS). <strong>Inmune al bloqueo de puertos de Railway</strong>. 3,000 correos gratis al mes.
+                </p>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Puerto
-                </label>
-                <Input
-                  placeholder="587 o 465"
-                  value={formData.smtp_port}
-                  onChange={(e) => setFormData({ ...formData, smtp_port: e.target.value })}
-                />
+
+              {/* Opción 2: SMTP Clásico */}
+              <div
+                onClick={() => setFormData({ ...formData, email_provider: 'smtp' })}
+                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                  formData.email_provider === 'smtp'
+                    ? 'border-emerald-600 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-600'
+                    : 'border-slate-200 hover:border-slate-300 bg-white'
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 bg-blue-100 text-blue-700 rounded-lg">
+                      <Server className="w-4 h-4" />
+                    </span>
+                    <span className="font-semibold text-slate-900">Gmail / SMTP Directo</span>
+                  </div>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                    Puerto 587/465
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                  Conexión directa por socket TCP a servidores SMTP. Ideal para pruebas locales o servidores con puertos SMTP abiertos.
+                </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Usuario / Correo SMTP
-                </label>
-                <Input
-                  type="text"
-                  placeholder="usuario@dominio.com"
-                  value={formData.smtp_user}
-                  onChange={(e) => setFormData({ ...formData, smtp_user: e.target.value })}
-                />
-              </div>
+            {/* Configuración Resend API */}
+            {formData.email_provider === 'resend' && (
+              <div className="space-y-4 pt-2 border-t border-slate-100">
+                <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-4 text-xs text-emerald-950 space-y-2">
+                  <div className="flex items-center gap-2 font-semibold text-emerald-900 text-sm">
+                    <Zap className="w-4 h-4 text-emerald-600" />
+                    <span>¿Cómo activar Resend en 1 minuto?</span>
+                  </div>
+                  <ol className="list-decimal list-inside space-y-1.5 text-emerald-900/90 pl-1">
+                    <li>Entra a <a href="https://resend.com" target="_blank" rel="noreferrer" className="underline font-semibold text-emerald-700">resend.com</a> e inicia sesión con tu cuenta de Google.</li>
+                    <li>Haz clic en <strong>API Keys</strong> en la barra lateral y presiona <strong>Create API Key</strong>.</li>
+                    <li>Copia la clave que empieza con <code className="bg-emerald-100/80 px-1 py-0.5 rounded font-mono">re_...</code> y pégala aquí abajo.</li>
+                  </ol>
+                  <div className="pt-1">
+                    <a
+                      href="https://resend.com"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg text-xs transition-colors shadow-sm"
+                    >
+                      <span>Abrir Resend.com</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Contraseña / App Password
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••••••••••"
-                    value={formData.smtp_pass}
-                    onChange={(e) => setFormData({ ...formData, smtp_pass: e.target.value })}
-                    className="flex h-10 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 pr-10 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Clave API de Resend (API Key)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showResendKey ? 'text' : 'password'}
+                      placeholder="re_123456789_abcdef..."
+                      value={formData.resend_api_key}
+                      onChange={(e) => setFormData({ ...formData, resend_api_key: e.target.value })}
+                      className="flex h-10 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 pr-10 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowResendKey((prev) => !prev);
+                      }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer z-10"
+                      title={showResendKey ? 'Ocultar API Key' : 'Ver API Key'}
+                    >
+                      {showResendKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Tu API key se guarda de forma segura en tu base de datos y se utiliza para enviar notificaciones vía HTTPS.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Nombre y Correo Remitente (From)
+                  </label>
+                  <Input
+                    placeholder="Trail Explorer <onboarding@resend.dev>"
+                    value={formData.smtp_from}
+                    onChange={(e) => setFormData({ ...formData, smtp_from: e.target.value })}
                   />
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setShowPassword((prev) => !prev);
-                    }}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer z-10"
-                    title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Usa <code className="font-mono text-slate-700 bg-slate-100 px-1 py-0.5 rounded">Trail Explorer &lt;onboarding@resend.dev&gt;</code> para pruebas inmediatas. Si tienes tu propio dominio verificado en Resend, puedes colocar ej. <code className="font-mono text-slate-700 bg-slate-100 px-1 py-0.5 rounded">Trail Explorer &lt;reservas@tudominio.com&gt;</code>.
+                  </p>
                 </div>
               </div>
-            </div>
+            )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Nombre y Correo del Remitente (From)
-                </label>
-                <Input
-                  placeholder="Trail Explorer <reservas@trailexplorer.com>"
-                  value={formData.smtp_from}
-                  onChange={(e) => setFormData({ ...formData, smtp_from: e.target.value })}
-                />
-                <p className="text-xs text-slate-400 mt-1">Opcional. Si se deja vacío se usará el Usuario SMTP.</p>
-              </div>
+            {/* Configuración SMTP Directo */}
+            {formData.email_provider === 'smtp' && (
+              <div className="space-y-4 pt-2 border-t border-slate-100">
+                {/* Advertencia Railway */}
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-900 space-y-2">
+                  <div className="flex items-center gap-2 font-semibold text-amber-800 text-sm">
+                    <Info className="w-4 h-4 flex-shrink-0 text-amber-600" />
+                    <span>Aviso importante para despliegues en Railway</span>
+                  </div>
+                  <p className="text-amber-800/90 leading-relaxed">
+                    <strong>Railway bloquea los puertos SMTP salientes (587, 465, 25)</strong> por defecto en todos los planes para evitar abusos de spam. Si al probar SMTP obtienes el error <em>"Tiempo de espera agotado (ETIMEDOUT)"</em>, selecciona la opción <strong>Resend API</strong> de arriba, que funciona por HTTPS puerto 443 sin bloqueos.
+                  </p>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Cifrado de Conexión (Seguridad)
-                </label>
-                <select
-                  value={formData.smtp_secure}
-                  onChange={(e) => setFormData({ ...formData, smtp_secure: e.target.value })}
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
-                >
-                  <option value="false">STARTTLS / Automático (Puerto 587)</option>
-                  <option value="true">SSL / TLS Directo (Puerto 465)</option>
-                </select>
-              </div>
-            </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Servidor SMTP (Host)
+                    </label>
+                    <Input
+                      placeholder="smtp.gmail.com"
+                      value={formData.smtp_host}
+                      onChange={(e) => setFormData({ ...formData, smtp_host: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Puerto
+                    </label>
+                    <Input
+                      placeholder="587 o 465"
+                      value={formData.smtp_port}
+                      onChange={(e) => setFormData({ ...formData, smtp_port: e.target.value })}
+                    />
+                  </div>
+                </div>
 
-            {/* Ayuda Gmail */}
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-900 space-y-2">
-              <div className="flex items-center gap-2 font-semibold text-amber-800 text-sm">
-                <Info className="w-4 h-4 flex-shrink-0 text-amber-600" />
-                <span>¿Usas una cuenta de Gmail (@gmail.com o Google Workspace)?</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Usuario / Correo SMTP
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="trailexplorersv@gmail.com"
+                      value={formData.smtp_user}
+                      onChange={(e) => setFormData({ ...formData, smtp_user: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Contraseña de Aplicación Google (16 letras)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="••••••••••••••••"
+                        value={formData.smtp_pass}
+                        onChange={(e) => setFormData({ ...formData, smtp_pass: e.target.value })}
+                        className="flex h-10 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 pr-10 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setShowPassword((prev) => !prev);
+                        }}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer z-10"
+                        title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Nombre y Correo del Remitente (From)
+                    </label>
+                    <Input
+                      placeholder="Trail Explorer <reservas@trailexplorer.com>"
+                      value={formData.smtp_from}
+                      onChange={(e) => setFormData({ ...formData, smtp_from: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Cifrado de Conexión (Seguridad)
+                    </label>
+                    <select
+                      value={formData.smtp_secure}
+                      onChange={(e) => setFormData({ ...formData, smtp_secure: e.target.value })}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white"
+                    >
+                      <option value="false">STARTTLS / Automático (Puerto 587)</option>
+                      <option value="true">SSL / TLS Directo (Puerto 465)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Guía Contraseñas de Aplicación Google */}
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs text-slate-700 space-y-2">
+                  <div className="flex items-center gap-2 font-semibold text-slate-900 text-sm">
+                    <Info className="w-4 h-4 flex-shrink-0 text-slate-600" />
+                    <span>Cómo generar una Contraseña de Aplicación en Google</span>
+                  </div>
+                  <ol className="list-decimal list-inside space-y-1 text-slate-600 pl-1">
+                    <li>Activa la <strong>Verificación en 2 pasos</strong> en tu cuenta de Google.</li>
+                    <li>Ingresa a <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" className="text-emerald-600 hover:underline font-semibold">myaccount.google.com/apppasswords</a>.</li>
+                    <li>Crea una clave para "Trail Explorer" y pega las 16 letras en el campo de contraseña.</li>
+                  </ol>
+                </div>
               </div>
-              <p className="text-amber-800/90 leading-relaxed">
-                Por seguridad, Google <strong>no acepta tu contraseña habitual</strong> para envíos SMTP. Debes generar una <strong>Contraseña de Aplicación (16 letras)</strong>:
-              </p>
-              <ol className="list-decimal list-inside space-y-1 text-amber-800/90 pl-1">
-                <li>Asegúrate de tener activada la <strong>Verificación en 2 pasos</strong> en tu cuenta de Google.</li>
-                <li>Genera una contraseña de aplicación con nombre ej. <em>"Trail Explorer"</em>.</li>
-                <li>Copia el código de 16 caracteres generado y pégalo en el campo <strong>Contraseña / App Password</strong> de arriba.</li>
-              </ol>
-              <div className="pt-1">
-                <a
-                  href="https://myaccount.google.com/apppasswords"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg text-xs transition-colors shadow-sm"
-                >
-                  <span>Abrir Google: Contraseñas de aplicaciones</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
@@ -392,9 +524,9 @@ export const AdminSettings = () => {
                 <Shield className="w-5 h-5" />
               </div>
               <div>
-                <CardTitle className="text-lg">Prueba de Conexión SMTP</CardTitle>
+                <CardTitle className="text-lg">Prueba de Envío</CardTitle>
                 <CardDescription>
-                  Envía un correo de prueba para verificar que la configuración y credenciales funcionen correctamente
+                  Envía un correo de prueba para verificar que {formData.email_provider === 'resend' ? 'Resend API' : 'el servidor SMTP'} funcione correctamente
                 </CardDescription>
               </div>
             </div>
@@ -412,7 +544,7 @@ export const AdminSettings = () => {
                   onChange={(e) => setTestEmail(e.target.value)}
                 />
                 <p className="text-xs text-slate-400 mt-1">
-                  Ingresa el correo donde deseas recibir el mensaje de confirmación de prueba.
+                  Recibirás un correo de confirmación validando la configuración.
                 </p>
               </div>
               <Button
@@ -425,12 +557,12 @@ export const AdminSettings = () => {
                 {testing ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Probando conexión...
+                    Enviando prueba...
                   </>
                 ) : (
                   <>
                     <Send className="w-4 h-4 mr-2" />
-                    Enviar Correo de Prueba
+                    Enviar Correo de Prueba ({formData.email_provider === 'resend' ? 'Resend API' : 'SMTP'})
                   </>
                 )}
               </Button>

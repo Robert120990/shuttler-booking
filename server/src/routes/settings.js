@@ -44,10 +44,13 @@ router.post('/', async (req, res) => {
   }
 });
 
-// POST /api/settings/test-smtp - Send test email
+// POST /api/settings/test-smtp - Send test email (supports both Resend API and Nodemailer SMTP)
 router.post('/test-smtp', async (req, res) => {
   try {
     const savedSettings = await getSettings();
+
+    const provider = req.body.email_provider || savedSettings.email_provider || 'smtp';
+    const resendApiKey = (req.body.resend_api_key || savedSettings.resend_api_key || '').trim();
 
     let host = (req.body.smtp_host || savedSettings.smtp_host || DEFAULT_SETTINGS.smtp_host).trim();
     let port = (req.body.smtp_port || savedSettings.smtp_port || DEFAULT_SETTINGS.smtp_port).toString().trim();
@@ -68,6 +71,8 @@ router.post('/test-smtp', async (req, res) => {
     const emailToSend = rawEmail.split(',')[0].trim();
 
     const config = {
+      email_provider: provider,
+      resend_api_key: resendApiKey,
       smtp_host: host,
       smtp_port: port,
       smtp_secure: secure,
@@ -77,15 +82,16 @@ router.post('/test-smtp', async (req, res) => {
     };
 
     await sendTestEmail(config, emailToSend);
-    res.json({ success: true, message: `Correo de prueba enviado exitosamente a ${emailToSend}` });
+    const methodDesc = (provider === 'resend' || resendApiKey) ? 'vía Resend API' : 'vía Servidor SMTP';
+    res.json({ success: true, message: `Correo de prueba enviado exitosamente a ${emailToSend} (${methodDesc})` });
   } catch (error) {
     console.error('Error sending test email:', error);
-    let errorMsg = error.message || error.response || 'Error de conexión con el servidor SMTP';
-    
+    let errorMsg = error.message || error.response || 'Error de conexión con el servicio de correo';
+
     if (errorMsg.includes('535') || errorMsg.includes('BadCredentials') || errorMsg.includes('Username and Password not accepted') || error.code === 'EAUTH') {
-      errorMsg = 'Error de autenticación SMTP (535): Google rechazó las credenciales. Si estás usando una cuenta de Gmail (@gmail.com), Google NO permite usar tu contraseña personal de inicio de sesión. Debes generar una "Contraseña de Aplicación" de 16 letras en https://myaccount.google.com/apppasswords (requiere Verificación en 2 pasos activada).';
+      errorMsg = 'Error de autenticación SMTP (535): Google rechazó las credenciales. Si estás usando una cuenta de Gmail (@gmail.com), debes generar una "Contraseña de Aplicación" de 16 letras en https://myaccount.google.com/apppasswords.';
     } else if (error.code === 'ETIMEDOUT' || error.code === 'ESOCKET' || errorMsg.includes('timeout')) {
-      errorMsg = 'Tiempo de espera agotado al conectar al servidor SMTP. Verifica que el Servidor (Host) y el Puerto (587 o 465) sean correctos.';
+      errorMsg = 'Tiempo de espera agotado (ETIMEDOUT): Tu servidor en la nube (Railway) bloquea por cortafuegos las conexiones salientes por los puertos SMTP 587 y 465. Para solucionarlo sin costo, selecciona la opción "Resend API" en la parte superior e ingresa tu clave API gratuita de resend.com (funciona por HTTPS puerto 443 sin bloqueos).';
     } else if (error.code === 'ENOTFOUND') {
       errorMsg = `No se pudo encontrar el servidor SMTP (${req.body.smtp_host}). Verifica que el nombre del host sea correcto.`;
     }

@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 export const DEFAULT_SETTINGS = {
   email_provider: 'smtp',
   resend_api_key: '',
+  brevo_api_key: '',
   smtp_host: 'smtp.gmail.com',
   smtp_port: '587',
   smtp_secure: 'false',
@@ -77,7 +78,14 @@ export function getMailSenderOptions(config) {
     return { from: address };
   }
 
-  // If user entered only a name like "Trail Explorer", attach user email
+  // If user entered plain email without name:
+  if (!rawFrom.includes('<') && rawFrom.includes('@')) {
+    return {
+      from: `Trail Explorer <${rawFrom}>`,
+    };
+  }
+
+  // If user entered just a display name without email:
   if (!rawFrom.includes('@')) {
     return {
       from: user ? `"${rawFrom}" <${user}>` : `"${rawFrom}" <no-reply@trailexplorer.com>`,
@@ -236,7 +244,7 @@ export async function sendViaResend(apiKey, options) {
       const finalMsg = data.message || data.error?.message || errMessage || 'Error desconocido al conectar con Resend API';
       if (finalMsg.includes('testing emails to your own email address') || finalMsg.includes('only send testing')) {
         throw new Error(
-          `Resend (Modo Prueba gratuito): Al usar 'onboarding@resend.dev', Resend únicamente permite enviar correos a la dirección con la que te registraste en resend.com. Por favor ingresa esa dirección en el campo 'Correo Destinatario de Prueba'.`
+          `Resend (Modo Prueba gratuito): Al usar 'onboarding@resend.dev', Resend únicamente permite enviar correos a la dirección con la que te registraste en resend.com. Para enviar a clientes externos, debes verificar un dominio en resend.com/domains o usar la alternativa Brevo (gratuita sin requerir dominio).`
         );
       }
       if (finalMsg.includes('API key') || finalMsg.includes('restricted') || finalMsg.includes('Unauthorized') || res.status === 401) {
@@ -244,6 +252,78 @@ export async function sendViaResend(apiKey, options) {
       }
       throw new Error(`Error de Resend API: ${finalMsg}`);
     }
+  }
+
+  return data;
+}
+
+/**
+ * Sends an email using Brevo's (Sendinblue) HTTPS REST API (Port 443 - free 300 emails/day, no custom domain required)
+ */
+export async function sendViaBrevo(apiKey, options) {
+  const cleanKey = (apiKey || '').trim();
+  if (!cleanKey) {
+    throw new Error('Debes ingresar una clave de API de Brevo (comienza con xkeysib-).');
+  }
+
+  const recipients = Array.isArray(options.to)
+    ? options.to
+    : (options.to || '')
+        .split(',')
+        .map((e) => e.trim())
+        .filter(Boolean);
+
+  if (recipients.length === 0) {
+    throw new Error('No se especificó ningún destinatario para el correo.');
+  }
+
+  let fromName = 'Trail Explorer';
+  let fromEmail = 'trailexplorersv@gmail.com';
+  if (options.from) {
+    const match = options.from.match(/^"?([^"<]+)"?\s*<([^>]+)>/);
+    if (match) {
+      fromName = match[1].trim();
+      fromEmail = match[2].trim();
+    } else if (options.from.includes('@')) {
+      fromEmail = options.from.trim();
+    }
+  }
+
+  const payload = {
+    sender: { name: fromName, email: fromEmail },
+    to: recipients.map((email) => ({ email })),
+    subject: options.subject,
+    htmlContent: options.html,
+  };
+
+  if (options.text) {
+    payload.textContent = options.text;
+  }
+
+  if (options.replyTo) {
+    payload.replyTo = { email: options.replyTo };
+  }
+
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'accept': 'application/json',
+      'api-key': cleanKey,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    const errMsg = data.message || JSON.stringify(data);
+    if (res.status === 401 || errMsg.includes('Key not found') || errMsg.includes('unauthorized')) {
+      throw new Error('Clave API de Brevo inválida. Verifica que comience con xkeysib- y esté activa en tu cuenta de Brevo.');
+    }
+    if (errMsg.includes('sender') || errMsg.includes('Sender email not allowed') || errMsg.includes('unregistered')) {
+      throw new Error(`El remitente (${fromEmail}) no está verificado en Brevo. Entra a Brevo -> Send & API -> Senders y añade/verifica tu correo ${fromEmail}.`);
+    }
+    throw new Error(`Error de Brevo API: ${errMsg}`);
   }
 
   return data;
@@ -421,16 +501,22 @@ Trail Explorer • Soporte y Asistencia de Viaje
  * Sends a test email to verify SMTP or Resend configuration
  */
 export async function sendTestEmail(customConfig, targetEmail) {
+  const isBrevo =
+    customConfig?.email_provider === 'brevo' ||
+    Boolean(customConfig?.brevo_api_key?.trim());
+
   // Only use Resend if provider is 'resend' or if provider is not 'smtp' and a resend key exists
   const isResend =
-    customConfig?.email_provider === 'resend' ||
-    (customConfig?.email_provider !== 'smtp' && (
-      Boolean(customConfig?.resend_api_key?.trim()) ||
-      Boolean(customConfig?.smtp_pass && customConfig.smtp_pass.trim().startsWith('re_'))
-    ));
+    !isBrevo && (
+      customConfig?.email_provider === 'resend' ||
+      (customConfig?.email_provider !== 'smtp' && (
+        Boolean(customConfig?.resend_api_key?.trim()) ||
+        Boolean(customConfig?.smtp_pass && customConfig.smtp_pass.trim().startsWith('re_'))
+      ))
+    );
 
   const senderOptions = getMailSenderOptions(customConfig);
-  const providerLabel = isResend ? 'Resend API HTTPS' : 'Servidor SMTP';
+  const providerLabel = isBrevo ? 'Brevo API HTTPS' : isResend ? 'Resend API HTTPS' : 'Servidor SMTP';
 
   const mailOptions = {
     ...senderOptions,
@@ -454,6 +540,16 @@ export async function sendTestEmail(customConfig, targetEmail) {
       </div>
     `,
   };
+
+  if (isBrevo) {
+    const apiKey = (customConfig.brevo_api_key || '').trim();
+    let brevoFrom = customConfig.smtp_from?.trim() || `Trail Explorer <${customConfig.smtp_user || 'trailexplorersv@gmail.com'}>`;
+    return await sendViaBrevo(apiKey, {
+      ...mailOptions,
+      from: brevoFrom,
+      replyTo: customConfig.smtp_user || undefined,
+    });
+  }
 
   if (isResend) {
     const apiKey = (customConfig.resend_api_key || customConfig.smtp_pass || '').trim();
@@ -506,12 +602,18 @@ export async function sendTestEmail(customConfig, targetEmail) {
 export async function sendBookingNotification(booking, shuttle = null) {
   try {
     const settings = await getSettings();
+    const isBrevo =
+      settings.email_provider === 'brevo' ||
+      Boolean(settings.brevo_api_key?.trim());
+
     const isResend =
-      settings.email_provider === 'resend' ||
-      (settings.email_provider !== 'smtp' && (
-        Boolean(settings.resend_api_key?.trim()) ||
-        Boolean(settings.smtp_pass && settings.smtp_pass.trim().startsWith('re_'))
-      ));
+      !isBrevo && (
+        settings.email_provider === 'resend' ||
+        (settings.email_provider !== 'smtp' && (
+          Boolean(settings.resend_api_key?.trim()) ||
+          Boolean(settings.smtp_pass && settings.smtp_pass.trim().startsWith('re_'))
+        ))
+      );
 
     const rawRecipient = settings.notification_email || settings.smtp_user;
     if (!rawRecipient) {
@@ -540,6 +642,46 @@ export async function sendBookingNotification(booking, shuttle = null) {
     const emailHtml = buildAdminBookingHtml(booking, shuttle, shuttleName, bookingDate);
     const emailText = buildAdminBookingText(booking, shuttle, shuttleName, bookingDate);
     const adminSubject = `🚐 Nueva Reserva: ${shuttleName} - ${booking.passenger_name || 'Cliente'} ($${booking.total_price} USD)`;
+
+    if (isBrevo) {
+      const apiKey = (settings.brevo_api_key || '').trim();
+      let brevoFrom = settings.smtp_from?.trim() || `Trail Explorer <${settings.smtp_user || 'trailexplorersv@gmail.com'}>`;
+
+      // 1. Send admin notification
+      try {
+        await sendViaBrevo(apiKey, {
+          from: brevoFrom,
+          to: recipientEmails,
+          subject: adminSubject,
+          text: emailText,
+          html: emailHtml,
+          replyTo: booking.passenger_email || undefined,
+        });
+        console.log(`✅ [Brevo] Notificación de reserva enviada a ${recipientEmails.join(', ')}`);
+      } catch (adminErr) {
+        console.error('Error enviando notificación admin vía Brevo:', adminErr);
+      }
+
+      // 2. Send customer confirmation
+      if (settings.send_customer_email === 'true' && booking.passenger_email) {
+        try {
+          const customerHtml = buildCustomerConfirmationHtml(booking, shuttle, shuttleName, bookingDate);
+          const customerText = buildCustomerConfirmationText(booking, shuttle, shuttleName, bookingDate);
+          await sendViaBrevo(apiKey, {
+            from: brevoFrom,
+            to: booking.passenger_email,
+            subject: `✅ Confirmación de Reserva: ${shuttleName} - Trail Explorer`,
+            text: customerText,
+            html: customerHtml,
+            replyTo: settings.notification_email || settings.smtp_user || undefined,
+          });
+          console.log(`✅ [Brevo] Confirmación enviada al cliente: ${booking.passenger_email}`);
+        } catch (custErr) {
+          console.error('Error enviando correo al cliente vía Brevo:', custErr);
+        }
+      }
+      return;
+    }
 
     if (isResend) {
       const apiKey = (settings.resend_api_key || settings.smtp_pass || '').trim();
@@ -830,12 +972,18 @@ export async function sendBookingStatusNotification(booking, newStatus, shuttle 
     }
 
     const settings = await getSettings();
+    const isBrevo =
+      settings.email_provider === 'brevo' ||
+      Boolean(settings.brevo_api_key?.trim());
+
     const isResend =
-      settings.email_provider === 'resend' ||
-      (settings.email_provider !== 'smtp' && (
-        Boolean(settings.resend_api_key?.trim()) ||
-        Boolean(settings.smtp_pass && settings.smtp_pass.trim().startsWith('re_'))
-      ));
+      !isBrevo && (
+        settings.email_provider === 'resend' ||
+        (settings.email_provider !== 'smtp' && (
+          Boolean(settings.resend_api_key?.trim()) ||
+          Boolean(settings.smtp_pass && settings.smtp_pass.trim().startsWith('re_'))
+        ))
+      );
 
     // Resolve shuttle info if not passed
     let resolvedShuttle = shuttle;
@@ -871,6 +1019,22 @@ export async function sendBookingStatusNotification(booking, newStatus, shuttle 
     } else {
       console.log(`No hay plantilla de notificación configurada para el estado: ${newStatus}`);
       return { success: false, error: `No hay plantilla para el estado ${newStatus}` };
+    }
+
+    if (isBrevo) {
+      const apiKey = (settings.brevo_api_key || '').trim();
+      let brevoFrom = settings.smtp_from?.trim() || `Trail Explorer <${settings.smtp_user || 'trailexplorersv@gmail.com'}>`;
+
+      await sendViaBrevo(apiKey, {
+        from: brevoFrom,
+        to: booking.passenger_email,
+        subject,
+        text: emailText,
+        html: emailHtml,
+        replyTo: settings.notification_email || settings.smtp_user || undefined,
+      });
+      console.log(`✅ [Brevo] Notificación de estado (${newStatus}) enviada al cliente: ${booking.passenger_email}`);
+      return { success: true, method: 'brevo', email: booking.passenger_email };
     }
 
     if (isResend) {

@@ -12,12 +12,14 @@ export const AdminSettings = () => {
   const [testing, setTesting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showResendKey, setShowResendKey] = useState(false);
+  const [showBrevoKey, setShowBrevoKey] = useState(false);
   const [testEmail, setTestEmail] = useState('');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const [formData, setFormData] = useState({
     email_provider: 'smtp',
     resend_api_key: '',
+    brevo_api_key: '',
     smtp_host: 'smtp.gmail.com',
     smtp_port: '587',
     smtp_secure: 'false',
@@ -47,6 +49,7 @@ export const AdminSettings = () => {
         setFormData({
           email_provider: raw.email_provider || 'smtp',
           resend_api_key: raw.resend_api_key || '',
+          brevo_api_key: raw.brevo_api_key || '',
           smtp_host: raw.smtp_host || 'smtp.gmail.com',
           smtp_port: raw.smtp_port || '587',
           smtp_secure: raw.smtp_secure || 'false',
@@ -86,6 +89,7 @@ export const AdminSettings = () => {
         setFormData({
           email_provider: s.email_provider || 'smtp',
           resend_api_key: s.resend_api_key || '',
+          brevo_api_key: s.brevo_api_key || '',
           smtp_host: s.smtp_host || 'smtp.gmail.com',
           smtp_port: s.smtp_port || '587',
           smtp_secure: s.smtp_secure || 'false',
@@ -111,13 +115,15 @@ export const AdminSettings = () => {
     }
   };
 
-  const handleSelectProvider = (provider: 'resend' | 'smtp') => {
+  const handleSelectProvider = (provider: 'brevo' | 'resend' | 'smtp') => {
     setFormData((prev) => {
       let nextFrom = prev.smtp_from;
       if (provider === 'resend') {
-        if (!nextFrom || nextFrom.includes('trailexplorer.com')) {
+        if (!nextFrom || nextFrom.includes('trailexplorer.com') || nextFrom.includes('gmail.com')) {
           nextFrom = 'Trail Explorer <onboarding@resend.dev>';
         }
+      } else if (provider === 'brevo') {
+        nextFrom = `Trail Explorer <${prev.smtp_user || 'trailexplorersv@gmail.com'}>`;
       } else {
         if (!nextFrom || nextFrom.includes('onboarding@resend.dev')) {
           nextFrom = 'Trail Explorer <reservas@trailexplorer.com>';
@@ -143,7 +149,15 @@ export const AdminSettings = () => {
       return;
     }
 
-    if (formData.email_provider === 'resend') {
+    if (formData.email_provider === 'brevo') {
+      if (!formData.brevo_api_key?.trim()) {
+        setFeedback({
+          type: 'error',
+          message: 'Debes ingresar tu Clave API de Brevo (comienza con xkeysib-) antes de enviar la prueba.',
+        });
+        return;
+      }
+    } else if (formData.email_provider === 'resend') {
       if (!formData.resend_api_key?.trim()) {
         setFeedback({
           type: 'error',
@@ -339,8 +353,33 @@ export const AdminSettings = () => {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Opción 1: Resend API */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Opción 1: Brevo API */}
+              <div
+                onClick={() => handleSelectProvider('brevo')}
+                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                  formData.email_provider === 'brevo'
+                    ? 'border-emerald-600 bg-emerald-50/40 shadow-sm ring-1 ring-emerald-600'
+                    : 'border-slate-200 hover:border-slate-300 bg-white'
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg">
+                      <Zap className="w-4 h-4" />
+                    </span>
+                    <span className="font-semibold text-slate-900">Brevo API (HTTPS)</span>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-600 text-white">
+                    100% Gratis
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 mt-2 leading-relaxed">
+                  <strong>300 correos/día gratis</strong> sin necesidad de dominio web propio. Funciona de inmediato en Railway mediante HTTPS.
+                </p>
+              </div>
+
+              {/* Opción 2: Resend API */}
               <div
                 onClick={() => handleSelectProvider('resend')}
                 className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
@@ -351,21 +390,21 @@ export const AdminSettings = () => {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="p-1.5 bg-emerald-100 text-emerald-700 rounded-lg">
+                    <span className="p-1.5 bg-purple-100 text-purple-700 rounded-lg">
                       <Zap className="w-4 h-4" />
                     </span>
-                    <span className="font-semibold text-slate-900">Resend API (HTTPS)</span>
+                    <span className="font-semibold text-slate-900">Resend API</span>
                   </div>
-                  <span className="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                    Recomendado Railway
+                  <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">
+                    Con Dominio
                   </span>
                 </div>
                 <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                  Envía correos mediante API Web por puerto 443 (HTTPS). <strong>Inmune al bloqueo de puertos de Railway</strong>. 3,000 correos gratis al mes.
+                  3,000 correos/mes gratis. Requiere vincular y verificar un dominio web propio en resend.com para enviar a clientes.
                 </p>
               </div>
 
-              {/* Opción 2: SMTP Clásico */}
+              {/* Opción 3: SMTP Clásico */}
               <div
                 onClick={() => handleSelectProvider('smtp')}
                 className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
@@ -379,17 +418,90 @@ export const AdminSettings = () => {
                     <span className="p-1.5 bg-blue-100 text-blue-700 rounded-lg">
                       <Server className="w-4 h-4" />
                     </span>
-                    <span className="font-semibold text-slate-900">Gmail / SMTP Directo</span>
+                    <span className="font-semibold text-slate-900">Gmail / SMTP</span>
                   </div>
-                  <span className="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
                     Puerto 587/465
                   </span>
                 </div>
                 <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                  Conexión directa por socket TCP a servidores SMTP. Ideal para pruebas locales o servidores con puertos SMTP abiertos.
+                  Conexión directa por socket TCP. En Railway requiere solicitar desbloqueo de puertos al soporte.
                 </p>
               </div>
             </div>
+
+            {/* Configuración Brevo API */}
+            {formData.email_provider === 'brevo' && (
+              <div className="space-y-4 pt-2 border-t border-slate-100">
+                <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-4 text-xs text-emerald-950 space-y-2">
+                  <div className="flex items-center gap-2 font-semibold text-emerald-900 text-sm">
+                    <Zap className="w-4 h-4 text-emerald-600" />
+                    <span>¿Cómo activar Brevo en 2 minutos (100% Gratis sin dominio)?</span>
+                  </div>
+                  <ol className="list-decimal list-inside space-y-1.5 text-emerald-900/90 pl-1">
+                    <li>Entra a <a href="https://brevo.com" target="_blank" rel="noreferrer" className="underline font-semibold text-emerald-700">brevo.com</a> y crea una cuenta gratuita con tu correo Gmail (ej. <code className="bg-emerald-100/80 px-1 py-0.5 rounded font-mono">trailexplorersv@gmail.com</code>).</li>
+                    <li>Confirma tu correo con el código/enlace que te enviará Brevo. Al hacerlo, tu dirección queda verificada automáticamente como remitente.</li>
+                    <li>En tu cuenta de Brevo, abre la sección <strong>SMTP &amp; API</strong> &gt; <strong>API Keys</strong> y haz clic en <strong>Generate a new API key</strong>.</li>
+                    <li>Copia la clave que empieza con <code className="bg-emerald-100/80 px-1 py-0.5 rounded font-mono">xkeysib-...</code> y pégala aquí abajo.</li>
+                  </ol>
+                  <div className="pt-1">
+                    <a
+                      href="https://app.brevo.com/settings/keys/api"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg text-xs transition-colors shadow-sm"
+                    >
+                      <span>Obtener API Key en Brevo.com</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Clave API de Brevo (API Key)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showBrevoKey ? 'text' : 'password'}
+                      placeholder="xkeysib-123456789_abcdef..."
+                      value={formData.brevo_api_key}
+                      onChange={(e) => setFormData({ ...formData, brevo_api_key: e.target.value })}
+                      className="flex h-10 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 pr-10 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowBrevoKey((prev) => !prev);
+                      }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer z-10"
+                      title={showBrevoKey ? 'Ocultar API Key' : 'Ver API Key'}
+                    >
+                      {showBrevoKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Tu API key se guarda de forma segura y envía correos vía HTTPS (puerto 443) a cualquier cliente sin bloqueos.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Correo Remitente en Brevo (From)
+                  </label>
+                  <Input
+                    placeholder="Trail Explorer <trailexplorersv@gmail.com>"
+                    value={formData.smtp_from}
+                    onChange={(e) => setFormData({ ...formData, smtp_from: e.target.value })}
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Debe ser el mismo correo con el que te registraste en Brevo.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Configuración Resend API */}
             {formData.email_provider === 'resend' && (

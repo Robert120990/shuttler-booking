@@ -79,6 +79,7 @@ router.post('/test-smtp', async (req, res) => {
 
     const provider = req.body.email_provider || savedSettings.email_provider || 'smtp';
     const resendApiKey = (provider === 'resend' ? (req.body.resend_api_key || savedSettings.resend_api_key || '') : '').trim();
+    const brevoApiKey = (provider === 'brevo' ? (req.body.brevo_api_key || savedSettings.brevo_api_key || '') : '').trim();
 
     let host = (req.body.smtp_host || savedSettings.smtp_host || DEFAULT_SETTINGS.smtp_host).trim();
     let port = (req.body.smtp_port || savedSettings.smtp_port || DEFAULT_SETTINGS.smtp_port).toString().trim();
@@ -106,9 +107,14 @@ router.post('/test-smtp', async (req, res) => {
       return res.status(400).json({ error: 'Debes ingresar tu Clave API de Resend (comienza con re_) para realizar la prueba.' });
     }
 
+    if (provider === 'brevo' && !brevoApiKey) {
+      return res.status(400).json({ error: 'Debes ingresar tu Clave API de Brevo (comienza con xkeysib-) para realizar la prueba.' });
+    }
+
     const config = {
       email_provider: provider,
       resend_api_key: resendApiKey,
+      brevo_api_key: brevoApiKey,
       smtp_host: host,
       smtp_port: port,
       smtp_secure: secure,
@@ -118,7 +124,7 @@ router.post('/test-smtp', async (req, res) => {
     };
 
     await sendTestEmail(config, emailToSend);
-    const methodDesc = provider === 'resend' ? 'vía Resend API (HTTPS)' : 'vía Servidor SMTP';
+    const methodDesc = provider === 'brevo' ? 'vía Brevo API (HTTPS)' : provider === 'resend' ? 'vía Resend API (HTTPS)' : 'vía Servidor SMTP';
     res.json({ success: true, message: `¡Correo de prueba enviado exitosamente a ${emailToSend} (${methodDesc})!` });
   } catch (error) {
     console.error('Error sending test email:', error);

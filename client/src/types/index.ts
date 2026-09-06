@@ -118,3 +118,29 @@ export interface Settings {
   key: string;
   value: string;
 }
+
+export interface Review {
+  id: string;
+  shuttle_id: string;
+  shuttle_name?: string;
+  shuttle_slug?: string;
+  user_name: string;
+  user_email?: string;
+  rating: number;
+  comment: string;
+  status: 'approved' | 'hidden';
+  created_at: string;
+}
+
+export interface ReviewStats {
+  averageRating: number;
+  reviewCount: number;
+  distribution: {
+    1: number;
+    2: number;
+    3: number;
+    4: number;
+    5: number;
+  };
+  recommendedPercent: number;
+}

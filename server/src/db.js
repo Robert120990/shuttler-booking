@@ -149,10 +149,22 @@ async function initSqlite() {
       phone TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS reviews (
+      id TEXT PRIMARY KEY,
+      shuttle_id TEXT NOT NULL REFERENCES shuttles(id) ON DELETE CASCADE,
+      user_name TEXT NOT NULL,
+      user_email TEXT,
+      rating INTEGER NOT NULL,
+      comment TEXT NOT NULL,
+      status TEXT DEFAULT 'approved',
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   try {
     sqliteDb.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_settings_key ON settings (key)');
+    sqliteDb.run('CREATE INDEX IF NOT EXISTS idx_reviews_shuttle_id ON reviews (shuttle_id)');
   } catch (e) {}
 
   saveDb();
@@ -285,7 +297,19 @@ export async function initDb() {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           );
 
+          CREATE TABLE IF NOT EXISTS reviews (
+            id TEXT PRIMARY KEY,
+            shuttle_id TEXT NOT NULL REFERENCES shuttles(id) ON DELETE CASCADE,
+            user_name TEXT NOT NULL,
+            user_email TEXT,
+            rating INTEGER NOT NULL,
+            comment TEXT NOT NULL,
+            status TEXT DEFAULT 'approved',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+
           CREATE UNIQUE INDEX IF NOT EXISTS idx_settings_key ON settings (key);
+          CREATE INDEX IF NOT EXISTS idx_reviews_shuttle_id ON reviews (shuttle_id);
         `);
       } finally {
         client.release();

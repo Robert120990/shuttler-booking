@@ -14,6 +14,7 @@ import uploadRoutes from './routes/upload.js';
 import usersRoutes from './routes/users.js';
 import settingsRoutes from './routes/settings.js';
 import hostelsRoutes from './routes/hostels.js';
+import reviewsRoutes from './routes/reviews.js';
 import { PUBLIC_URL, IMAGES_DIR, ensureDir } from './config.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -89,6 +90,7 @@ app.use('/api/faqs', faqsRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/hostels', hostelsRoutes);
+app.use('/api/reviews', reviewsRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

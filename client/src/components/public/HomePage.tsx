@@ -246,9 +246,14 @@ export const HomePage = () => {
                     </div>
                   </div>
                   <CardContent className="pt-4">
-                    <div className="flex items-center gap-1 text-sm text-amber-500 mb-2">
+                    <div className="flex items-center gap-1.5 text-sm text-amber-500 mb-2">
                       <Star className="w-4 h-4 fill-current" />
-                      <span className="font-medium">{shuttle.rating || 5.0}</span>
+                      <span className="font-bold text-slate-800">{(shuttle.rating || 5.0).toFixed(1)}</span>
+                      {Number(shuttle.review_count) > 0 && (
+                        <span className="text-xs text-slate-400 font-normal">
+                          ({shuttle.review_count} {language === 'es' ? 'reseñas' : 'reviews'})
+                        </span>
+                      )}
                     </div>
                     <h3 className="font-semibold text-slate-900 mb-1">{translateRouteName(shuttle.name, language)}</h3>
                     <div className="flex items-center gap-2 text-sm text-slate-500 mb-3">

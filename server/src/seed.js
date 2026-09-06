@@ -499,6 +499,81 @@ export async function seedDefaultSettings() {
   }
 }
 
+export async function seedSampleReviews() {
+  try {
+    const existing = await prepare('SELECT COUNT(*) as count FROM reviews').get();
+    if (existing && Number(existing.count) > 0) {
+      return;
+    }
+
+    const shuttles = await prepare('SELECT id, slug, name FROM shuttles').all();
+    if (!shuttles || shuttles.length === 0) return;
+
+    const { recalculateShuttleRating } = await import('./routes/reviews.js');
+
+    const sampleReviewsData = [
+      {
+        slugMatch: 'antigua-to-san-salvador',
+        reviews: [
+          { name: 'Sarah Jenkins', email: 'sarah.j@traveler.com', rating: 5, comment: 'Excelente experiencia de Antigua a San Salvador. El chofer fue muy puntual y nos ayudó con todo el trámite migratorio en la frontera. La van con aire acondicionado perfecto.' },
+          { name: 'Mateo Gómez', email: 'mateo.gomez@gmail.com', rating: 5, comment: 'Muy cómodo y seguro. Salimos a tiempo y llegamos directo a nuestro hotel en San Benito sin contratiempos. 100% recomendado para mochileros y turistas.' },
+          { name: 'Claire Dupont', email: 'c.dupont@voyage.fr', rating: 4, comment: 'Very smooth ride between Guatemala and El Salvador. Driver was courteous and drove safely through the mountains.' },
+        ],
+      },
+      {
+        slugMatch: 'la-fortuna-to-san-josé',
+        reviews: [
+          { name: 'David Miller', email: 'dmiller@outlook.com', rating: 5, comment: 'El servicio puerta a puerta en Costa Rica es inmejorable. Nos recogieron en el lobby del hotel en La Fortuna y nos dejaron directo en el aeropuerto SJO.' },
+          { name: 'Elena Fernández', email: 'elena.f@hotmail.com', rating: 5, comment: 'Excelente servicio, van moderna, limpia y con Wi-Fi funcionando todo el trayecto. El chofer Carlos fue súper amable.' },
+        ],
+      },
+      {
+        slugMatch: 'el-tunco-to-antigua',
+        reviews: [
+          { name: 'Lucas Meyer', email: 'lucas.m@gmail.com', rating: 5, comment: 'Salida temprano muy eficiente. Cruzamos la frontera sin filas y llegamos a Antigua antes del mediodía con todo el día por delante para recorrer la ciudad.' },
+          { name: 'Andrea Romero', email: 'andrea.romero@gmail.com', rating: 4, comment: 'Buen viaje, asientos reclinables y buena música. Una gran alternativa al transporte público.' },
+        ],
+      },
+      {
+        slugMatch: 'tamarindo-to-monteverde',
+        reviews: [
+          { name: 'Jessica Taylor', email: 'jess.taylor@gmail.com', rating: 5, comment: 'Great transfer from the beach to the cloud forest! Spectacular mountain views and safe driving.' },
+        ],
+      },
+      {
+        slugMatch: 'granada-to-león',
+        reviews: [
+          { name: 'Carlos Morales', email: 'cmorales@viajes.com', rating: 5, comment: 'Rápido, puntual y muy cómodo para viajar entre las ciudades coloniales de Nicaragua. Súper recomendado.' },
+        ],
+      },
+    ];
+
+    const insertReview = prepare(`
+      INSERT INTO reviews (id, shuttle_id, user_name, user_email, rating, comment, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, 'approved', CURRENT_TIMESTAMP)
+    `);
+
+    for (const group of sampleReviewsData) {
+      const shuttle = shuttles.find((s) => s.slug === group.slugMatch || s.slug.includes(group.slugMatch)) || shuttles[0];
+      if (shuttle) {
+        for (const rev of group.reviews) {
+          await insertReview.run(uuidv4(), shuttle.id, rev.name, rev.email, rev.rating, rev.comment);
+        }
+        await recalculateShuttleRating(shuttle.id);
+      }
+    }
+
+    // Ensure all shuttles have updated ratings
+    for (const s of shuttles) {
+      await recalculateShuttleRating(s.id);
+    }
+
+    console.log('✅ Reseñas de demostración sembradas y puntuaciones calculadas con éxito.');
+  } catch (err) {
+    console.error('Error seeding sample reviews:', err);
+  }
+}
+
 export async function seedData() {
   const userCount = await prepare('SELECT COUNT(*) as count FROM users').get();
   if (userCount && Number(userCount.count) > 0) {
@@ -506,6 +581,7 @@ export async function seedData() {
     await seedSampleBookings();
     await seedSampleHostels();
     await seedDefaultSettings();
+    await seedSampleReviews();
     return;
   }
 

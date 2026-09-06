@@ -1,5 +1,5 @@
 import api from './client';
-import type { Country, City, Shuttle, Booking, FAQ, User, Hostel } from '../types';
+import type { Country, City, Shuttle, Booking, FAQ, User, Hostel, Review, ReviewStats } from '../types';
 
 export const countriesApi = {
   getAll: () => api.get<Country[]>('/countries'),
@@ -71,6 +71,19 @@ export const settingsApi = {
   getPublic: () => api.get<Record<string, string>>('/settings/public'),
   update: (data: Record<string, any>) => api.post<{ message: string; settings: Record<string, string> }>('/settings', data),
   testSmtp: (data: Record<string, any>) => api.post<{ success: boolean; message: string }>('/settings/test-smtp', data, { timeout: 35000 }),
+};
+
+export const reviewsApi = {
+  getByShuttle: (shuttleId: string) => api.get<{ reviews: Review[]; stats: ReviewStats }>(`/reviews/shuttle/${shuttleId}`),
+  create: (shuttleId: string, data: { user_name: string; user_email?: string; rating: number; comment: string }) =>
+    api.post<{ message: string; review: Review; updatedStats: { rating: number; review_count: number } }>(`/reviews/shuttle/${shuttleId}`, data),
+  getAllAdmin: (params?: { shuttle_id?: string; rating?: number; status?: string }) =>
+    api.get<{ reviews: Review[]; metrics: { totalReviews: number; averageRating: number; fiveStarReviews: number; approvedReviews: number } }>('/reviews', { params }),
+  createAdmin: (data: { shuttle_id: string; user_name: string; user_email?: string; rating: number; comment: string }) =>
+    api.post<{ message: string; review: Review }>('/reviews/admin', data),
+  updateStatus: (id: string, status: 'approved' | 'hidden') =>
+    api.patch<{ message: string; id: string; status: string }>(`/reviews/${id}/status`, { status }),
+  delete: (id: string) => api.delete<{ message: string }>(`/reviews/${id}`),
 };
 
 

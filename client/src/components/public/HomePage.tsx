@@ -4,12 +4,12 @@ import { Star, Clock, MapPin, Shield, CreditCard, Headphones, Calendar, Loader2,
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { countriesApi, shuttlesApi } from '../../api/endpoints';
+import { countriesApi, shuttlesApi, citiesApi } from '../../api/endpoints';
 import { getImageUrl } from '../../api/client';
 import { SEO } from '../seo/SEO';
 import { useLanguageStore } from '../../i18n';
-import { translateRouteName, translateCountryName, translateCountryDescription } from '../../utils/shuttleTranslator';
-import type { Country, Shuttle } from '../../types';
+import { translateRouteName, translateCountryName, translateCountryDescription, translateCityDescription } from '../../utils/shuttleTranslator';
+import type { Country, Shuttle, City } from '../../types';
 
 export const HomePage = () => {
   const { t } = useTranslation();
@@ -39,10 +39,12 @@ export const HomePage = () => {
   ];
 
   const [countries, setCountries] = useState<Country[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
   const [featuredShuttles, setFeaturedShuttles] = useState<Shuttle[]>([]);
   const [loading, setLoading] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
+  const citiesCarouselRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const location = useLocation();
   const isSearch = location.pathname === '/search';
@@ -50,12 +52,14 @@ export const HomePage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [countriesRes, shuttlesRes] = await Promise.all([
+        const [countriesRes, shuttlesRes, citiesRes] = await Promise.all([
           countriesApi.getAll(),
           shuttlesApi.getFeatured(),
+          citiesApi.getAll(),
         ]);
         setCountries(countriesRes.data);
         setFeaturedShuttles(shuttlesRes.data);
+        setCities(citiesRes.data || []);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -88,6 +92,16 @@ export const HomePage = () => {
     if (carouselRef.current) {
       const scrollAmount = 300;
       carouselRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  const scrollCities = (direction: 'left' | 'right') => {
+    if (citiesCarouselRef.current) {
+      const scrollAmount = 320;
+      citiesCarouselRef.current.scrollBy({
         left: direction === 'left' ? -scrollAmount : scrollAmount,
         behavior: 'smooth'
       });
@@ -197,6 +211,9 @@ export const HomePage = () => {
                       alt={translateCountryName(country.name, language)}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                       loading="lazy"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/placeholder.jpg';
+                      }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                     <div className="absolute inset-0 p-6 flex flex-col justify-end">
@@ -218,7 +235,91 @@ export const HomePage = () => {
         </div>
       </section>
 
-      <section className="py-16 bg-slate-50">
+      {/* Sección de Ciudades y Destinos Populares */}
+      {cities.length > 0 && (
+        <section className="py-16 bg-slate-50 border-t border-slate-200/60">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-end justify-between mb-8">
+              <div>
+                <h2 className="text-3xl font-bold text-slate-900">
+                  {language === 'es' ? 'Ciudades y Destinos Populares' : 'Popular Cities & Destinations'}
+                </h2>
+                <p className="mt-1 text-slate-500">
+                  {language === 'es' ? 'Explora las principales ciudades conectadas por nuestras rutas de shuttle' : 'Discover top cities connected by our daily shuttle routes'}
+                </p>
+              </div>
+              <div className="hidden sm:flex gap-2">
+                <button
+                  onClick={() => scrollCities('left')}
+                  className="p-2 rounded-full border border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-600 transition-all shadow-sm"
+                  aria-label="Previous cities"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => scrollCities('right')}
+                  className="p-2 rounded-full border border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-600 transition-all shadow-sm"
+                  aria-label="Next cities"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div
+              ref={citiesCarouselRef}
+              className="flex gap-5 overflow-x-auto scrollbar-hide scroll-smooth pb-4 -mx-4 px-4"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {cities.map((city) => (
+                <Link
+                  key={city.slug}
+                  to={`/cities/${city.slug}`}
+                  className="flex-shrink-0 w-64 sm:w-72 group"
+                >
+                  <div className="bg-white rounded-2xl overflow-hidden shadow-md group-hover:shadow-xl transition-all duration-300 border border-slate-200/80 group-hover:border-emerald-500/50 flex flex-col h-full">
+                    <div className="relative h-48 overflow-hidden bg-slate-100">
+                      <img
+                        src={getImageUrl(city.image_url)}
+                        alt={city.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        loading="lazy"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/placeholder.jpg';
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                      <div className="absolute top-3 right-3">
+                        <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-white/90 text-slate-800 backdrop-blur-sm shadow-sm">
+                          {city.country_name || 'Centroamérica'}
+                        </span>
+                      </div>
+                      <div className="absolute bottom-3 left-3 right-3 text-white">
+                        <h3 className="font-bold text-lg leading-snug">{city.name}</h3>
+                      </div>
+                    </div>
+                    <div className="p-4 flex flex-col flex-1 justify-between">
+                      <p className="text-xs text-slate-500 line-clamp-2 mb-3">
+                        {translateCityDescription(city.description, language)}
+                      </p>
+                      <div className="flex items-center justify-between text-xs font-semibold text-emerald-600 group-hover:text-emerald-700 pt-2 border-t border-slate-100">
+                        <span>{language === 'es' ? 'Ver shuttles' : 'View shuttles'}</span>
+                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            <div className="mt-4 text-center sm:hidden">
+              <p className="text-xs text-slate-500">{t('home.swipeMore')}</p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-slate-900">{t('home.topRoutes')}</h2>
@@ -234,6 +335,9 @@ export const HomePage = () => {
                       alt={translateRouteName(shuttle.name, language)}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       loading="lazy"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/placeholder.jpg';
+                      }}
                     />
                     <div className="absolute top-3 right-3">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${

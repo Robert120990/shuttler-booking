@@ -150,7 +150,14 @@ export const CityPage = () => {
         ]}
       />
       <section className="relative h-64 md:h-80">
-        <img src={getImageUrl(city.image_url)} alt={city.name} className="w-full h-full object-cover" />
+        <img
+          src={getImageUrl(city.image_url)}
+          alt={city.name}
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = '/placeholder.jpg';
+          }}
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-8">
           <div className="max-w-7xl mx-auto">

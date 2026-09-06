@@ -261,9 +261,17 @@ export async function sendViaResend(apiKey, options) {
  * Sends an email using Brevo's (Sendinblue) HTTPS REST API (Port 443 - free 300 emails/day, no custom domain required)
  */
 export async function sendViaBrevo(apiKey, options) {
-  const cleanKey = (apiKey || '').trim();
+  let cleanKey = (apiKey || '').trim().replace(/^["']|["']$/g, '');
   if (!cleanKey) {
     throw new Error('Debes ingresar una clave de API de Brevo (comienza con xkeysib-).');
+  }
+
+  if (cleanKey.includes('*') || cleanKey.includes('•') || cleanKey.includes('...')) {
+    throw new Error('La clave ingresada está oculta con asteriscos o puntos. En Brevo debes hacer clic en "Generar una nueva clave API" y copiar la clave completa directamente desde la ventana emergente antes de cerrarla.');
+  }
+
+  if (cleanKey.startsWith('xsmtpsib-')) {
+    throw new Error('Has copiado la clave SMTP en lugar de la clave API. En Brevo ve a la pestaña "API Keys" (Claves API) y genera una clave API v3 que comience con xkeysib-.');
   }
 
   const recipients = Array.isArray(options.to)
@@ -318,10 +326,10 @@ export async function sendViaBrevo(apiKey, options) {
   if (!res.ok) {
     const errMsg = data.message || JSON.stringify(data);
     if (res.status === 401 || errMsg.includes('Key not found') || errMsg.includes('unauthorized')) {
-      throw new Error('Clave API de Brevo inválida. Verifica que comience con xkeysib- y esté activa en tu cuenta de Brevo.');
+      throw new Error(`Brevo rechazó la clave (${errMsg}). Asegúrate de haber confirmado el correo de activación de Brevo en tu Gmail y de copiar la clave completa desde la pestaña "API Keys" de Brevo.`);
     }
     if (errMsg.includes('sender') || errMsg.includes('Sender email not allowed') || errMsg.includes('unregistered')) {
-      throw new Error(`El remitente (${fromEmail}) no está verificado en Brevo. Entra a Brevo -> Send & API -> Senders y añade/verifica tu correo ${fromEmail}.`);
+      throw new Error(`El remitente (${fromEmail}) no está verificado en Brevo. Entra a Brevo -> Senders y añade/verifica tu correo ${fromEmail}.`);
     }
     throw new Error(`Error de Brevo API: ${errMsg}`);
   }

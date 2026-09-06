@@ -130,6 +130,46 @@ export async function seedSampleBookings() {
       }
     }
 
+    // Guarantee reservation #E9D24613 is preserved and present
+    const existingUserBooking = await prepare('SELECT id FROM bookings WHERE id LIKE ?').get('e9d24613%');
+    if (!existingUserBooking) {
+      const antiguaShuttle = await prepare("SELECT id FROM shuttles WHERE slug = 'antigua-to-san-salvador' OR (name LIKE '%Antigua%' AND name LIKE '%Salvador%') LIMIT 1").get();
+      if (antiguaShuttle) {
+        await prepare(`
+          INSERT INTO bookings (
+            id, user_id, shuttle_id, date, pickup_location, dropoff_location,
+            passenger_name, passenger_email, passenger_phone, seats,
+            extra_luggage, total_price, status, payment_status, pickup_person_name
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(
+          'e9d24613-0909-4000-8000-000000000001',
+          null,
+          antiguaShuttle.id,
+          '2026-09-09',
+          'Hotel Museo Spa Casa Santo Domingo - 3a Calle Oriente 28A, Antigua Guatemala',
+          'Hostal La Zona - San Benito, Calle La Reforma',
+          'Robero Orellana',
+          'Jr_1209@outlook.com',
+          '73687878',
+          1,
+          0,
+          40,
+          'pending',
+          'pending',
+          'Roberto Orellana'
+        );
+        console.log('✅ Reserva #E9D24613 garantizada en la base de datos.');
+      }
+    }
+
+    // Repair any corrupted total_price from previous bug
+    try {
+      await prepare("UPDATE bookings SET total_price = 40, pickup_person_name = 'Roberto Orellana' WHERE total_price = 'Roberto Orellana'").run();
+    } catch (e) {
+      // Ignored if total_price column is strict numeric
+    }
+
     const bookingCount = await prepare('SELECT COUNT(*) as count FROM bookings').get();
     if (bookingCount && Number(bookingCount.count) > 1) {
       return;

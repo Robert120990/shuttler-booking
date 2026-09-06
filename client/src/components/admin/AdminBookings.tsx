@@ -70,7 +70,9 @@ export const AdminBookings = () => {
       pickupPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
       routeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       pickupLoc.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      dropoffLoc.toLowerCase().includes(searchTerm.toLowerCase());
+      dropoffLoc.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (booking.id && booking.id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (booking.id && `#${booking.id.slice(0, 8)}`.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesStatus = !statusFilter || booking.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -168,7 +170,12 @@ export const AdminBookings = () => {
                     {/* Passenger */}
                     <td className="py-3 px-4">
                       <div>
-                        <p className="font-semibold text-slate-900">{booking.passenger_name || 'N/A'}</p>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="font-mono text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-1.5 py-0.5 rounded tracking-wide">
+                            #{booking.id ? booking.id.slice(0, 8).toUpperCase() : 'N/A'}
+                          </span>
+                          <span className="font-semibold text-slate-900">{booking.passenger_name || 'N/A'}</span>
+                        </div>
                         {(booking as any).pickup_person_name && (booking as any).pickup_person_name !== booking.passenger_name && (
                           <span className="inline-flex items-center text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-200/80 rounded px-1.5 py-0.5 mt-0.5">
                             Recoger a: {(booking as any).pickup_person_name}
@@ -277,7 +284,12 @@ export const AdminBookings = () => {
               <div key={booking.id} className="p-4 space-y-3 bg-white">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="font-bold text-slate-900 text-base">{booking.passenger_name || 'N/A'}</p>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="font-mono text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200/80 px-1.5 py-0.5 rounded tracking-wide">
+                        #{booking.id ? booking.id.slice(0, 8).toUpperCase() : 'N/A'}
+                      </span>
+                      <span className="font-bold text-slate-900 text-base">{booking.passenger_name || 'N/A'}</span>
+                    </div>
                     {(booking as any).pickup_person_name && (booking as any).pickup_person_name !== booking.passenger_name && (
                       <span className="inline-flex items-center text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-200/80 rounded px-1.5 py-0.5 mt-0.5">
                         Recoger a: {(booking as any).pickup_person_name}
@@ -348,8 +360,13 @@ export const AdminBookings = () => {
           <Card className="w-full max-w-xl max-h-[92vh] overflow-y-auto shadow-2xl">
             <CardHeader className="flex flex-row items-center justify-between sticky top-0 bg-white z-10 border-b border-slate-100 pb-3">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">Detalles de la Reserva</h2>
-                <p className="text-xs text-slate-400">ID: {selectedBooking.id}</p>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-bold text-slate-900">Detalles de la Reserva</h2>
+                  <span className="font-mono text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
+                    #{selectedBooking.id.slice(0, 8).toUpperCase()}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400">ID Completo: {selectedBooking.id}</p>
               </div>
               <Button variant="ghost" size="sm" onClick={() => setSelectedBooking(null)}>
                 <X className="w-5 h-5 text-slate-400 hover:text-slate-700" />

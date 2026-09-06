@@ -83,6 +83,7 @@ router.post('/', async (req, res) => {
       passenger_phone || null,
       seats || 1,
       extra_luggage || 0,
+      total_price || 0,
       (pickup_person_name && pickup_person_name.trim()) || (passenger_name && passenger_name.trim()) || null
     );
 

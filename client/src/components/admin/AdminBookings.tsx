@@ -538,15 +538,32 @@ export const AdminBookings = () => {
               </div>
 
               {/* Price & Status */}
-              <div className="border-t border-slate-100 pt-4 flex items-center justify-between bg-slate-900 text-white p-4 rounded-xl">
+              <div className="border-t border-slate-100 pt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between bg-slate-900 text-white p-4 rounded-xl gap-3">
                 <div>
                   <p className="text-xs text-slate-400">Total de la Reserva</p>
                   <p className="text-2xl font-black text-emerald-400">${selectedBooking.total_price} USD</p>
                 </div>
-                <div className="flex flex-col items-end gap-1.5">
-                  <Badge variant={getStatusBadgeVariant(selectedBooking.status || 'pending')}>
-                    Estado: {translateStatus(selectedBooking.status || 'pending')}
-                  </Badge>
+                <div className="flex flex-col sm:items-end gap-2 w-full sm:w-auto">
+                  <div className="flex items-center gap-2">
+                    <Badge variant={getStatusBadgeVariant(selectedBooking.status || 'pending')}>
+                      {translateStatus(selectedBooking.status || 'pending')}
+                    </Badge>
+                    <Select
+                      options={[
+                        { value: 'pending', label: 'Pendiente' },
+                        { value: 'confirmed', label: 'Confirmado' },
+                        { value: 'completed', label: 'Completado' },
+                        { value: 'cancelled', label: 'Cancelado' },
+                      ]}
+                      value={selectedBooking.status || 'pending'}
+                      onChange={(e) => {
+                        const newSt = e.target.value as any;
+                        setSelectedBooking({ ...selectedBooking, status: newSt });
+                        handleStatusChange(selectedBooking.id, newSt);
+                      }}
+                      className="text-xs py-1 text-slate-900 bg-white min-w-[130px]"
+                    />
+                  </div>
                   <Badge variant={getPaymentBadgeVariant(selectedBooking.payment_status || 'pending')}>
                     Pago: {selectedBooking.payment_status === 'paid' ? 'Pagado' : selectedBooking.payment_status === 'refunded' ? 'Reembolsado' : 'Pendiente'}
                   </Badge>

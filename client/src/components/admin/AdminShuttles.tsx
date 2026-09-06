@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, Search, Loader2, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Loader2, X, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -8,6 +8,25 @@ import { Badge } from '../ui/Badge';
 import { shuttlesApi, citiesApi } from '../../api/endpoints';
 import { getImageUrl } from '../../api/client';
 import type { Shuttle, City, LuggageOption } from '../../types';
+
+export const CONVENTIONAL_SHUTTLE_DEFAULTS = {
+  schedule: '8:00 AM',
+  duration_hours: '4',
+  availability_days: [0, 1, 2, 3, 4, 5, 6],
+  availability: 'Todos los días',
+  service_type: 'local' as 'local' | 'international',
+  included: 'Aire acondicionado, Servicio puerta a puerta, WiFi gratuito',
+  to_bring: 'Agua, Pasaporte / Documento de identidad, Audífonos, Ropa cómoda',
+  luggage_policy: '1 mochila o maleta principal y 1 bolso de mano por persona',
+  pickup_info: 'Recogida directa en el lobby de tu hotel u hostal. Por favor estar listo 15 minutos antes de la hora indicada.',
+  cancellation_policy: 'Cancelación gratuita hasta 24 horas antes de la salida.',
+  operator: 'Trail Explorer Partner',
+  pets_allowed: false,
+  luggage_options: [
+    { name: 'Maleta adicional', price: 15 },
+    { name: 'Tabla de surf', price: 25 },
+  ] as LuggageOption[],
+};
 
 export const AdminShuttles = () => {
   const [shuttles, setShuttles] = useState<Shuttle[]>([]);
@@ -18,12 +37,24 @@ export const AdminShuttles = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingShuttle, setEditingShuttle] = useState<Shuttle | null>(null);
   const [formData, setFormData] = useState({
-    name: '', origin_city_id: '', destination_city_id: '', price: '', duration_hours: '',
-    schedule: '', availability: '', availability_days: [0,1,2,3,4,5,6] as number[],
-    service_type: 'local', description: '',
-    included: '', to_bring: '', luggage_policy: '', pickup_info: '',
-    cancellation_policy: '', operator: '', pets_allowed: false,
-    luggage_options: [] as LuggageOption[]
+    name: '',
+    origin_city_id: '',
+    destination_city_id: '',
+    price: '55',
+    duration_hours: CONVENTIONAL_SHUTTLE_DEFAULTS.duration_hours,
+    schedule: CONVENTIONAL_SHUTTLE_DEFAULTS.schedule,
+    availability: CONVENTIONAL_SHUTTLE_DEFAULTS.availability,
+    availability_days: CONVENTIONAL_SHUTTLE_DEFAULTS.availability_days as number[],
+    service_type: CONVENTIONAL_SHUTTLE_DEFAULTS.service_type,
+    description: '',
+    included: CONVENTIONAL_SHUTTLE_DEFAULTS.included,
+    to_bring: CONVENTIONAL_SHUTTLE_DEFAULTS.to_bring,
+    luggage_policy: CONVENTIONAL_SHUTTLE_DEFAULTS.luggage_policy,
+    pickup_info: CONVENTIONAL_SHUTTLE_DEFAULTS.pickup_info,
+    cancellation_policy: CONVENTIONAL_SHUTTLE_DEFAULTS.cancellation_policy,
+    operator: CONVENTIONAL_SHUTTLE_DEFAULTS.operator,
+    pets_allowed: CONVENTIONAL_SHUTTLE_DEFAULTS.pets_allowed,
+    luggage_options: [...CONVENTIONAL_SHUTTLE_DEFAULTS.luggage_options] as LuggageOption[],
   });
   const [saving, setSaving] = useState(false);
 
@@ -87,15 +118,119 @@ export const AdminShuttles = () => {
     } else {
       setEditingShuttle(null);
       setFormData({
-        name: '', origin_city_id: '', destination_city_id: '', price: '', duration_hours: '',
-        schedule: '', availability: '', availability_days: [0,1,2,3,4,5,6],
-        service_type: 'local', description: '',
-        included: '', to_bring: '', luggage_policy: '', pickup_info: '',
-        cancellation_policy: '', operator: '', pets_allowed: false,
-        luggage_options: []
+        name: '',
+        origin_city_id: '',
+        destination_city_id: '',
+        price: '55',
+        duration_hours: CONVENTIONAL_SHUTTLE_DEFAULTS.duration_hours,
+        schedule: CONVENTIONAL_SHUTTLE_DEFAULTS.schedule,
+        availability: CONVENTIONAL_SHUTTLE_DEFAULTS.availability,
+        availability_days: CONVENTIONAL_SHUTTLE_DEFAULTS.availability_days,
+        service_type: CONVENTIONAL_SHUTTLE_DEFAULTS.service_type,
+        description: '',
+        included: CONVENTIONAL_SHUTTLE_DEFAULTS.included,
+        to_bring: CONVENTIONAL_SHUTTLE_DEFAULTS.to_bring,
+        luggage_policy: CONVENTIONAL_SHUTTLE_DEFAULTS.luggage_policy,
+        pickup_info: CONVENTIONAL_SHUTTLE_DEFAULTS.pickup_info,
+        cancellation_policy: CONVENTIONAL_SHUTTLE_DEFAULTS.cancellation_policy,
+        operator: CONVENTIONAL_SHUTTLE_DEFAULTS.operator,
+        pets_allowed: CONVENTIONAL_SHUTTLE_DEFAULTS.pets_allowed,
+        luggage_options: [...CONVENTIONAL_SHUTTLE_DEFAULTS.luggage_options],
       });
     }
     setShowModal(true);
+  };
+
+  const handleOriginChange = (originId: string) => {
+    const origin = cities.find(c => c.id === originId);
+    const dest = cities.find(c => c.id === formData.destination_city_id);
+
+    let nextServiceType = formData.service_type;
+    if (origin && dest && origin.country_id && dest.country_id) {
+      nextServiceType = origin.country_id === dest.country_id ? 'local' : 'international';
+    }
+
+    const currentOrigin = cities.find(c => c.id === formData.origin_city_id);
+    const prevSuggested = currentOrigin && dest ? `${currentOrigin.name} a ${dest.name}` : '';
+    let nextName = formData.name;
+    if (!formData.name || formData.name === prevSuggested || formData.name.endsWith(' a ...')) {
+      nextName = origin && dest ? `${origin.name} a ${dest.name}` : (origin ? `${origin.name} a ...` : '');
+    }
+
+    let nextDesc = formData.description;
+    if (!formData.description && origin && dest) {
+      nextDesc = `Transporte compartido cómodo y seguro de ${origin.name} a ${dest.name}. Servicio puerta a puerta entre hostales y hoteles con aire acondicionado.`;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      origin_city_id: originId,
+      service_type: nextServiceType,
+      name: nextName,
+      description: nextDesc,
+    }));
+  };
+
+  const handleDestinationChange = (destId: string) => {
+    const origin = cities.find(c => c.id === formData.origin_city_id);
+    const dest = cities.find(c => c.id === destId);
+
+    let nextServiceType = formData.service_type;
+    if (origin && dest && origin.country_id && dest.country_id) {
+      nextServiceType = origin.country_id === dest.country_id ? 'local' : 'international';
+    }
+
+    const currentDest = cities.find(c => c.id === formData.destination_city_id);
+    const prevSuggested = origin && currentDest ? `${origin.name} a ${currentDest.name}` : '';
+    let nextName = formData.name;
+    if (!formData.name || formData.name === prevSuggested || formData.name.endsWith(' a ...')) {
+      nextName = origin && dest ? `${origin.name} a ${dest.name}` : '';
+    }
+
+    let nextDesc = formData.description;
+    if (!formData.description && origin && dest) {
+      nextDesc = `Transporte compartido cómodo y seguro de ${origin.name} a ${dest.name}. Servicio puerta a puerta entre hostales y hoteles con aire acondicionado.`;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      destination_city_id: destId,
+      service_type: nextServiceType,
+      name: nextName,
+      description: nextDesc,
+    }));
+  };
+
+  const handleApplyDefaults = () => {
+    const origin = cities.find(c => c.id === formData.origin_city_id);
+    const dest = cities.find(c => c.id === formData.destination_city_id);
+    const suggestedName = origin && dest ? `${origin.name} a ${dest.name}` : formData.name;
+    const suggestedDesc = origin && dest 
+      ? `Transporte compartido cómodo y seguro de ${origin.name} a ${dest.name}. Servicio puerta a puerta entre hostales y hoteles con aire acondicionado.`
+      : formData.description;
+
+    let nextServiceType = formData.service_type;
+    if (origin && dest && origin.country_id && dest.country_id) {
+      nextServiceType = origin.country_id === dest.country_id ? 'local' : 'international';
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      name: prev.name || suggestedName,
+      description: prev.description || suggestedDesc,
+      price: prev.price || '55',
+      duration_hours: prev.duration_hours || CONVENTIONAL_SHUTTLE_DEFAULTS.duration_hours,
+      schedule: prev.schedule || CONVENTIONAL_SHUTTLE_DEFAULTS.schedule,
+      availability_days: prev.availability_days?.length ? prev.availability_days : CONVENTIONAL_SHUTTLE_DEFAULTS.availability_days,
+      service_type: nextServiceType,
+      included: CONVENTIONAL_SHUTTLE_DEFAULTS.included,
+      to_bring: CONVENTIONAL_SHUTTLE_DEFAULTS.to_bring,
+      luggage_policy: CONVENTIONAL_SHUTTLE_DEFAULTS.luggage_policy,
+      pickup_info: CONVENTIONAL_SHUTTLE_DEFAULTS.pickup_info,
+      cancellation_policy: CONVENTIONAL_SHUTTLE_DEFAULTS.cancellation_policy,
+      operator: CONVENTIONAL_SHUTTLE_DEFAULTS.operator,
+      luggage_options: prev.luggage_options.length ? prev.luggage_options : [...CONVENTIONAL_SHUTTLE_DEFAULTS.luggage_options],
+    }));
   };
 
   const handleCloseModal = () => {
@@ -358,16 +493,93 @@ export const AdminShuttles = () => {
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Input label="Nombre del Shuttle" placeholder="ej., La Fortuna a Monteverde" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Select label="Ciudad de Origen" options={[{ value: '', label: 'Seleccionar ciudad' }, ...cityOptions]} value={formData.origin_city_id} onChange={(e) => setFormData({ ...formData, origin_city_id: e.target.value })} />
-                <Select label="Ciudad de Destino" options={[{ value: '', label: 'Seleccionar ciudad' }, ...cityOptions]} value={formData.destination_city_id} onChange={(e) => setFormData({ ...formData, destination_city_id: e.target.value })} />
+              {/* Conventional defaults banner and quick-apply button */}
+              <div className="bg-emerald-50/90 border border-emerald-200/90 rounded-xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                  <span className="text-xs text-emerald-950 font-medium leading-tight">
+                    Prellenado con la información convencional establecida de Trail Explorer.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleApplyDefaults}
+                  className="text-xs font-semibold text-emerald-800 bg-white hover:bg-emerald-100 border border-emerald-300 rounded-lg px-2.5 py-1.5 transition-colors flex items-center gap-1 shadow-sm whitespace-nowrap self-end sm:self-auto"
+                >
+                  ⚡ Reaplicar valores convencionales
+                </button>
               </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Input label="Precio ($)" type="number" placeholder="59" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} />
-                <Input label="Duración (horas)" type="number" placeholder="4" value={formData.duration_hours} onChange={(e) => setFormData({ ...formData, duration_hours: e.target.value })} />
+                <Select
+                  label="Ciudad de Origen"
+                  options={[{ value: '', label: 'Seleccionar ciudad' }, ...cityOptions]}
+                  value={formData.origin_city_id}
+                  onChange={(e) => handleOriginChange(e.target.value)}
+                  required
+                />
+                <Select
+                  label="Ciudad de Destino"
+                  options={[{ value: '', label: 'Seleccionar ciudad' }, ...cityOptions]}
+                  value={formData.destination_city_id}
+                  onChange={(e) => handleDestinationChange(e.target.value)}
+                  required
+                />
               </div>
-              <Input label="Horario" placeholder="ej., 8:00 AM" value={formData.schedule} onChange={(e) => setFormData({ ...formData, schedule: e.target.value })} />
+
+              <Input
+                label="Nombre del Shuttle / Viaje"
+                placeholder="ej., La Fortuna a Monteverde"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+              />
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Descripción del Viaje</label>
+                <textarea
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  rows={2}
+                  placeholder="Breve descripción del trayecto..."
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Input
+                  label="Precio ($ USD)"
+                  type="number"
+                  placeholder="55"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  required
+                />
+                <Input
+                  label="Duración (horas)"
+                  type="number"
+                  placeholder="4"
+                  value={formData.duration_hours}
+                  onChange={(e) => setFormData({ ...formData, duration_hours: e.target.value })}
+                  required
+                />
+                <Select
+                  label="Tipo de Servicio"
+                  options={[
+                    { value: 'local', label: 'Local (Nacional)' },
+                    { value: 'international', label: 'Internacional (Fronterizo)' },
+                  ]}
+                  value={formData.service_type}
+                  onChange={(e) => setFormData({ ...formData, service_type: e.target.value as any })}
+                />
+              </div>
+
+              <Input
+                label="Horario de Salida"
+                placeholder="ej., 8:00 AM"
+                value={formData.schedule}
+                onChange={(e) => setFormData({ ...formData, schedule: e.target.value })}
+              />
               
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Días Disponibles</label>

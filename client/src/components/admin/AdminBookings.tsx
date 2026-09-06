@@ -60,12 +60,14 @@ export const AdminBookings = () => {
     const routeName = getShuttleName(booking.shuttle_id, booking);
     const passengerName = booking.passenger_name || '';
     const passengerEmail = booking.passenger_email || '';
+    const pickupPerson = (booking as any).pickup_person_name || '';
     const pickupLoc = booking.pickup_location || '';
     const dropoffLoc = booking.dropoff_location || '';
 
     const matchesSearch =
       passengerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       passengerEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      pickupPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
       routeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       pickupLoc.toLowerCase().includes(searchTerm.toLowerCase()) ||
       dropoffLoc.toLowerCase().includes(searchTerm.toLowerCase());
@@ -167,6 +169,11 @@ export const AdminBookings = () => {
                     <td className="py-3 px-4">
                       <div>
                         <p className="font-semibold text-slate-900">{booking.passenger_name || 'N/A'}</p>
+                        {(booking as any).pickup_person_name && (booking as any).pickup_person_name !== booking.passenger_name && (
+                          <span className="inline-flex items-center text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-200/80 rounded px-1.5 py-0.5 mt-0.5">
+                            Recoger a: {(booking as any).pickup_person_name}
+                          </span>
+                        )}
                         <p className="text-xs text-slate-500">{booking.passenger_email || '—'}</p>
                         <p className="text-xs text-slate-400">{booking.passenger_phone || ''}</p>
                       </div>
@@ -271,6 +278,11 @@ export const AdminBookings = () => {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="font-bold text-slate-900 text-base">{booking.passenger_name || 'N/A'}</p>
+                    {(booking as any).pickup_person_name && (booking as any).pickup_person_name !== booking.passenger_name && (
+                      <span className="inline-flex items-center text-[11px] font-medium text-amber-700 bg-amber-50 border border-amber-200/80 rounded px-1.5 py-0.5 mt-0.5">
+                        Recoger a: {(booking as any).pickup_person_name}
+                      </span>
+                    )}
                     <p className="text-xs text-slate-500">{booking.passenger_email || '—'} {booking.passenger_phone ? `• ${booking.passenger_phone}` : ''}</p>
                   </div>
                   <Button variant="ghost" size="sm" onClick={() => setSelectedBooking(booking)}>

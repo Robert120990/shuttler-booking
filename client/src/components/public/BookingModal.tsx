@@ -21,6 +21,63 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
   const { user } = useAuthStore();
   const { bookingData, setBookingData } = useBookingStore();
   const [submitting, setSubmitting] = useState(false);
+
+  // Track if user explicitly customized the pickup person to be someone else
+  const [isCustomPickupPerson, setIsCustomPickupPerson] = useState<boolean>(() => {
+    const existingPassenger = (bookingData.passenger_name || user?.name || '').trim();
+    const existingPickup = (bookingData.pickup_person_name || '').trim();
+    return Boolean(existingPickup && existingPickup !== existingPassenger);
+  });
+
+  // Pre-fill user data and sync default pickup person name on mount / when user loads
+  useEffect(() => {
+    const currentName = (bookingData.passenger_name || user?.name || '').trim();
+    const currentEmail = (bookingData.passenger_email || user?.email || '').trim();
+    const updates: Partial<typeof bookingData> = {};
+
+    if (!bookingData.passenger_name && currentName) {
+      updates.passenger_name = currentName;
+    }
+    if (!bookingData.passenger_email && currentEmail) {
+      updates.passenger_email = currentEmail;
+    }
+    if (!bookingData.pickup_person_name && currentName) {
+      updates.pickup_person_name = currentName;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      setBookingData(updates);
+    }
+  }, [user]);
+
+  const handlePassengerNameChange = (newName: string) => {
+    if (!isCustomPickupPerson) {
+      // Keep pickup_person_name in sync automatically
+      setBookingData({
+        passenger_name: newName,
+        pickup_person_name: newName,
+      });
+    } else {
+      setBookingData({ passenger_name: newName });
+    }
+  };
+
+  const handlePickupPersonChange = (newPickupName: string) => {
+    const currentPassenger = (bookingData.passenger_name || user?.name || '').trim();
+    if (!newPickupName.trim() || newPickupName.trim() === currentPassenger) {
+      setIsCustomPickupPerson(false);
+      setBookingData({ pickup_person_name: newPickupName });
+    } else {
+      setIsCustomPickupPerson(true);
+      setBookingData({ pickup_person_name: newPickupName });
+    }
+  };
+
+  const handleResetPickupPerson = () => {
+    const currentPassenger = (bookingData.passenger_name || user?.name || '').trim();
+    setIsCustomPickupPerson(false);
+    setBookingData({ pickup_person_name: currentPassenger });
+  };
   
   const [originHostels, setOriginHostels] = useState<Hostel[]>([]);
   const [destHostels, setDestHostels] = useState<Hostel[]>([]);
@@ -150,10 +207,10 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
     const totalPrice = (shuttle.price * passengersCount) + extraLuggageCost;
     const totalExtraLuggage = bookingData.extra_luggage.reduce((sum, item) => sum + item.quantity, 0);
 
-    const passengerName = bookingData.passenger_name || user?.name || '';
-    const passengerEmail = bookingData.passenger_email || user?.email || '';
-    const passengerPhone = bookingData.passenger_phone || '';
-    const pickupPersonName = bookingData.pickup_person_name || passengerName;
+    const passengerName = (bookingData.passenger_name || user?.name || '').trim();
+    const passengerEmail = (bookingData.passenger_email || user?.email || '').trim();
+    const passengerPhone = (bookingData.passenger_phone || '').trim();
+    const pickupPersonName = (bookingData.pickup_person_name || passengerName).trim();
 
     try {
       setSubmitting(true);
@@ -172,7 +229,13 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
         extra_luggage: totalExtraLuggage,
         status: 'pending',
       });
-      setBookingData({ extra_luggage: [] });
+      setBookingData({
+        extra_luggage: [],
+        passenger_name: '',
+        passenger_email: '',
+        passenger_phone: '',
+        pickup_person_name: '',
+      });
       onSuccess();
     } catch (err: any) {
       console.error('Error al crear reserva:', err);
@@ -223,10 +286,10 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
             {/* Passengers & Contact details */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
-                label="Nombre del Pasajero Principal"
+                label="Nombre de Quien Reserva"
                 placeholder="Nombre y Apellido"
                 value={bookingData.passenger_name || user?.name || ''}
-                onChange={(e) => setBookingData({ passenger_name: e.target.value })}
+                onChange={(e) => handlePassengerNameChange(e.target.value)}
                 required
               />
               <Input
@@ -247,12 +310,33 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
               required
             />
 
-            <Input
-              label="Persona a Recoger (si viaja otra persona)"
-              placeholder="Nombre de la persona a recoger"
-              value={bookingData.pickup_person_name || ''}
-              onChange={(e) => setBookingData({ pickup_person_name: e.target.value })}
-            />
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-slate-700">
+                  Persona a Recoger en el Origen
+                </label>
+                {isCustomPickupPerson && (
+                  <button
+                    type="button"
+                    onClick={handleResetPickupPerson}
+                    className="text-xs text-emerald-600 hover:text-emerald-700 font-medium hover:underline flex items-center gap-1"
+                  >
+                    ↺ Usar mismo nombre de quien reserva
+                  </button>
+                )}
+              </div>
+              <Input
+                placeholder="Nombre de la persona a recoger"
+                value={bookingData.pickup_person_name || (isCustomPickupPerson ? '' : (bookingData.passenger_name || user?.name || ''))}
+                onChange={(e) => handlePickupPersonChange(e.target.value)}
+                required
+              />
+              <p className="text-[11px] text-slate-500">
+                {isCustomPickupPerson
+                  ? '⚠️ Has especificado a una persona distinta para la recogida.'
+                  : '✓ Por defecto se recogerá a la misma persona que realiza la reserva.'}
+              </p>
+            </div>
 
             {/* ORIGIN PICKUP LOCATION (HOSTELS OF ORIGIN CITY) */}
             <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 space-y-2">

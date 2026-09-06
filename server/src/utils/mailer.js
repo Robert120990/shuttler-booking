@@ -351,6 +351,7 @@ export function buildCustomerConfirmationHtml(booking, shuttle, shuttleName, boo
         </p>
         <div style="background-color: #f8fafc; border-radius: 8px; padding: 16px; margin: 16px 0; font-size: 14px;">
           <p style="margin: 0 0 8px;"><strong>Punto de Recogida:</strong> ${booking.pickup_location}</p>
+          ${booking.pickup_person_name ? `<p style="margin: 0 0 8px;"><strong>Persona a Recoger:</strong> ${booking.pickup_person_name}</p>` : ''}
           <p style="margin: 0 0 8px;"><strong>Punto de Entrega:</strong> ${booking.dropoff_location}</p>
           <p style="margin: 0 0 8px;"><strong>Número de Pasajeros:</strong> ${booking.seats || 1}</p>
           <p style="margin: 0;"><strong>Total Pagado/Estimado:</strong> $${booking.total_price} USD</p>

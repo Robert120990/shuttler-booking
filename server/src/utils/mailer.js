@@ -1,5 +1,21 @@
 import nodemailer from 'nodemailer';
 import { prepare } from '../db.js';
+import { v4 as uuidv4 } from 'uuid';
+
+/**
+ * Default fallback SMTP and notification settings
+ */
+export const DEFAULT_SETTINGS = {
+  smtp_host: 'smtp.gmail.com',
+  smtp_port: '587',
+  smtp_secure: 'false',
+  smtp_user: 'trailexplorersv@gmail.com',
+  smtp_pass: 'nxwmwvjkpgdbofyw',
+  smtp_from: 'Trail Explorer <trailexplorersv@gmail.com>',
+  notification_email: 'trailexplorersv@gmail.com',
+  test_email: 'trailexplorersv@gmail.com',
+  send_customer_email: 'true',
+};
 
 /**
  * Retrieves SMTP and notification settings from the database
@@ -11,10 +27,28 @@ export async function getSettings() {
     for (const row of rows) {
       settings[row.key] = row.value;
     }
+
+    // If settings are not yet populated in DB (e.g. fresh Railway deploy), initialize defaults
+    if (!settings.smtp_user) {
+      for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
+        if (!settings[key]) {
+          settings[key] = value;
+          try {
+            const existing = await prepare('SELECT id FROM settings WHERE key = ?').get(key);
+            if (!existing) {
+              await prepare('INSERT INTO settings (id, key, value) VALUES (?, ?, ?)').run(uuidv4(), key, value);
+            }
+          } catch (insertErr) {
+            // Ignore if DB already populated in parallel
+          }
+        }
+      }
+    }
+
     return settings;
   } catch (error) {
     console.error('Error loading settings from DB:', error);
-    return {};
+    return { ...DEFAULT_SETTINGS };
   }
 }
 

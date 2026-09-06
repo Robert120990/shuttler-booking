@@ -14,14 +14,14 @@ export const AdminSettings = () => {
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const [formData, setFormData] = useState({
-    smtp_host: '',
+    smtp_host: 'smtp.gmail.com',
     smtp_port: '587',
     smtp_secure: 'false',
-    smtp_user: '',
-    smtp_pass: '',
-    smtp_from: '',
-    notification_email: '',
-    test_email: '',
+    smtp_user: 'trailexplorersv@gmail.com',
+    smtp_pass: 'nxwmwvjkpgdbofyw',
+    smtp_from: 'Trail Explorer <reservas@trailexplorer.com>',
+    notification_email: 'trailexplorersv@gmail.com',
+    test_email: 'trailexplorersv@gmail.com',
     send_customer_email: 'true',
   });
 
@@ -34,15 +34,15 @@ export const AdminSettings = () => {
       setLoading(true);
       const res = await settingsApi.getAll();
       if (res.data) {
-        const notifEmail = res.data.notification_email ?? res.data.smtp_user ?? '';
-        const testMail = res.data.test_email || notifEmail || res.data.smtp_user || '';
+        const notifEmail = res.data.notification_email ?? res.data.smtp_user ?? 'trailexplorersv@gmail.com';
+        const testMail = res.data.test_email || notifEmail || res.data.smtp_user || 'trailexplorersv@gmail.com';
         setFormData({
-          smtp_host: res.data.smtp_host || '',
+          smtp_host: res.data.smtp_host || 'smtp.gmail.com',
           smtp_port: res.data.smtp_port || '587',
           smtp_secure: res.data.smtp_secure || 'false',
-          smtp_user: res.data.smtp_user || '',
-          smtp_pass: res.data.smtp_pass || '',
-          smtp_from: res.data.smtp_from || '',
+          smtp_user: res.data.smtp_user || 'trailexplorersv@gmail.com',
+          smtp_pass: res.data.smtp_pass || 'nxwmwvjkpgdbofyw',
+          smtp_from: res.data.smtp_from || 'Trail Explorer <reservas@trailexplorer.com>',
           notification_email: notifEmail,
           test_email: testMail,
           send_customer_email: res.data.send_customer_email !== undefined ? res.data.send_customer_email : 'true',

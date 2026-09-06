@@ -440,12 +440,31 @@ export async function seedSampleHostels() {
   }
 }
 
+export async function seedDefaultSettings() {
+  try {
+    const user = await prepare('SELECT value FROM settings WHERE key = ?').get('smtp_user');
+    if (!user || !user.value) {
+      const { DEFAULT_SETTINGS } = await import('./utils/mailer.js');
+      for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
+        const exists = await prepare('SELECT id FROM settings WHERE key = ?').get(key);
+        if (!exists) {
+          await prepare('INSERT INTO settings (id, key, value) VALUES (?, ?, ?)').run(uuidv4(), key, value);
+        }
+      }
+      console.log('✅ Configuración SMTP por defecto inicializada con éxito.');
+    }
+  } catch (err) {
+    console.error('Error seeding default settings:', err);
+  }
+}
+
 export async function seedData() {
   const userCount = await prepare('SELECT COUNT(*) as count FROM users').get();
   if (userCount && Number(userCount.count) > 0) {
     await syncDatabaseImages();
     await seedSampleBookings();
     await seedSampleHostels();
+    await seedDefaultSettings();
     return;
   }
 
@@ -752,6 +771,7 @@ export async function seedData() {
   await syncDatabaseImages();
   await seedSampleBookings();
   await seedSampleHostels();
+  await seedDefaultSettings();
 
   console.log('Database seeded and images synchronized successfully!');
 }

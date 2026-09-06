@@ -15,12 +15,12 @@ import { BookingModal } from './BookingModal';
 import { BookingConfirmationModal } from './BookingConfirmationModal';
 import { TripServicesGrid } from './TripServicesGrid';
 import { TripToBringGrid } from './TripToBringGrid';
+import { TripPickupDropoffGrid } from './TripPickupDropoffGrid';
 import { SEO } from '../seo/SEO';
 import {
   translateRouteName,
   translateLuggagePolicy,
   translateLuggageOptions,
-  translatePickupInfo,
   translateCancellationPolicy,
   translateDescription,
   translateAvailability,
@@ -229,7 +229,6 @@ export const ShuttlePage = () => {
   const cancellationPolicy = translateCancellationPolicy(shuttle.cancellation_policy, language);
   const operator = (shuttle as any).operator || 'Trail Explorer';
   const luggagePolicy = translateLuggagePolicy(shuttle.luggage_policy, language);
-  const pickupInfo = translatePickupInfo(shuttle.pickup_info, language);
   const availability = translateAvailability(shuttle.availability, language);
   const description = translateDescription(shuttle.description, routeName, language);
 
@@ -455,10 +454,10 @@ export const ShuttlePage = () => {
                     </div>
                   )}
 
-                  {pickupInfo && (
+                  {shuttle.pickup_info && shuttle.pickup_info.trim().length > 0 && (
                     <div>
-                      <h3 className="font-semibold text-slate-900 mb-2">{t('shuttle.pickupInformation')}</h3>
-                      <p className="text-sm text-slate-600 whitespace-pre-line">{pickupInfo}</p>
+                      <h3 className="font-semibold text-slate-900 mb-3">{t('shuttle.pickupInformation')}</h3>
+                      <TripPickupDropoffGrid pickupInfoRaw={shuttle.pickup_info} language={language} />
                     </div>
                   )}
 
@@ -828,10 +827,10 @@ export const ShuttlePage = () => {
                   <span className="text-slate-500"> {t('shuttle.perPerson')}</span>
                 </div>
 
-                {pickupInfo && (
+                {shuttle.pickup_info && (
                   <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                     <p className="text-sm font-medium text-amber-800 mb-1">{t('shuttle.pickupInformation')}</p>
-                    <p className="text-xs text-amber-700 whitespace-pre-line">{pickupInfo}</p>
+                    <p className="text-xs text-amber-700 whitespace-pre-line">{shuttle.pickup_info}</p>
                   </div>
                 )}
 

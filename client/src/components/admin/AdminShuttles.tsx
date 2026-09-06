@@ -10,6 +10,7 @@ import { getImageUrl } from '../../api/client';
 import type { Shuttle, City, LuggageOption } from '../../types';
 import { TripServicesSelector } from './TripServicesSelector';
 import { TripToBringSelector } from './TripToBringSelector';
+import { TripPickupDropoffSelector } from './TripPickupDropoffSelector';
 
 export const CONVENTIONAL_SHUTTLE_DEFAULTS = {
   schedule: '8:00 AM',
@@ -20,7 +21,7 @@ export const CONVENTIONAL_SHUTTLE_DEFAULTS = {
   included: 'A/C, Parada de Servicio, Asientos Reclinables, Enchufe de Carga, Wifi, Alimentos y Bebidas',
   to_bring: 'Pasaporte / Identificación, Agua, Chaqueta o Suéter, Audífonos, Ropa Cómoda, Cargador de Celular, Dinero en Efectivo',
   luggage_policy: '1 mochila o maleta principal y 1 bolso de mano por persona',
-  pickup_info: 'Recogida directa en el lobby de tu hotel u hostal. Por favor estar listo 15 minutos antes de la hora indicada.',
+  pickup_info: 'Recogida: Puerta a Puerta (Hoteles y Hostales) - Recogida directa en el lobby de tu hotel u hostal (estar listo 15 min antes).\nEntrega: Entrega Puerta a Puerta (Hoteles y Hostales) - Desembarque directo en la puerta de tu hotel, hostal o alojamiento.',
   cancellation_policy: 'Cancelación gratuita hasta 24 horas antes de la salida.',
   operator: 'Trail Explorer Partner',
   pets_allowed: false,
@@ -1036,14 +1037,10 @@ export const AdminShuttles = () => {
 
               <Input label="Política de Equipaje" placeholder="ej., 1 mochila y 1 bolso de mano por persona" value={formData.luggage_policy} onChange={(e) => setFormData({ ...formData, luggage_policy: e.target.value })} />
               
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Información de Recogida</label>
-                <textarea
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  rows={3}
-                  placeholder="Ingresa los lugares y detalles de recogida..."
+              <div className="border-t pt-4">
+                <TripPickupDropoffSelector
                   value={formData.pickup_info}
-                  onChange={(e) => setFormData({ ...formData, pickup_info: e.target.value })}
+                  onChange={(newPickupInfo) => setFormData({ ...formData, pickup_info: newPickupInfo })}
                 />
               </div>
 

@@ -68,7 +68,7 @@ export const authApi = {
 export const settingsApi = {
   getAll: () => api.get<Record<string, string>>('/settings'),
   update: (data: Record<string, any>) => api.post<{ message: string; settings: Record<string, string> }>('/settings', data),
-  testSmtp: (data: Record<string, any>) => api.post<{ success: boolean; message: string }>('/settings/test-smtp', data),
+  testSmtp: (data: Record<string, any>) => api.post<{ success: boolean; message: string }>('/settings/test-smtp', data, { timeout: 35000 }),
 };
 
 

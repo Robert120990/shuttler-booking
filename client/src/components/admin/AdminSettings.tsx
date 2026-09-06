@@ -130,7 +130,10 @@ export const AdminSettings = () => {
       });
     } catch (error: any) {
       console.error('Error al probar servicio de correo:', error);
-      const msg = error.response?.data?.error || 'No se pudo conectar al servicio de correo. Revisa las credenciales o proveedor.';
+      let msg = error.response?.data?.error || error.message || 'No se pudo conectar al servicio de correo. Revisa las credenciales o proveedor.';
+      if (error.code === 'ECONNABORTED' || msg.includes('timeout') || msg.includes('Tiempo de espera') || msg.includes('Network Error')) {
+        msg = 'Tiempo de espera agotado: El servidor en la nube (Railway) tiene bloqueados los puertos SMTP 587 y 465 por políticas de red. Para enviar correos en Railway sin bloqueos, selecciona la opción "Resend API (HTTPS)" en la parte superior e ingresa tu clave API gratuita de resend.com.';
+      }
       setFeedback({ type: 'error', message: msg });
     } finally {
       setTesting(false);

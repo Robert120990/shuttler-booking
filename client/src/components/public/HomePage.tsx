@@ -53,13 +53,30 @@ export const HomePage = () => {
   // Sort countries so that any country marked as unavailable (is_available === 0 or description) appears at the end of the carousel
   const sortedCountries = useMemo(() => {
     return [...countries].sort((a, b) => {
-      const aAvail = a.is_available !== 0 && a.is_available !== false && !isCountryUnavailable(a.description);
-      const bAvail = b.is_available !== 0 && b.is_available !== false && !isCountryUnavailable(b.description);
+      const aAvail = !isCountryUnavailable(a.description, a.is_available);
+      const bAvail = !isCountryUnavailable(b.description, b.is_available);
       if (aAvail && !bAvail) return -1;
       if (!aAvail && bAvail) return 1;
       return 0;
     });
   }, [countries]);
+
+  // Sort cities so that cities of available countries appear first, and unavailable at the end
+  const sortedCities = useMemo(() => {
+    return [...cities].sort((a, b) => {
+      const aCountry = countries.find(c => c.id === a.country_id || c.slug === a.country_slug || c.name === a.country_name);
+      const bCountry = countries.find(c => c.id === b.country_id || c.slug === b.country_slug || c.name === b.country_name);
+
+      const aUnavail = (aCountry && isCountryUnavailable(aCountry.description, aCountry.is_available)) ||
+                       isCountryUnavailable(a.country_description, a.country_is_available);
+      const bUnavail = (bCountry && isCountryUnavailable(bCountry.description, bCountry.is_available)) ||
+                       isCountryUnavailable(b.country_description, b.country_is_available);
+
+      if (!aUnavail && bUnavail) return -1;
+      if (aUnavail && !bUnavail) return 1;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+  }, [cities, countries]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -318,45 +335,58 @@ export const HomePage = () => {
               className="flex gap-5 overflow-x-auto scrollbar-hide scroll-smooth pb-4 -mx-4 px-4"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-              {cities.map((city) => (
-                <Link
-                  key={city.slug}
-                  to={`/cities/${city.slug}`}
-                  className="flex-shrink-0 w-64 sm:w-72 group"
-                >
-                  <div className="bg-white rounded-2xl overflow-hidden shadow-md card-hover-fx border border-slate-200/80 group-hover:border-emerald-500/50 flex flex-col h-full">
-                    <div className="relative h-48 overflow-hidden bg-slate-100 shimmer-container">
-                      <img
-                        src={getImageUrl(city.image_url)}
-                        alt={city.name}
-                        className="w-full h-full object-cover img-zoom-fx"
-                        loading="lazy"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/placeholder.jpg';
-                        }}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-                      <div className="absolute top-3 right-3">
-                        <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-white/90 text-slate-800 backdrop-blur-sm shadow-sm">
-                          {city.country_name || 'Centroamérica'}
-                        </span>
+              {sortedCities.map((city) => {
+                const cityCountry = countries.find(c => c.id === city.country_id || c.slug === city.country_slug || c.name === city.country_name);
+                const isCityUnavailable = (cityCountry && isCountryUnavailable(cityCountry.description, cityCountry.is_available)) ||
+                                          isCountryUnavailable(city.country_description, city.country_is_available);
+
+                return (
+                  <Link
+                    key={city.slug}
+                    to={`/cities/${city.slug}`}
+                    className="flex-shrink-0 w-64 sm:w-72 group"
+                  >
+                    <div className="bg-white rounded-2xl overflow-hidden shadow-md card-hover-fx border border-slate-200/80 group-hover:border-emerald-500/50 flex flex-col h-full">
+                      <div className="relative h-48 overflow-hidden bg-slate-100 shimmer-container">
+                        <img
+                          src={getImageUrl(city.image_url)}
+                          alt={city.name}
+                          className="w-full h-full object-cover img-zoom-fx"
+                          loading="lazy"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/placeholder.jpg';
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+                        <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
+                          <span className={`px-2.5 py-1 text-xs font-semibold rounded-full shadow-sm backdrop-blur-sm ${
+                            isCityUnavailable
+                              ? 'bg-amber-500/90 text-white border border-amber-400/40'
+                              : 'bg-white/90 text-slate-800'
+                          }`}>
+                            {city.country_name || 'Centroamérica'}
+                            {isCityUnavailable && (language === 'es' ? ' • No disponible' : ' • Unavailable')}
+                          </span>
+                        </div>
+                        <div className="absolute bottom-3 left-3 right-3 text-white">
+                          <h3 className="font-bold text-lg leading-snug">{city.name}</h3>
+                        </div>
                       </div>
-                      <div className="absolute bottom-3 left-3 right-3 text-white">
-                        <h3 className="font-bold text-lg leading-snug">{city.name}</h3>
+                      <div className="p-4 flex flex-col flex-1 justify-between">
+                        <p className={`text-xs line-clamp-2 mb-3 ${isCityUnavailable ? 'text-amber-600 font-medium' : 'text-slate-500'}`}>
+                          {isCityUnavailable
+                            ? (language === 'es' ? 'Ruta de país temporalmente no disponible' : 'Country route currently unavailable')
+                            : translateCityDescription(city.description, language)}
+                        </p>
+                        <div className="flex items-center justify-between text-xs font-semibold text-emerald-600 group-hover:text-emerald-700 pt-2 border-t border-slate-100">
+                          <span>{language === 'es' ? 'Ver shuttles' : 'View shuttles'}</span>
+                          <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                        </div>
                       </div>
                     </div>
-                    <div className="p-4 flex flex-col flex-1 justify-between">
-                      <p className="text-xs text-slate-500 line-clamp-2 mb-3">
-                        {translateCityDescription(city.description, language)}
-                      </p>
-                      <div className="flex items-center justify-between text-xs font-semibold text-emerald-600 group-hover:text-emerald-700 pt-2 border-t border-slate-100">
-                        <span>{language === 'es' ? 'Ver shuttles' : 'View shuttles'}</span>
-                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
 
             <div className="mt-4 text-center sm:hidden">

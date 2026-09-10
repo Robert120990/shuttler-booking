@@ -114,6 +114,66 @@ app.get('/images/shuttles/:filename', async (req, res, next) => {
   next();
 });
 
+// 2.6: Dynamic on-demand recovery for missing city images (handles ephemeral container restarts)
+app.get('/images/cities/:filename', async (req, res, next) => {
+  try {
+    const filename = path.basename(req.params.filename);
+    const diskPath = path.join(IMAGES_DIR, 'cities', filename);
+    const repoPath = path.join(repoImagesDir, 'cities', filename);
+
+    // If file already exists on disk, serve it immediately
+    if (fs.existsSync(diskPath) && fs.statSync(diskPath).size > 0) {
+      return res.sendFile(diskPath);
+    }
+    if (fs.existsSync(repoPath) && fs.statSync(repoPath).size > 0) {
+      return res.sendFile(repoPath);
+    }
+
+    // 1. Attempt restoring from image_storage in DB
+    try {
+      const stored = await prepare('SELECT data FROM image_storage WHERE filename = ?').get(filename);
+      if (stored && stored.data) {
+        ensureDir(path.join(IMAGES_DIR, 'cities'));
+        fs.writeFileSync(diskPath, Buffer.from(stored.data, 'base64'));
+        return res.sendFile(diskPath);
+      }
+    } catch (_) {}
+
+    // 2. Look up city in database using this filename
+    const city = await prepare(`
+      SELECT c.*, co.slug as country_slug, co.name as country_name
+      FROM cities c
+      LEFT JOIN countries co ON c.country_id = co.id
+      WHERE c.image_url LIKE ?
+    `).get(`%${filename}%`);
+
+    if (city) {
+      const { resolveCityFallbackImage } = await import('./seed.js');
+      const fallbackFile = resolveCityFallbackImage(city);
+      if (fallbackFile) {
+        const sourcePath = path.join(repoImagesDir, 'cities', fallbackFile);
+        if (fs.existsSync(sourcePath)) {
+          ensureDir(path.join(IMAGES_DIR, 'cities'));
+          try { fs.copyFileSync(sourcePath, diskPath); } catch (_) {}
+          try {
+            await prepare('UPDATE cities SET image_url = ? WHERE id = ?').run(`/images/cities/${fallbackFile}`, city.id);
+          } catch (_) {}
+          return res.sendFile(sourcePath);
+        }
+      }
+    }
+
+    // 3. Fallback to default Salvadoran premier image rather than plain placeholder
+    const defaultCityFile = path.join(repoImagesDir, 'cities', '0a45d200-8afc-468a-a572-db3f8b37fdec.webp');
+    if (fs.existsSync(defaultCityFile)) {
+      return res.sendFile(defaultCityFile);
+    }
+  } catch (err) {
+    console.error(`Error en auto-recuperación de imagen de ciudad ${req.params.filename}:`, err);
+  }
+  next();
+});
+
 // 3. Fallback for any missing /images/* file: serve placeholder image instead of 404 JSON
 const fallbackPlaceholder = path.join(repoImagesDir, 'cities', 'placeholder.png');
 app.use('/images', (req, res, next) => {
@@ -387,14 +447,39 @@ async function healMissingShuttleImages() {
   }
 }
 
+async function restoreStoredImages() {
+  try {
+    const images = await prepare('SELECT filename, category, data FROM image_storage').all();
+    if (!images || images.length === 0) return;
+
+    let restored = 0;
+    for (const img of images) {
+      const targetDir = path.join(IMAGES_DIR, img.category || 'cities');
+      ensureDir(targetDir);
+      const targetFile = path.join(targetDir, img.filename);
+      if (!fs.existsSync(targetFile) || fs.statSync(targetFile).size === 0) {
+        fs.writeFileSync(targetFile, Buffer.from(img.data, 'base64'));
+        restored++;
+      }
+    }
+    if (restored > 0) {
+      console.log(`✅ Restauradas ${restored} imágenes de usuarios desde el almacenamiento permanente de la BD.`);
+    }
+  } catch (err) {
+    console.warn('Aviso restaurando imágenes de usuario desde BD:', err.message);
+  }
+}
+
 // Start listening immediately so Railway health checks pass instantly
 app.listen(PORT, '0.0.0.0', async () => {
   console.log(`🚀 Server running on port ${PORT}`);
   
   try {
     await initDb();
-    const { seedData } = await import('./seed.js');
+    await restoreStoredImages();
+    const { seedData, healMissingCityImages } = await import('./seed.js');
     await seedData();
+    await healMissingCityImages();
     await healMissingShuttleImages();
     console.log('✨ Sistema y base de datos listos para procesar solicitudes.');
   } catch (err) {

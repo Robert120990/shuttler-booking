@@ -558,9 +558,10 @@ export function translateCityDescription(desc: string | null | undefined, lang: 
 }
 
 /**
- * Detects if a country is marked as unavailable in its description.
+ * Detects if a country is marked as unavailable in its description or by is_available flag.
  */
-export function isCountryUnavailable(desc: string | null | undefined): boolean {
+export function isCountryUnavailable(desc: string | null | undefined, isAvailable?: boolean | number): boolean {
+  if (isAvailable === 0 || isAvailable === false) return true;
   if (!desc) return false;
   const lower = desc.toLowerCase();
   return (

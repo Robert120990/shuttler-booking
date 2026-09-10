@@ -60,13 +60,36 @@ router.post('/image', upload.single('image'), async (req, res) => {
       height = 600;
     }
 
-    await sharp(req.file.buffer)
+    const webpBuffer = await sharp(req.file.buffer)
       .resize(width, height, {
         fit: 'cover',
         position: 'center',
       })
       .webp({ quality: 80 })
-      .toFile(filepath);
+      .toBuffer();
+
+    fs.writeFileSync(filepath, webpBuffer);
+
+    // Persist in DB so Railway container restarts never lose user uploads
+    try {
+      const base64Data = webpBuffer.toString('base64');
+      const { prepare, getDbStatus } = await import('../db.js');
+      const status = getDbStatus();
+      if (status.isPg) {
+        await prepare(`
+          INSERT INTO image_storage (filename, category, data, mime_type)
+          VALUES (?, ?, ?, ?)
+          ON CONFLICT (filename) DO UPDATE SET data = EXCLUDED.data
+        `).run(filename, folderName, base64Data, 'image/webp');
+      } else {
+        await prepare(`
+          INSERT OR REPLACE INTO image_storage (filename, category, data, mime_type)
+          VALUES (?, ?, ?, ?)
+        `).run(filename, folderName, base64Data, 'image/webp');
+      }
+    } catch (dbErr) {
+      console.warn('Advertencia: No se pudo respaldar imagen en BD:', dbErr.message);
+    }
 
     const imageUrl = `/images/${folderName}/${filename}`;
 
@@ -91,7 +114,13 @@ router.delete('/image', async (req, res) => {
 
     const relativePath = url.startsWith('/images/') ? url.slice('/images/'.length) : url.replace(/^\//, '');
     const filepath = path.join(publicDir, relativePath);
+    const filename = path.basename(relativePath);
     
+    try {
+      const { prepare } = await import('../db.js');
+      await prepare('DELETE FROM image_storage WHERE filename = ?').run(filename);
+    } catch (_) {}
+
     if (fs.existsSync(filepath)) {
       fs.unlinkSync(filepath);
       res.json({ success: true, message: 'Imagen eliminada' });

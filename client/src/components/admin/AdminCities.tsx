@@ -166,7 +166,14 @@ export const AdminCities = () => {
                   <tr key={city.id} className="border-b border-slate-100 hover:bg-slate-50">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        <img src={getImageUrl((city as any).image_url) || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=100&q=80'} alt={city.name} className="w-10 h-10 rounded-lg object-cover" />
+                        <img
+                          src={getImageUrl((city as any).image_url)}
+                          alt={city.name}
+                          className="w-10 h-10 rounded-lg object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/images/cities/0a45d200-8afc-468a-a572-db3f8b37fdec.webp';
+                          }}
+                        />
                         <span className="font-medium text-slate-900">{city.name}</span>
                       </div>
                     </td>

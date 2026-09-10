@@ -1,7 +1,15 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { prepare } from './db.js';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
 import { generateShuttleImage } from './utils/imageUtils.js';
+import { IMAGES_DIR, ensureDir } from './config.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const repoImagesDir = path.join(__dirname, '../public/images');
 
 const getImageUrl = (category, filename) => `/images/${category}/${filename}`;
 
@@ -30,11 +38,27 @@ export const DEFAULT_CITY_IMAGES = {
   'panajachel': '372dc37d-b613-4ed3-944d-77bc66bf42e1.webp',
   'quetzaltenango': 'd4014625-3505-49d4-98f9-3f803e56cc9e.webp',
   'guatemala-city': '48d64f60-a1d8-4f7e-bd31-431772855d73.webp',
-  // El Salvador
+  // El Salvador (ciudades principales y destinos turísticos)
   'el-tunco': 'ea33d26b-81c3-4346-a173-e8649f02111a.webp',
+  'playa-el-tunco': 'ea33d26b-81c3-4346-a173-e8649f02111a.webp',
   'santa-ana': '9b972527-384b-4567-94b0-226201b994fa.webp',
   'san-salvador': '0a45d200-8afc-468a-a572-db3f8b37fdec.webp',
   'suchitoto': '40b7bc4f-2d7f-495f-82e7-ff90f4c71d50.webp',
+  'el-zonte': 'city-el-zonte-sv.webp',
+  'playa-el-zonte': 'city-el-zonte-sv.webp',
+  'juayua': 'city-juayua-sv.webp',
+  'lago-de-coatepeque': 'city-coatepeque-sv.webp',
+  'coatepeque': 'city-coatepeque-sv.webp',
+  'la-libertad': 'city-la-libertad-sv.webp',
+  'puerto-de-la-libertad': 'city-la-libertad-sv.webp',
+  'concepcion-de-ataco': 'city-ataco-sv.webp',
+  'ataco': 'city-ataco-sv.webp',
+  'costa-del-sol': 'city-costa-del-sol-sv.webp',
+  'playa-costa-del-sol': 'city-costa-del-sol-sv.webp',
+  'san-miguel': 'city-el-zonte-sv.webp',
+  'el-cuco': 'city-el-zonte-sv.webp',
+  'playa-las-flores': 'city-el-zonte-sv.webp',
+  'ruta-de-las-flores': 'city-juayua-sv.webp',
   // Nicaragua
   'granada': '38071664-3768-4fdb-a122-8094435b16c5.webp',
   'leon': '3b886163-05b6-43cf-8e4f-34860c0db141.webp',
@@ -114,8 +138,111 @@ export async function syncDatabaseImages() {
         }
       }
     }
+
+    // 5. Run thorough self-healing for all cities (detecting broken or missing disk files)
+    await healMissingCityImages();
   } catch (err) {
     console.error('Error in syncDatabaseImages:', err);
+  }
+}
+
+export function resolveCityFallbackImage(city) {
+  if (!city) return '0a45d200-8afc-468a-a572-db3f8b37fdec.webp';
+
+  const slug = (city.slug || '').toLowerCase().trim();
+  const name = (city.name || '').toLowerCase().trim();
+  const countrySlug = (city.country_slug || '').toLowerCase().trim();
+  const countryName = (city.country_name || '').toLowerCase().trim();
+
+  // 1. Direct slug match in DEFAULT_CITY_IMAGES
+  if (DEFAULT_CITY_IMAGES[slug]) {
+    return DEFAULT_CITY_IMAGES[slug];
+  }
+
+  // 2. Keyword match in name or slug for Salvadoran and popular destinations
+  if (slug.includes('tunco') || name.includes('tunco')) return 'ea33d26b-81c3-4346-a173-e8649f02111a.webp';
+  if (slug.includes('santa-ana') || name.includes('santa ana')) return '9b972527-384b-4567-94b0-226201b994fa.webp';
+  if (slug.includes('suchitoto') || name.includes('suchitoto')) return '40b7bc4f-2d7f-495f-82e7-ff90f4c71d50.webp';
+  if (slug.includes('salvador') || name.includes('salvador')) return '0a45d200-8afc-468a-a572-db3f8b37fdec.webp';
+  if (slug.includes('zonte') || name.includes('zonte')) return 'city-el-zonte-sv.webp';
+  if (slug.includes('juayua') || name.includes('juayua') || name.includes('juayúa')) return 'city-juayua-sv.webp';
+  if (slug.includes('coatepeque') || name.includes('coatepeque')) return 'city-coatepeque-sv.webp';
+  if (slug.includes('libertad') || name.includes('libertad')) return 'city-la-libertad-sv.webp';
+  if (slug.includes('ataco') || name.includes('ataco')) return 'city-ataco-sv.webp';
+  if (slug.includes('costa-del-sol') || name.includes('costa del sol')) return 'city-costa-del-sol-sv.webp';
+  if (slug.includes('cuco') || (slug.includes('flores') && (countrySlug.includes('salvador') || countryName.includes('salvador')))) return 'city-el-zonte-sv.webp';
+
+  // 3. Country-level fallback for El Salvador
+  if (countrySlug === 'el-salvador' || countryName.includes('salvador')) {
+    return '0a45d200-8afc-468a-a572-db3f8b37fdec.webp'; // San Salvador
+  }
+
+  // 4. Other country-level defaults
+  if (countrySlug === 'costa-rica' || countryName.includes('costa')) return '34107515-6273-4ac1-b253-651ed7f5ffae.webp';
+  if (countrySlug === 'guatemala' || countryName.includes('guatemala')) return '87482884-3c34-41dd-a048-fe833611d110.webp';
+  if (countrySlug === 'nicaragua' || countryName.includes('nicaragua')) return '38071664-3768-4fdb-a122-8094435b16c5.webp';
+  if (countrySlug === 'panama' || countryName.includes('panam')) return '12cb407b-425d-46ee-826b-03f2a55275dc.webp';
+
+  return '0a45d200-8afc-468a-a572-db3f8b37fdec.webp';
+}
+
+export async function healMissingCityImages() {
+  try {
+    const cities = await prepare(`
+      SELECT c.id, c.name, c.slug, c.image_url, c.country_id, co.slug as country_slug, co.name as country_name
+      FROM cities c
+      LEFT JOIN countries co ON c.country_id = co.id
+    `).all();
+
+    if (!cities || cities.length === 0) return;
+
+    let repairedCount = 0;
+    for (const city of cities) {
+      let isBroken = false;
+
+      if (!city.image_url || city.image_url.trim() === '' || city.image_url.includes('placeholder')) {
+        isBroken = true;
+      } else if (city.image_url.includes('/images/cities/')) {
+        const filename = path.basename(city.image_url.split('?')[0]);
+        const diskPath = path.join(IMAGES_DIR, 'cities', filename);
+        const repoPath = path.join(repoImagesDir, 'cities', filename);
+
+        const existsOnDisk = (fs.existsSync(diskPath) && fs.statSync(diskPath).size > 0) ||
+                             (fs.existsSync(repoPath) && fs.statSync(repoPath).size > 0);
+
+        if (!existsOnDisk) {
+          // Check if it can be restored from image_storage in DB
+          try {
+            const stored = await prepare('SELECT data FROM image_storage WHERE filename = ?').get(filename);
+            if (stored && stored.data) {
+              ensureDir(path.join(IMAGES_DIR, 'cities'));
+              fs.writeFileSync(diskPath, Buffer.from(stored.data, 'base64'));
+              continue; // Restored successfully!
+            }
+          } catch (_) {}
+
+          isBroken = true;
+        }
+      }
+
+      if (isBroken) {
+        const fallbackFile = resolveCityFallbackImage(city);
+        const newUrl = `/images/cities/${fallbackFile}`;
+        if (city.image_url !== newUrl) {
+          console.log(`🔄 Auto-sanación: Restaurando imagen de ciudad "${city.name}" (${city.slug}): ${city.image_url || 'vacía'} -> ${newUrl}`);
+          await prepare('UPDATE cities SET image_url = ? WHERE id = ?').run(newUrl, city.id);
+          repairedCount++;
+        }
+      }
+    }
+
+    if (repairedCount > 0) {
+      console.log(`✅ Auto-sanación de ciudades completada: ${repairedCount} imágenes recuperadas.`);
+    } else {
+      console.log('✅ Todas las ciudades tienen imágenes válidas en disco.');
+    }
+  } catch (err) {
+    console.error('Error en healMissingCityImages:', err);
   }
 }
 

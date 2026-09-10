@@ -166,6 +166,14 @@ async function initSqlite() {
       status TEXT DEFAULT 'approved',
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS image_storage (
+      filename TEXT PRIMARY KEY,
+      category TEXT NOT NULL,
+      data TEXT NOT NULL,
+      mime_type TEXT DEFAULT 'image/webp',
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   try {
@@ -338,6 +346,14 @@ export async function initDb() {
             rating INTEGER NOT NULL,
             comment TEXT NOT NULL,
             status TEXT DEFAULT 'approved',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+
+          CREATE TABLE IF NOT EXISTS image_storage (
+            filename TEXT PRIMARY KEY,
+            category TEXT NOT NULL,
+            data TEXT NOT NULL,
+            mime_type TEXT DEFAULT 'image/webp',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           );
 

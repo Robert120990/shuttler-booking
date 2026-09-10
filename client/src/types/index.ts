@@ -18,6 +18,8 @@ export interface City {
   country?: Country;
   country_name?: string;
   country_slug?: string;
+  country_is_available?: boolean | number;
+  country_description?: string;
   description?: string;
   image_url?: string;
   created_at: string;

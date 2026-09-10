@@ -7,12 +7,31 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const cities = await prepare(`
-      SELECT c.*, co.name as country_name, co.slug as country_slug 
+      SELECT c.*, co.name as country_name, co.slug as country_slug,
+             co.is_available as country_is_available, co.description as country_description
       FROM cities c 
       JOIN countries co ON c.country_id = co.id 
       ORDER BY c.name
     `).all();
-    res.json(cities);
+
+    const sorted = [...cities].sort((a, b) => {
+      const aAvail = a.country_is_available !== 0 && a.country_is_available !== false;
+      const bAvail = b.country_is_available !== 0 && b.country_is_available !== false;
+
+      const aDesc = (a.country_description || '').toLowerCase();
+      const bDesc = (b.country_description || '').toLowerCase();
+      const aTextUnavail = aDesc.includes('no disponible') || aDesc.includes('not available') || aDesc.includes('unavailable') || aDesc.includes('no habilitado');
+      const bTextUnavail = bDesc.includes('no disponible') || bDesc.includes('not available') || bDesc.includes('unavailable') || bDesc.includes('no habilitado');
+
+      const aEffective = aAvail && !aTextUnavail;
+      const bEffective = bAvail && !bTextUnavail;
+
+      if (aEffective && !bEffective) return -1;
+      if (!aEffective && bEffective) return 1;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+
+    res.json(sorted);
   } catch (error) {
     console.error('Error fetching cities:', error);
     res.status(500).json({ error: 'Failed to fetch cities' });

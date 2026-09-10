@@ -557,3 +557,18 @@ export function translateCityDescription(desc: string | null | undefined, lang: 
   return clean;
 }
 
+/**
+ * Detects if a country is marked as unavailable in its description.
+ */
+export function isCountryUnavailable(desc: string | null | undefined): boolean {
+  if (!desc) return false;
+  const lower = desc.toLowerCase();
+  return (
+    lower.includes('no disponible') ||
+    lower.includes('no se encuentra disponible') ||
+    lower.includes('not available') ||
+    lower.includes('unavailable') ||
+    lower.includes('no habilitado')
+  );
+}
+

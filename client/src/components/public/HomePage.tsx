@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Star, Clock, MapPin, Shield, CreditCard, Headphones, Calendar, ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -9,7 +9,7 @@ import { countriesApi, shuttlesApi, citiesApi } from '../../api/endpoints';
 import { getImageUrl } from '../../api/client';
 import { SEO } from '../seo/SEO';
 import { useLanguageStore } from '../../i18n';
-import { translateRouteName, translateCountryName, translateCountryDescription, translateCityDescription } from '../../utils/shuttleTranslator';
+import { translateRouteName, translateCountryName, translateCountryDescription, translateCityDescription, isCountryUnavailable } from '../../utils/shuttleTranslator';
 import type { Country, Shuttle, City } from '../../types';
 
 export const HomePage = () => {
@@ -49,6 +49,17 @@ export const HomePage = () => {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const location = useLocation();
   const isSearch = location.pathname === '/search';
+
+  // Sort countries so that any country marked as unavailable in description appears at the end of the carousel
+  const sortedCountries = useMemo(() => {
+    return [...countries].sort((a, b) => {
+      const aUnavailable = isCountryUnavailable(a.description);
+      const bUnavailable = isCountryUnavailable(b.description);
+      if (aUnavailable && !bUnavailable) return 1;
+      if (!aUnavailable && bUnavailable) return -1;
+      return 0;
+    });
+  }, [countries]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -219,33 +230,45 @@ export const HomePage = () => {
               className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-4 -mx-4 px-4"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-              {countries.map((country) => (
-                <Link
-                  key={country.slug}
-                  to={`/countries/${country.slug}`}
-                  className="flex-shrink-0 w-72 group"
-                >
-                  <div className="relative h-80 rounded-2xl overflow-hidden shadow-lg group-hover:shadow-xl transition-shadow duration-300">
-                    <img
-                      src={getImageUrl(country.image_url)}
-                      alt={translateCountryName(country.name, language)}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      loading="lazy"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = '/placeholder.jpg';
-                      }}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                    <div className="absolute inset-0 p-6 flex flex-col justify-end">
-                      <h3 className="text-2xl font-bold text-white mb-1">{translateCountryName(country.name, language)}</h3>
-                      <p className="text-sm text-white/80 line-clamp-2 mb-3">{translateCountryDescription(country.description, country.name, language)}</p>
-                      <span className="inline-flex items-center text-sm font-medium text-emerald-400 group-hover:text-emerald-300 transition-colors">
-                        {t('home.explore')} <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                      </span>
+              {sortedCountries.map((country) => {
+                const isUnavailable = isCountryUnavailable(country.description);
+                return (
+                  <Link
+                    key={country.slug}
+                    to={`/countries/${country.slug}`}
+                    className="flex-shrink-0 w-72 group"
+                  >
+                    <div className="relative h-80 rounded-2xl overflow-hidden shadow-lg group-hover:shadow-xl transition-shadow duration-300">
+                      <img
+                        src={getImageUrl(country.image_url)}
+                        alt={translateCountryName(country.name, language)}
+                        className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 ${
+                          isUnavailable ? 'filter grayscale-[30%] opacity-90' : ''
+                        }`}
+                        loading="lazy"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = '/placeholder.jpg';
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                      {isUnavailable && (
+                        <div className="absolute top-4 right-4 z-10">
+                          <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/90 text-white shadow-sm backdrop-blur-xs">
+                            {language === 'es' ? 'No disponible' : 'Not available'}
+                          </span>
+                        </div>
+                      )}
+                      <div className="absolute inset-0 p-6 flex flex-col justify-end">
+                        <h3 className="text-2xl font-bold text-white mb-1">{translateCountryName(country.name, language)}</h3>
+                        <p className="text-sm text-white/80 line-clamp-2 mb-3">{translateCountryDescription(country.description, country.name, language)}</p>
+                        <span className="inline-flex items-center text-sm font-medium text-emerald-400 group-hover:text-emerald-300 transition-colors">
+                          {t('home.explore')} <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
           </div>
           

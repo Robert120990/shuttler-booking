@@ -28,7 +28,10 @@ async function getPayPalAccessToken(clientId, clientSecret, isLive) {
 // POST /api/payments/paypal/create-order
 router.post('/paypal/create-order', async (req, res) => {
   try {
-    const { booking_id, amount } = req.body;
+    const { booking_id, amount, bookingData, idempotency_key } = req.body;
+    const rawIdempotencyKey = req.headers['idempotency-key'] || idempotency_key || (bookingData && bookingData.idempotency_key) || null;
+    const resolvedIdempotencyKey = typeof rawIdempotencyKey === 'string' && rawIdempotencyKey.trim() !== '' ? rawIdempotencyKey.trim() : null;
+
     const settings = await getSettings();
 
     const clientId = settings.paypal_client_id;
@@ -40,12 +43,17 @@ router.post('/paypal/create-order', async (req, res) => {
       try {
         const { token, host } = await getPayPalAccessToken(clientId, clientSecret, isLive);
 
+        const paypalHeaders = {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        };
+        if (resolvedIdempotencyKey) {
+          paypalHeaders['PayPal-Request-Id'] = resolvedIdempotencyKey;
+        }
+
         const orderRes = await fetch(`${host}/v2/checkout/orders`, {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
+          headers: paypalHeaders,
           body: JSON.stringify({
             intent: 'CAPTURE',
             purchase_units: [
@@ -92,6 +100,11 @@ router.post('/paypal/capture-order', async (req, res) => {
     const booking = await prepare('SELECT * FROM bookings WHERE id = ?').get(booking_id);
     if (!booking) {
       return res.status(404).json({ error: 'Reserva no encontrada' });
+    }
+
+    // Idempotency check: if booking is already paid, return without mutating or duplicating emails
+    if (booking.payment_status === 'paid') {
+      return res.json({ success: true, booking, already_processed: true });
     }
 
     const details = JSON.stringify({
@@ -164,6 +177,11 @@ router.post('/wompi/confirm', async (req, res) => {
       return res.status(404).json({ error: 'Reserva no encontrada' });
     }
 
+    // Idempotency check: if booking is already paid, return without duplicate operations or emails
+    if (booking.payment_status === 'paid') {
+      return res.json({ success: true, booking, already_processed: true });
+    }
+
     const paymentId = transaction_id || reference || `WOMPI-${Date.now()}`;
     const details = JSON.stringify({
       provider: 'wompi',
@@ -207,6 +225,11 @@ router.post('/pay-on-arrival', async (req, res) => {
     const booking = await prepare('SELECT * FROM bookings WHERE id = ?').get(booking_id);
     if (!booking) {
       return res.status(404).json({ error: 'Reserva no encontrada' });
+    }
+
+    // Idempotency check: if pay-on-arrival is already confirmed, avoid repeating notification
+    if (booking.status === 'confirmed' && booking.payment_method === 'pay_on_arrival') {
+      return res.json({ success: true, booking, already_processed: true });
     }
 
     await prepare(`

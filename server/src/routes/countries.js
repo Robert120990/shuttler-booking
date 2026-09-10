@@ -7,7 +7,16 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const countries = await prepare('SELECT * FROM countries ORDER BY name').all();
-    res.json(countries);
+    const sorted = [...countries].sort((a, b) => {
+      const aDesc = (a.description || '').toLowerCase();
+      const bDesc = (b.description || '').toLowerCase();
+      const aUnavail = aDesc.includes('no disponible') || aDesc.includes('not available') || aDesc.includes('unavailable') || aDesc.includes('no habilitado');
+      const bUnavail = bDesc.includes('no disponible') || bDesc.includes('not available') || bDesc.includes('unavailable') || bDesc.includes('no habilitado');
+      if (aUnavail && !bUnavail) return 1;
+      if (!aUnavail && bUnavail) return -1;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+    res.json(sorted);
   } catch (error) {
     console.error('Error fetching countries:', error);
     res.status(500).json({ error: 'Failed to fetch countries' });

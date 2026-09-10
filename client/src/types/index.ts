@@ -94,6 +94,8 @@ export interface Booking {
   payment_method?: 'pay_on_arrival' | 'wompi' | 'paypal' | string;
   payment_id?: string;
   payment_details?: string;
+  idempotency_key?: string;
+  idempotent?: boolean;
   boarding_status?: 'pending' | 'boarded' | 'no_show';
   created_at: string;
 }

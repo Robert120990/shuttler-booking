@@ -30,6 +30,9 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
   const [publicSettings, setPublicSettings] = useState<PublicSettings | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethodType>('pay_on_arrival');
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [idempotencyKey, setIdempotencyKey] = useState<string>(() => {
+    return typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `idemp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  });
 
   // Card details state for Wompi
   const [wompiCard, setWompiCard] = useState({
@@ -278,6 +281,7 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
       pickup_person_name: pickupPersonName,
       total_price: totalPrice,
       extra_luggage: totalExtraLuggage,
+      idempotency_key: idempotencyKey,
     };
 
     try {
@@ -315,6 +319,7 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
         const orderRes = await paymentsApi.paypalCreateOrder({
           bookingData: basePayload,
           currency: 'USD',
+          idempotency_key: idempotencyKey,
         });
         const orderId = orderRes.data?.orderID || `PAYPAL-ORD-${Date.now()}`;
 
@@ -354,6 +359,8 @@ export const BookingModal = ({ shuttle, dates, luggageOptions, onClose, onSucces
         passenger_phone: '',
         pickup_person_name: '',
       });
+      // Generate a new idempotency key for future bookings
+      setIdempotencyKey(typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `idemp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
       onSuccess(createdBooking);
     } catch (err: any) {
       console.error('Error al procesar reserva:', err);

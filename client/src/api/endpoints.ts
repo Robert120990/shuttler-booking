@@ -45,7 +45,14 @@ export const bookingsApi = {
   getById: (id: string) => api.get<Booking>(`/bookings/${id}`),
   getManifest: (date: string, shuttleId?: string) =>
     api.get<ManifestData>(`/bookings/manifest?date=${encodeURIComponent(date)}${shuttleId ? `&shuttle_id=${encodeURIComponent(shuttleId)}` : ''}`),
-  create: (data: Partial<Booking>) => api.post<Booking>('/bookings', data),
+  create: (data: Partial<Booking>, options?: { idempotencyKey?: string }) => {
+    const headers: Record<string, string> = {};
+    const key = options?.idempotencyKey || data.idempotency_key;
+    if (key) {
+      headers['Idempotency-Key'] = key;
+    }
+    return api.post<Booking>('/bookings', data, { headers });
+  },
   update: (id: string, data: Partial<Booking>) => api.put<Booking>(`/bookings/${id}`, data),
   updateStatus: (id: string, status: string) => api.patch<Booking & { mailResult?: any }>(`/bookings/${id}/status`, { status }),
   updateBoarding: (id: string, boarding_status: 'pending' | 'boarded' | 'no_show') =>
@@ -82,8 +89,14 @@ export const settingsApi = {
 };
 
 export const paymentsApi = {
-  paypalCreateOrder: (data: { bookingData: any; currency?: string }) =>
-    api.post<{ orderID: string; simulated?: boolean }>('/payments/paypal/create-order', data),
+  paypalCreateOrder: (data: { bookingData: any; currency?: string; idempotency_key?: string }) => {
+    const headers: Record<string, string> = {};
+    const key = data.idempotency_key || data.bookingData?.idempotency_key;
+    if (key) {
+      headers['Idempotency-Key'] = key;
+    }
+    return api.post<{ orderID: string; simulated?: boolean }>('/payments/paypal/create-order', data, { headers });
+  },
   paypalCaptureOrder: (orderId: string, bookingData?: any) =>
     api.post<{ success: boolean; details: any; simulated?: boolean }>('/payments/paypal/capture-order', { orderId, bookingData }),
   wompiCreateCheckout: (data: { bookingData: any; currency?: string }) =>

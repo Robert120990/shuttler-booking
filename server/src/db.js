@@ -124,6 +124,7 @@ async function initSqlite() {
       payment_method TEXT DEFAULT 'pay_on_arrival',
       payment_id TEXT,
       payment_details TEXT,
+      idempotency_key TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       pickup_person_name TEXT
     );
@@ -180,6 +181,12 @@ async function initSqlite() {
     } catch (colErr) {}
     try {
       sqliteDb.run("ALTER TABLE bookings ADD COLUMN payment_details TEXT");
+    } catch (colErr) {}
+    try {
+      sqliteDb.run("ALTER TABLE bookings ADD COLUMN idempotency_key TEXT");
+    } catch (colErr) {}
+    try {
+      sqliteDb.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_idempotency_key ON bookings (idempotency_key)");
     } catch (colErr) {}
   } catch (e) {}
 
@@ -287,6 +294,7 @@ export async function initDb() {
             payment_method TEXT DEFAULT 'pay_on_arrival',
             payment_id TEXT,
             payment_details TEXT,
+            idempotency_key TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             pickup_person_name TEXT
           );
@@ -334,6 +342,8 @@ export async function initDb() {
           ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_method TEXT DEFAULT 'pay_on_arrival';
           ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_id TEXT;
           ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_details TEXT;
+          ALTER TABLE bookings ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_idempotency_key ON bookings (idempotency_key);
         `);
       } finally {
         client.release();

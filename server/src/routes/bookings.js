@@ -148,8 +148,23 @@ router.post('/', async (req, res) => {
       payment_id,
       payment_details,
       payment_status,
-      status
+      status,
+      idempotency_key
     } = req.body;
+
+    const rawIdempotencyKey = req.headers['idempotency-key'] || idempotency_key || null;
+    const resolvedIdempotencyKey = typeof rawIdempotencyKey === 'string' && rawIdempotencyKey.trim() !== '' ? rawIdempotencyKey.trim() : null;
+
+    if (resolvedIdempotencyKey) {
+      try {
+        const existingBooking = await prepare('SELECT * FROM bookings WHERE idempotency_key = ?').get(resolvedIdempotencyKey);
+        if (existingBooking) {
+          return res.status(200).json({ ...existingBooking, idempotent: true });
+        }
+      } catch (lookupErr) {
+        console.warn('Aviso: Error buscando reserva por idempotency_key:', lookupErr.message);
+      }
+    }
 
     if (!shuttle_id || !date || !pickup_location || !dropoff_location) {
       return res.status(400).json({ error: 'Missing required booking fields (shuttle_id, date, pickup_location, dropoff_location)' });
@@ -179,34 +194,50 @@ router.post('/', async (req, res) => {
     const resolvedPaymentStatus = payment_status || 'pending';
     const resolvedStatus = status || (resolvedPaymentStatus === 'paid' ? 'confirmed' : 'pending');
 
-    await prepare(`
-      INSERT INTO bookings (
-        id, user_id, shuttle_id, date, pickup_location, dropoff_location,
-        passenger_name, passenger_email, passenger_phone, seats,
-        extra_luggage, total_price, status, payment_status, pickup_person_name,
-        payment_method, payment_id, payment_details
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      id,
-      resolvedUserId,
-      shuttle_id,
-      date,
-      pickup_location,
-      dropoff_location,
-      passenger_name || null,
-      passenger_email || null,
-      passenger_phone || null,
-      seats || 1,
-      extra_luggage || 0,
-      total_price || 0,
-      resolvedStatus,
-      resolvedPaymentStatus,
-      (pickup_person_name && pickup_person_name.trim()) || (passenger_name && passenger_name.trim()) || null,
-      resolvedPaymentMethod,
-      payment_id || null,
-      payment_details || null
-    );
+    try {
+      await prepare(`
+        INSERT INTO bookings (
+          id, user_id, shuttle_id, date, pickup_location, dropoff_location,
+          passenger_name, passenger_email, passenger_phone, seats,
+          extra_luggage, total_price, status, payment_status, pickup_person_name,
+          payment_method, payment_id, payment_details, idempotency_key
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        id,
+        resolvedUserId,
+        shuttle_id,
+        date,
+        pickup_location,
+        dropoff_location,
+        passenger_name || null,
+        passenger_email || null,
+        passenger_phone || null,
+        seats || 1,
+        extra_luggage || 0,
+        total_price || 0,
+        resolvedStatus,
+        resolvedPaymentStatus,
+        (pickup_person_name && pickup_person_name.trim()) || (passenger_name && passenger_name.trim()) || null,
+        resolvedPaymentMethod,
+        payment_id || null,
+        payment_details || null,
+        resolvedIdempotencyKey
+      );
+    } catch (insertErr) {
+      // In case of concurrent race condition triggering unique constraint on idempotency_key
+      if (resolvedIdempotencyKey) {
+        try {
+          const raceWinnerBooking = await prepare('SELECT * FROM bookings WHERE idempotency_key = ?').get(resolvedIdempotencyKey);
+          if (raceWinnerBooking) {
+            return res.status(200).json({ ...raceWinnerBooking, idempotent: true });
+          }
+        } catch (raceLookupErr) {
+          console.error('Error recuperando reserva ganadora de condición de carrera:', raceLookupErr);
+        }
+      }
+      throw insertErr;
+    }
 
     const booking = await prepare('SELECT * FROM bookings WHERE id = ?').get(id);
 

@@ -14,7 +14,7 @@ export const AdminCountries = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingCountry, setEditingCountry] = useState<Country | null>(null);
-  const [formData, setFormData] = useState({ name: '', slug: '', description: '', image_url: '' });
+  const [formData, setFormData] = useState({ name: '', slug: '', description: '', image_url: '', is_available: true });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -36,10 +36,16 @@ export const AdminCountries = () => {
   const handleOpenModal = (country?: Country) => {
     if (country) {
       setEditingCountry(country);
-      setFormData({ name: country.name, slug: country.slug, description: country.description || '', image_url: country.image_url || '' });
+      setFormData({
+        name: country.name,
+        slug: country.slug,
+        description: country.description || '',
+        image_url: country.image_url || '',
+        is_available: country.is_available !== 0 && country.is_available !== false,
+      });
     } else {
       setEditingCountry(null);
-      setFormData({ name: '', slug: '', description: '', image_url: '' });
+      setFormData({ name: '', slug: '', description: '', image_url: '', is_available: true });
     }
     setShowModal(true);
   };
@@ -47,7 +53,21 @@ export const AdminCountries = () => {
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingCountry(null);
-    setFormData({ name: '', slug: '', description: '', image_url: '' });
+    setFormData({ name: '', slug: '', description: '', image_url: '', is_available: true });
+  };
+
+  const handleToggleAvailability = async (country: Country) => {
+    try {
+      const currentAvailable = country.is_available !== 0 && country.is_available !== false;
+      const newStatus = currentAvailable ? 0 : 1;
+      setCountries((prev) =>
+        prev.map((c) => (c.id === country.id ? { ...c, is_available: newStatus } : c))
+      );
+      await countriesApi.toggleAvailability(country.id);
+    } catch (err) {
+      console.error('Error toggling country availability:', err);
+      fetchCountries();
+    }
   };
 
   const handleSave = async () => {
@@ -127,6 +147,7 @@ export const AdminCountries = () => {
                   <th className="text-left py-3 px-4 text-sm font-medium text-slate-500 dark:text-slate-400">Country</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-slate-500 dark:text-slate-400">Slug</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-slate-500 dark:text-slate-400">Description</th>
+                  <th className="text-center py-3 px-4 text-sm font-medium text-slate-500 dark:text-slate-400">Disponibilidad</th>
                   <th className="text-right py-3 px-4 text-sm font-medium text-slate-500 dark:text-slate-400">Actions</th>
                 </tr>
               </thead>
@@ -141,6 +162,25 @@ export const AdminCountries = () => {
                     </td>
                     <td className="py-3 px-4 text-slate-600 dark:text-slate-400">{country.slug}</td>
                     <td className="py-3 px-4 text-slate-600 dark:text-slate-400 max-w-xs truncate">{country.description}</td>
+                    <td className="py-3 px-4 text-center">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleAvailability(country)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer shadow-xs ${
+                          country.is_available !== 0 && country.is_available !== false
+                            ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300'
+                            : 'bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-300'
+                        }`}
+                        title="Haz clic para alternar disponibilidad"
+                      >
+                        <span
+                          className={`w-2 h-2 rounded-full ${
+                            country.is_available !== 0 && country.is_available !== false ? 'bg-emerald-500' : 'bg-amber-500'
+                          }`}
+                        />
+                        {country.is_available !== 0 && country.is_available !== false ? 'Disponible' : 'No disponible'}
+                      </button>
+                    </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button variant="ghost" size="sm" onClick={() => handleOpenModal(country)}>
@@ -196,6 +236,29 @@ export const AdminCountries = () => {
                 onChange={(url) => setFormData({ ...formData, image_url: url })}
                 label="Country Image"
               />
+              <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                <div>
+                  <label className="text-sm font-semibold text-slate-800 dark:text-slate-200 block">
+                    País disponible
+                  </label>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {formData.is_available ? 'Visible como destino activo en el carrusel.' : 'Se mostrará al final del carrusel con estado "No disponible".'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, is_available: !formData.is_available })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none cursor-pointer ${
+                    formData.is_available ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-600'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      formData.is_available ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
               <div className="flex gap-3 pt-4">
                 <Button variant="outline" className="flex-1" onClick={handleCloseModal}>
                   Cancel

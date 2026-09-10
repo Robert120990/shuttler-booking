@@ -6,6 +6,7 @@ export const countriesApi = {
   getBySlug: (slug: string) => api.get<Country>(`/countries/${slug}`),
   create: (data: Partial<Country>) => api.post<Country>('/countries', data),
   update: (id: string, data: Partial<Country>) => api.put<Country>(`/countries/${id}`, data),
+  toggleAvailability: (id: string) => api.patch<Country>(`/countries/${id}/toggle-availability`),
   delete: (id: string) => api.delete(`/countries/${id}`),
 };
 

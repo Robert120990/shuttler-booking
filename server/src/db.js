@@ -65,6 +65,7 @@ async function initSqlite() {
       flag TEXT,
       description TEXT,
       image_url TEXT,
+      is_available INTEGER DEFAULT 1,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -188,6 +189,9 @@ async function initSqlite() {
     try {
       sqliteDb.run("CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_idempotency_key ON bookings (idempotency_key)");
     } catch (colErr) {}
+    try {
+      sqliteDb.run("ALTER TABLE countries ADD COLUMN is_available INTEGER DEFAULT 1");
+    } catch (colErr) {}
   } catch (e) {}
 
   saveDb();
@@ -235,6 +239,7 @@ export async function initDb() {
             flag TEXT,
             description TEXT,
             image_url TEXT,
+            is_available INTEGER DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           );
 
@@ -344,6 +349,7 @@ export async function initDb() {
           ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_details TEXT;
           ALTER TABLE bookings ADD COLUMN IF NOT EXISTS idempotency_key TEXT;
           CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_idempotency_key ON bookings (idempotency_key);
+          ALTER TABLE countries ADD COLUMN IF NOT EXISTS is_available INTEGER DEFAULT 1;
         `);
       } finally {
         client.release();

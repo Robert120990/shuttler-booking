@@ -50,13 +50,13 @@ export const HomePage = () => {
   const location = useLocation();
   const isSearch = location.pathname === '/search';
 
-  // Sort countries so that any country marked as unavailable in description appears at the end of the carousel
+  // Sort countries so that any country marked as unavailable (is_available === 0 or description) appears at the end of the carousel
   const sortedCountries = useMemo(() => {
     return [...countries].sort((a, b) => {
-      const aUnavailable = isCountryUnavailable(a.description);
-      const bUnavailable = isCountryUnavailable(b.description);
-      if (aUnavailable && !bUnavailable) return 1;
-      if (!aUnavailable && bUnavailable) return -1;
+      const aAvail = a.is_available !== 0 && a.is_available !== false && !isCountryUnavailable(a.description);
+      const bAvail = b.is_available !== 0 && b.is_available !== false && !isCountryUnavailable(b.description);
+      if (aAvail && !bAvail) return -1;
+      if (!aAvail && bAvail) return 1;
       return 0;
     });
   }, [countries]);
@@ -231,7 +231,7 @@ export const HomePage = () => {
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
               {sortedCountries.map((country) => {
-                const isUnavailable = isCountryUnavailable(country.description);
+                const isUnavailable = (country.is_available === 0 || country.is_available === false) || isCountryUnavailable(country.description);
                 return (
                   <Link
                     key={country.slug}
@@ -260,7 +260,11 @@ export const HomePage = () => {
                       )}
                       <div className="absolute inset-0 p-6 flex flex-col justify-end">
                         <h3 className="text-2xl font-bold text-white mb-1">{translateCountryName(country.name, language)}</h3>
-                        <p className="text-sm text-white/80 line-clamp-2 mb-3">{translateCountryDescription(country.description, country.name, language)}</p>
+                        <p className={`text-sm mb-3 line-clamp-2 ${isUnavailable ? 'text-amber-300/90 font-medium' : 'text-white/80'}`}>
+                          {isUnavailable
+                            ? (language === 'es' ? 'No disponible' : 'Not available')
+                            : translateCountryDescription(country.description, country.name, language)}
+                        </p>
                         <span className="inline-flex items-center text-sm font-medium text-emerald-400 group-hover:text-emerald-300 transition-colors">
                           {t('home.explore')} <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                         </span>

@@ -8,12 +8,20 @@ router.get('/', async (req, res) => {
   try {
     const countries = await prepare('SELECT * FROM countries ORDER BY name').all();
     const sorted = [...countries].sort((a, b) => {
+      const aAvail = a.is_available !== 0 && a.is_available !== false;
+      const bAvail = b.is_available !== 0 && b.is_available !== false;
+
+      // Secondary check on description text if marked unavailable
       const aDesc = (a.description || '').toLowerCase();
       const bDesc = (b.description || '').toLowerCase();
-      const aUnavail = aDesc.includes('no disponible') || aDesc.includes('not available') || aDesc.includes('unavailable') || aDesc.includes('no habilitado');
-      const bUnavail = bDesc.includes('no disponible') || bDesc.includes('not available') || bDesc.includes('unavailable') || bDesc.includes('no habilitado');
-      if (aUnavail && !bUnavail) return 1;
-      if (!aUnavail && bUnavail) return -1;
+      const aTextUnavail = aDesc.includes('no disponible') || aDesc.includes('not available') || aDesc.includes('unavailable') || aDesc.includes('no habilitado');
+      const bTextUnavail = bDesc.includes('no disponible') || bDesc.includes('not available') || bDesc.includes('unavailable') || bDesc.includes('no habilitado');
+
+      const aEffective = aAvail && !aTextUnavail;
+      const bEffective = bAvail && !bTextUnavail;
+
+      if (aEffective && !bEffective) return -1;
+      if (!aEffective && bEffective) return 1;
       return (a.name || '').localeCompare(b.name || '');
     });
     res.json(sorted);
@@ -72,10 +80,11 @@ router.get('/:slug', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { name, slug, description, image_url } = req.body;
+    const { name, slug, description, image_url, is_available } = req.body;
     const id = uuidv4();
+    const resolvedAvailable = is_available !== undefined ? (is_available ? 1 : 0) : 1;
     
-    await prepare('INSERT INTO countries (id, name, slug, description, image_url) VALUES (?, ?, ?, ?, ?)').run(id, name, slug, description, image_url);
+    await prepare('INSERT INTO countries (id, name, slug, description, image_url, is_available) VALUES (?, ?, ?, ?, ?, ?)').run(id, name, slug, description, image_url, resolvedAvailable);
     
     const country = await prepare('SELECT * FROM countries WHERE id = ?').get(id);
     res.status(201).json(country);
@@ -87,15 +96,34 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   try {
-    const { name, description, image_url } = req.body;
+    const { name, description, image_url, is_available } = req.body;
+    const resolvedAvailable = is_available !== undefined ? (is_available ? 1 : 0) : 1;
     
-    await prepare('UPDATE countries SET name = ?, description = ?, image_url = ? WHERE id = ?').run(name, description, image_url, req.params.id);
+    await prepare('UPDATE countries SET name = ?, description = ?, image_url = ?, is_available = ? WHERE id = ?').run(name, description, image_url, resolvedAvailable, req.params.id);
     
     const country = await prepare('SELECT * FROM countries WHERE id = ?').get(req.params.id);
     res.json(country);
   } catch (error) {
     console.error('Error updating country:', error);
     res.status(500).json({ error: 'Failed to update country' });
+  }
+});
+
+// PATCH /api/countries/:id/toggle-availability
+router.patch('/:id/toggle-availability', async (req, res) => {
+  try {
+    const country = await prepare('SELECT * FROM countries WHERE id = ?').get(req.params.id);
+    if (!country) return res.status(404).json({ error: 'Country not found' });
+    
+    const currentAvailable = country.is_available !== 0 && country.is_available !== false;
+    const newStatus = currentAvailable ? 0 : 1;
+
+    await prepare('UPDATE countries SET is_available = ? WHERE id = ?').run(newStatus, req.params.id);
+    const updated = await prepare('SELECT * FROM countries WHERE id = ?').get(req.params.id);
+    res.json(updated);
+  } catch (error) {
+    console.error('Error toggling country availability:', error);
+    res.status(500).json({ error: 'Failed to toggle country availability' });
   }
 });
 

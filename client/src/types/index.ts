@@ -5,6 +5,7 @@ export interface Country {
   flag?: string;
   description?: string;
   image_url?: string;
+  is_available?: boolean | number;
   cities?: City[];
   created_at: string;
 }

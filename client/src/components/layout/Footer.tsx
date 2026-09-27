@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useLanguageStore } from '../../i18n';
 import { useContactStore } from '../../stores/contactStore';
 import { translateCountryName } from '../../utils/shuttleTranslator';
+import { GooglePreferredBadge } from '../common/GooglePreferredBadge';
 
 const COUNTRIES = [
   { name: 'México', slug: 'mexico' },
@@ -99,6 +100,11 @@ export const Footer = () => {
                 </div>
               </div>
             )}
+
+            {/* Google Preferred Sources Badge */}
+            <div className="mt-5">
+              <GooglePreferredBadge variant="badge" />
+            </div>
           </div>
 
           <div>

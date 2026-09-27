@@ -211,13 +211,44 @@ Disallow: /admin
 Disallow: /login
 Disallow: /register
 Disallow: /api/
-Disallow: /images/
+
+# AI Crawlers & Large Language Models
+User-agent: GPTBot
+Allow: /
+Disallow: /admin
+Disallow: /api/
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /admin
+Disallow: /api/
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /admin
+Disallow: /api/
+
+User-agent: Google-Extended
+Allow: /
 
 Sitemap: ${baseUrl}/sitemap.xml
 `;
   res.header('Content-Type', 'text/plain; charset=utf-8');
   res.send(robots);
 });
+
+app.get('/llms.txt', (req, res) => {
+  const filePath = path.join(clientDistPath, 'llms.txt');
+  if (fs.existsSync(filePath)) {
+    return res.sendFile(filePath);
+  }
+  const fallbackPath = path.join(__dirname, '../../client/public/llms.txt');
+  if (fs.existsSync(fallbackPath)) {
+    return res.sendFile(fallbackPath);
+  }
+  res.status(404).send('Not found');
+});
+
 
 app.get('/sitemap.xml', async (req, res) => {
   try {
@@ -281,7 +312,7 @@ app.get('*', async (req, res) => {
     const pageUrl = `${baseUrl}${req.originalUrl || req.path}`;
 
     let metaTitle = 'Trail Explorer - Shuttles y Transporte en Centroamérica';
-    let metaDesc = 'Reserva shuttles compartidos y traslados turísticos en Costa Rica, Guatemala, El Salvador y toda Centroamérica. Reserva segura en minutos.';
+    let metaDesc = 'Reserva shuttles compartidos y traslados turísticos en Centroamérica. Rutas directas y seguras al mejor precio.';
     let rawImg = '/logo.jpeg';
 
     const cleanPath = req.path.replace(/\/$/, '');
@@ -390,6 +421,12 @@ app.get('*', async (req, res) => {
 
     // Inject before </head>
     html = html.replace('</head>', `${ogTags}\n  </head>`);
+
+    // Ensure crawlers and SEO scanners see a clean H1 even before React mounts
+    html = html.replace(
+      '<div id="root">',
+      `<div id="root">\n      <h1 class="sr-only" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">${safeTitle}</h1>`
+    );
 
     res.header('Content-Type', 'text/html; charset=utf-8');
     res.send(html);

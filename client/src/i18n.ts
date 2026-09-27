@@ -162,6 +162,12 @@ export const resources = {
         cookies: 'Cookie Policy',
         contactUs: 'Contact Us',
       },
+      googlePreferred: {
+        buttonText: 'Add as preferred source on Google',
+        cardTitle: 'Find us on Google Search',
+        cardDesc: 'Add us to your trusted sources to discover our shuttles, routes, and travel guides directly in your Google Search and AI Overviews.',
+        tooltip: 'Follow on Google Search and AI Overviews',
+      },
       auth: {
         login: 'Login',
         email: 'Email',
@@ -485,6 +491,12 @@ export const resources = {
         privacy: 'Política de Privacidad',
         cookies: 'Política de Cookies',
         contactUs: 'Contáctanos',
+      },
+      googlePreferred: {
+        buttonText: 'Añádenos como fuente preferida en Google',
+        cardTitle: 'Encuéntranos en Google Search',
+        cardDesc: 'Añádenos a tus fuentes de confianza para ver nuestras rutas, shuttles e itinerarios directamente en tus resultados y resúmenes de IA.',
+        tooltip: 'Seguir en Google Search y AI Overviews',
       },
       auth: {
         login: 'Iniciar Sesión',

@@ -164,7 +164,7 @@ export const HomePage = () => {
     <div>
       <SEO
         title={language === 'es' ? 'Shuttles y Transporte en Centroamérica' : 'Book Shuttles Across Central America'}
-        description="Reserva shuttles compartidos y traslados turísticos en Costa Rica, Guatemala, El Salvador y toda Centroamérica. Reserva segura en minutos."
+        description="Reserva shuttles compartidos y traslados turísticos en Centroamérica. Rutas directas y seguras al mejor precio."
         path={isSearch ? '/search' : '/'}
         jsonLd={[
           {

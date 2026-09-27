@@ -11,6 +11,7 @@ import type { Shuttle, City, LuggageOption } from '../../types';
 import { TripServicesSelector } from './TripServicesSelector';
 import { TripToBringSelector } from './TripToBringSelector';
 import { TripPickupDropoffSelector } from './TripPickupDropoffSelector';
+import { formatAvailabilityDays } from '../../utils/shuttleTranslator';
 
 export const CONVENTIONAL_SHUTTLE_DEFAULTS = {
   schedule: '8:00 AM',
@@ -284,26 +285,9 @@ export const AdminShuttles = () => {
     setFormData({ ...formData, availability_days: days });
   };
 
-  const generateAvailabilityText = (days: number[]): string => {
-    if (days.length === 0) return 'Sin días disponibles';
-    if (days.length === 7) return 'Todos los días';
-    if (days.length === 5 && !days.includes(0) && !days.includes(6)) return 'Lunes a Viernes';
-    if (days.length === 2 && days.includes(0) && days.includes(6)) return 'Fines de semana';
-    if (days.length === 2 && days.includes(5) && days.includes(6)) return 'Viernes a Sábado';
-    
-    const shortDays = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    
-    if (days.length <= 3) {
-      return days.sort((a, b) => a - b).map(d => shortDays[d]).join(', ');
-    }
-    
-    const sorted = days.sort((a, b) => a - b);
-    return `${shortDays[sorted[0]]} a ${shortDays[sorted[sorted.length - 1]]}`;
-  };
-
   const dayLabels = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
   const allDaysSelected = formData.availability_days.length === 7;
-  const autoAvailability = generateAvailabilityText(formData.availability_days);
+  const autoAvailability = formatAvailabilityDays(formData.availability_days, 'es');
 
   const handleGenerateFusionNow = async () => {
     if (!formData.origin_city_id || !formData.destination_city_id) {

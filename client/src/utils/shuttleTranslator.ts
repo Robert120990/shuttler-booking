@@ -261,23 +261,36 @@ export function translateCancellationPolicy(policy: string | null | undefined, l
 }
 
 /**
- * Translates route description strings with sensible fallbacks.
+ * Translates route description strings with sensible fallbacks without overwriting custom user descriptions.
  */
 export function translateDescription(desc: string | null | undefined, routeName: string, lang: string): string {
-  if (!desc) {
+  if (!desc || !desc.trim()) {
     return lang === 'es'
       ? `Transporte compartido cómodo y seguro para ${translateRouteName(routeName, 'es')}. Servicio puerta a puerta entre hostales y hoteles con aire acondicionado.`
       : `Comfortable and reliable shared transportation for ${translateRouteName(routeName, 'en')}. Door-to-door service between hostels and hotels with air conditioning.`;
   }
 
-  const lower = desc.toLowerCase();
-  if (lower.includes('door-to-door') || lower.includes('puerta a puerta') || lower.includes('transporte compartido')) {
+  const clean = desc.trim();
+
+  // If language is English and text is standard template, translate it
+  const lower = clean.toLowerCase();
+  const isDefaultTemplate =
+    (lower.startsWith('transporte compartido cómodo y seguro de') || lower.startsWith('transporte compartido cómodo y seguro para')) &&
+    lower.includes('servicio puerta a puerta entre hostales y hoteles con aire acondicionado');
+
+  if (isDefaultTemplate) {
     return lang === 'es'
-      ? `Transporte compartido cómodo y seguro para ${translateRouteName(routeName, 'es')}. Servicio puerta a puerta entre hostales y hoteles con aire acondicionado.`
+      ? clean
       : `Comfortable and reliable shared transportation for ${translateRouteName(routeName, 'en')}. Door-to-door service between hostels and hotels with air conditioning.`;
   }
 
-  return desc;
+  // Otherwise, respect the custom description entered by the user
+  if (lang === 'en') {
+    // If it's a simple route description, just translate connector if needed
+    return clean.replace(/\b([A-Za-zÁ-ú\s]+)\s+a\s+([A-Za-zÁ-ú\s]+)\b/g, '$1 to $2');
+  }
+
+  return clean;
 }
 
 /**
@@ -334,6 +347,54 @@ export function generateLocalizedDates(
 }
 
 /**
+ * Formats an array of day numbers (0=Sun..6=Sat) into user-friendly text in English or Spanish.
+ */
+export function formatAvailabilityDays(days: number[], lang: string): string {
+  if (!days || days.length === 0) {
+    return lang === 'es' ? 'Sin días disponibles' : 'No available days';
+  }
+  if (days.length === 7) {
+    return lang === 'es' ? 'Todos los días' : 'Every day';
+  }
+  if (days.length === 5 && !days.includes(0) && !days.includes(6)) {
+    return lang === 'es' ? 'Lunes a Viernes' : 'Monday to Friday';
+  }
+  if (days.length === 2 && days.includes(0) && days.includes(6)) {
+    return lang === 'es' ? 'Fines de semana' : 'Weekends';
+  }
+  if (days.length === 2 && days.includes(5) && days.includes(6)) {
+    return lang === 'es' ? 'Viernes y Sábado' : 'Friday and Saturday';
+  }
+
+  const shortDaysEs = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const shortDaysEn = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const shortDays = lang === 'es' ? shortDaysEs : shortDaysEn;
+
+  const sorted = [...days].sort((a, b) => a - b);
+
+  // Check if they form a contiguous sequential range
+  let isContiguous = true;
+  for (let i = 0; i < sorted.length - 1; i++) {
+    if (sorted[i + 1] !== sorted[i] + 1) {
+      isContiguous = false;
+      break;
+    }
+  }
+
+  if (isContiguous && sorted.length >= 4) {
+    const connector = lang === 'es' ? ' a ' : ' to ';
+    return `${shortDays[sorted[0]]}${connector}${shortDays[sorted[sorted.length - 1]]}`;
+  }
+
+  // Not contiguous (e.g. Lun, Mié, Vie, Sáb) or 3 or fewer days: list them individually!
+  const list = sorted.map((d) => shortDays[d]);
+  if (list.length === 1) return list[0];
+  const last = list.pop();
+  const connector = lang === 'es' ? ' y ' : ' and ';
+  return `${list.join(', ')}${connector}${last}`;
+}
+
+/**
  * Translates availability summary text.
  */
 export function translateAvailability(rawAvailability: string | null | undefined, lang: string): string {
@@ -356,7 +417,28 @@ export function translateAvailability(rawAvailability: string | null | undefined
     return lang === 'es' ? 'Diario' : 'Daily';
   }
 
-  return clean;
+  // Handle short ranges like "Lun a Sáb" or "Mon to Sat"
+  if (lang === 'en') {
+    return clean
+      .replace(/lun/gi, 'Mon')
+      .replace(/mar/gi, 'Tue')
+      .replace(/mié|mie/gi, 'Wed')
+      .replace(/jue/gi, 'Thu')
+      .replace(/vie/gi, 'Fri')
+      .replace(/sáb|sab/gi, 'Sat')
+      .replace(/dom/gi, 'Sun')
+      .replace(/\s+a\s+/gi, ' to ');
+  } else {
+    return clean
+      .replace(/mon/gi, 'Lun')
+      .replace(/tue/gi, 'Mar')
+      .replace(/wed/gi, 'Mié')
+      .replace(/thu/gi, 'Jue')
+      .replace(/fri/gi, 'Vie')
+      .replace(/sat/gi, 'Sáb')
+      .replace(/sun/gi, 'Dom')
+      .replace(/\s+to\s+/gi, ' a ');
+  }
 }
 
 /**

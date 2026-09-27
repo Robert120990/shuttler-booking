@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Star, Clock, MapPin, Calendar, CheckCircle, XCircle, ChevronLeft, ChevronRight, Loader2, MessageSquare, CheckCircle2, AlertCircle, Send, Home } from 'lucide-react';
+import { Star, Clock, Calendar, CheckCircle, XCircle, ChevronLeft, ChevronRight, Loader2, MessageSquare, CheckCircle2, AlertCircle, Send, Home } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Badge } from '../ui/Badge';
@@ -25,6 +25,7 @@ import {
   translateDescription,
   translateAvailability,
   generateLocalizedDates,
+  formatAvailabilityDays,
 } from '../../utils/shuttleTranslator';
 import type { Shuttle, Review, ReviewStats, Booking } from '../../types';
 
@@ -229,7 +230,10 @@ export const ShuttlePage = () => {
   const cancellationPolicy = translateCancellationPolicy(shuttle.cancellation_policy, language);
   const operator = (shuttle as any).operator || 'Trail Explorer';
   const luggagePolicy = translateLuggagePolicy(shuttle.luggage_policy, language);
-  const availability = translateAvailability(shuttle.availability, language);
+  // Derive availability text directly from availability_days if configured, ensuring accurate day names (e.g. Lun, Mié, Vie y Sáb)
+  const availability = (shuttle as any).availability_days
+    ? formatAvailabilityDays(availabilityDays, language)
+    : translateAvailability(shuttle.availability, language);
   const description = translateDescription(shuttle.description, routeName, language);
 
   const rawImages = [
@@ -402,17 +406,21 @@ export const ShuttlePage = () => {
                 <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-4">{routeName}</h1>
                 
                 <div className="flex flex-wrap gap-4 text-sm text-slate-600 mb-6">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    <span>{duration} {t('shuttle.hours')}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    <span>{shuttle.schedule || availability}</span>
-                  </div>
+                  {duration > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-emerald-600" />
+                      <span>{duration} {t('shuttle.hours')}</span>
+                    </div>
+                  )}
+                  {shuttle.schedule && (
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-emerald-600" />
+                      <span>{language === 'es' ? 'Salida: ' : 'Departure: '}{shuttle.schedule}</span>
+                    </div>
+                  )}
                   {availability && (
                     <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4" />
+                      <Calendar className="w-4 h-4 text-emerald-600" />
                       <span>{availability}</span>
                     </div>
                   )}

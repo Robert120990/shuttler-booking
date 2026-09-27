@@ -502,9 +502,50 @@ export const ShuttlePage = () => {
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* SECCIÓN DE RESEÑAS Y VALORACIONES */}
-            <div id="reviews-section" className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-8 space-y-6 mt-6">
+
+          <div className="lg:col-span-1">
+            <Card className="sticky top-24">
+              <CardHeader>
+                <CardTitle>{t('shuttle.bookThisShuttle')}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4">
+                  <span className="text-3xl font-bold text-emerald-600">${shuttle.price}</span>
+                  <span className="text-slate-500"> {t('shuttle.perPerson')}</span>
+                </div>
+
+                {shuttle.pickup_info && (
+                  <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-sm font-medium text-amber-800 mb-1">{t('shuttle.pickupInformation')}</p>
+                    <p className="text-xs text-amber-700 whitespace-pre-line">{shuttle.pickup_info}</p>
+                  </div>
+                )}
+
+                <div className="space-y-3 text-sm text-slate-600 mb-4">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-slate-400" />
+                    <span>{duration} {t('shuttle.hours')}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-slate-400" />
+                    <span>{dates.length} {language === 'es' ? 'fechas disponibles' : 'available dates'}</span>
+                  </div>
+                </div>
+
+                <Button className="w-full" size="lg" onClick={handleBooking}>
+                  {t('shuttle.reserveNow')}
+                </Button>
+                <p className="text-xs text-center text-slate-500 mt-2">
+                  {t('shuttle.demoMode')}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+              {/* SECCIÓN DE RESEÑAS Y VALORACIONES AL FINAL DE LA PÁGINA */}
+        <div id="reviews-section" className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-8 space-y-6 mt-12">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
                 <div>
                   <div className="flex items-center gap-2">
@@ -822,47 +863,6 @@ export const ShuttlePage = () => {
                 )}
               </div>
             </div>
-          </div>
-
-          <div className="lg:col-span-1">
-            <Card className="sticky top-24">
-              <CardHeader>
-                <CardTitle>{t('shuttle.bookThisShuttle')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="mb-4">
-                  <span className="text-3xl font-bold text-emerald-600">${shuttle.price}</span>
-                  <span className="text-slate-500"> {t('shuttle.perPerson')}</span>
-                </div>
-
-                {shuttle.pickup_info && (
-                  <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                    <p className="text-sm font-medium text-amber-800 mb-1">{t('shuttle.pickupInformation')}</p>
-                    <p className="text-xs text-amber-700 whitespace-pre-line">{shuttle.pickup_info}</p>
-                  </div>
-                )}
-
-                <div className="space-y-3 text-sm text-slate-600 mb-4">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-slate-400" />
-                    <span>{duration} {t('shuttle.hours')}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-slate-400" />
-                    <span>{dates.length} {language === 'es' ? 'fechas disponibles' : 'available dates'}</span>
-                  </div>
-                </div>
-
-                <Button className="w-full" size="lg" onClick={handleBooking}>
-                  {t('shuttle.reserveNow')}
-                </Button>
-                <p className="text-xs text-center text-slate-500 mt-2">
-                  {t('shuttle.demoMode')}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
       </div>
 
       {showBookingModal && (
